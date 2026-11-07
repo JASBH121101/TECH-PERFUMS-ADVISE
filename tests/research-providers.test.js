@@ -487,3 +487,21 @@ test("CoreInfo resolves tablet and smartwatch category-specific records without 
   assert.equal(watch[0].value, "Redmi Watch 5");
   assert.deepEqual(absent, []);
 });
+
+
+test("JSON reader timeout covers response-body parsing, not only response headers", async () => {
+  const provider = createCoreInfoResearchProvider({
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: () => new Promise(() => {}),
+    }),
+    timeoutMs: 10,
+    minRequestIntervalMs: 0,
+  });
+  await assert.rejects(
+    () => provider.search({ query: "huawei-nova-16-se", field: "name" }),
+    /timed out after 10 ms/u,
+  );
+});

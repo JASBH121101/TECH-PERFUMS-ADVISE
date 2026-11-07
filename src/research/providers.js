@@ -63,6 +63,7 @@ function createJsonReader(fetchImpl, {
     const controller = typeof AbortController === "function" ? new AbortController() : null;
     const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
     let response;
+    let body;
     try {
       response = await fetchImpl(key, {
         method: "GET",
@@ -70,24 +71,23 @@ function createJsonReader(fetchImpl, {
         ...(controller ? { signal: controller.signal } : {}),
       });
       lastRequestAt = Date.now();
+      if (!response || response.ok !== true) {
+        const status = response?.status ?? "unknown";
+        const retryAfter = response?.headers?.get?.("retry-after");
+        const suffix = retryAfter ? \`; retry after \${retryAfter} seconds\` : "";
+        throw new Error(\`\${label} request failed with HTTP \${status}\${suffix}\`);
+      }
+      try {
+        body = await response.json();
+      } catch {
+        if (controller?.signal.aborted) throw new Error(\`\${label} timed out after \${timeoutMs} ms\`);
+        throw new TypeError(\`\${label} returned invalid JSON\`);
+      }
     } catch (error) {
-      if (controller?.signal.aborted) throw new Error(`${label} timed out after ${timeoutMs} ms`);
+      if (controller?.signal.aborted) throw new Error(\`\${label} timed out after \${timeoutMs} ms\`);
       throw error;
     } finally {
       if (timeout !== null) clearTimeout(timeout);
-    }
-
-    if (!response || response.ok !== true) {
-      const status = response?.status ?? "unknown";
-      const retryAfter = response?.headers?.get?.("retry-after");
-      const suffix = retryAfter ? `; retry after ${retryAfter} seconds` : "";
-      throw new Error(`${label} request failed with HTTP ${status}${suffix}`);
-    }
-    let body;
-    try {
-      body = await response.json();
-    } catch {
-      throw new TypeError(`${label} returned invalid JSON`);
     }
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       throw new TypeError(`${label} returned an invalid JSON object`);
