@@ -43,3 +43,12 @@ test("export and import preserve records and reject duplicate IDs", () => {
   assert.equal(restored.getById("ev-1").value, "256 GB");
   assert.throws(() => EvidenceStore.fromExport({ schemaVersion: 2, records: [] }), /Unsupported/);
 });
+
+test("matching claims are not reported as conflicts", () => {
+  const store = new EvidenceStore();
+  store.add(record("ev-1", "256 GB"));
+  store.add(record("ev-2", "256 gb"));
+  assert.deepEqual(store.conflicts({
+    domain: "technology", subjectId: "phone-001", field: "storage",
+  }), []);
+});
