@@ -134,7 +134,7 @@ const WIKIDATA_FIELDS = Object.freeze({
   deviceType: { property: "P31", kind: "entity" },
   release_date: { property: "P577", kind: "time" },
   launch_date: { property: "P577", kind: "time" },
-  display_size: { property: "P2386", kind: "quantity" },
+  display_size: { property: "P13749", kind: "quantity" },
 });
 function parseWikidataSnak(snak, kind) {
   const value = snak?.mainsnak?.datavalue?.value ?? snak?.datavalue?.value;

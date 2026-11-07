@@ -17,7 +17,7 @@ Scento describes its note pyramids as sourced from a house-published list or an 
 
 - Domain: technology only.
 - Public Wikidata search and entity JSON endpoints; no API key.
-- Supported fields with explicit property mappings: name/identity, manufacturer (P176), operating system (P306), device type (P31), release/launch date (P577), display size (P2386).
+- Supported fields with explicit property mappings: name/identity, manufacturer (P176), operating system (P306), device type (P31), release/launch date (P577), diagonal display size (P13749).
 - Unsupported fields (for example battery capacity, RAM, chipset and market price) are deliberately rejected rather than inferred.
 - Search hits are resolved to entity pages and statements. Quantities retain the Wikidata amount and unit URI; dates retain the stated calendar date. Entity references include the Q-id, page URL and resolved English label where available.
 - The provider uses the public endpoint conservatively. It does not issue broad SPARQL scans or crawl the catalogue.

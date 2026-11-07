@@ -66,3 +66,19 @@ test("default research provider registry contains isolated fragrance and technol
   assert.deepEqual(providers[0].domains, [DOMAINS.FRAGRANCE]);
   assert.deepEqual(providers[1].domains, [DOMAINS.TECHNOLOGY]);
 });
+
+test("Wikidata maps display size to the diagonal display-size property", async () => {
+  const requested = [];
+  const fetchImpl = async url => {
+    requested.push(String(url));
+    if (String(url).includes("wbsearchentities")) return response({ search: [{ id: "Q123", label: "Example tablet" }] });
+    if (String(url).includes("Special:EntityData")) return response({ entities: {
+      Q123: { claims: { P13749: [{ mainsnak: { datavalue: { value: { amount: "+11", unit: "http://www.wikidata.org/entity/Q174728" } } } }] } },
+    } });
+    throw new Error("unexpected request");
+  };
+  const provider = createWikidataResearchProvider({ fetchImpl, clock: fixedClock });
+  const results = await provider.search({ query: "Example tablet", field: "display_size" });
+  assert.equal(results[0].value.amount, 11);
+  assert.match(requested[1], /Q123\.json$/u);
+});
