@@ -3,9 +3,11 @@ import { DOMAINS } from "./domains.js";
 const UNIVERSAL_IDENTIFIERS = Object.freeze(["gtin", "ean", "upc"]);
 const MANUFACTURER_IDENTIFIERS = Object.freeze(["mpn", "manufacturerSku", "modelNumber"]);
 const VARIANT_FIELDS = Object.freeze([
-  "ramGB", "storageGB", "color", "edition", "carrier", "network",
+  "ramGB", "storageGB", "color", "edition", "carrier", "network", "region",
   "condition", "finish", "concentration", "volumeMl", "formulation", "packaging",
 ]);
+const CAPACITY_FACTORS = Object.freeze({ mb: 1 / 1024, gb: 1, tb: 1024 });
+const VOLUME_FACTORS = Object.freeze({ ml: 1, l: 1000 });
 
 function normalizeText(value) {
   return String(value ?? "")
@@ -20,6 +22,28 @@ function normalizeText(value) {
 function normalizeIdentifier(value) {
   return String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/gu, "");
 }
+function canonicalBarcode(value) {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string") return null;
+  let digits = value.replace(/[\s-]/gu, "");
+  if (!/^\d+$/u.test(digits) || ![8, 12, 13, 14].includes(digits.length)) return null;
+  const body = digits.slice(0, -1);
+  let sum = 0;
+  for (let index = 0; index < body.length; index += 1) {
+    const distanceFromRight = body.length - index - 1;
+    sum += Number(body[index]) * (distanceFromRight % 2 === 0 ? 3 : 1);
+  }
+  if ((10 - (sum % 10)) % 10 !== Number(digits.at(-1))) return null;
+  while (digits.length > 12 && digits.startsWith("0")) digits = digits.slice(1);
+  return digits;
+}
+function collectUniversalIdentifiers(product) {
+  return UNIVERSAL_IDENTIFIERS.flatMap(field => {
+    const raw = product.identifiers?.[field] ?? product[field];
+    const canonical = canonicalBarcode(raw);
+    return canonical ? [{ field, value: canonical }] : [];
+  });
+}
 function tokenSimilarity(left, right) {
   const a = new Set(normalizeText(left).split(" ").filter(Boolean));
   const b = new Set(normalizeText(right).split(" ").filter(Boolean));
@@ -33,6 +57,47 @@ function category(product) {
     ? product.deviceType ?? null
     : product.productType ?? null;
 }
+function normalizeCapacity(field, value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const match = value.trim().match(/^([\d,]+(?:\.\d+)?)\s*(mb|gb|tb)?$/iu);
+  if (!match) return null;
+  const amount = Number(match[1].replace(/,/gu, ""));
+  const unit = (match[2] ?? (field === "volumeMl" ? "ml" : "gb")).toLowerCase();
+  return Number.isFinite(amount) && CAPACITY_FACTORS[unit] !== undefined
+    ? amount * CAPACITY_FACTORS[unit]
+    : null;
+}
+function normalizeVolume(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const match = value.trim().match(/^([\d,]+(?:\.\d+)?)\s*(ml|l)?$/iu);
+  if (!match) return null;
+  const amount = Number(match[1].replace(/,/gu, ""));
+  const unit = (match[2] ?? "ml").toLowerCase();
+  return Number.isFinite(amount) ? amount * VOLUME_FACTORS[unit] : null;
+}
+function canonicalVariantValue(field, value) {
+  if (["ramGB", "storageGB"].includes(field)) {
+    const normalized = normalizeCapacity(field, value);
+    if (normalized !== null) return `number:${normalized.toFixed(4)}`;
+  }
+  if (field === "volumeMl") {
+    const normalized = normalizeVolume(value);
+    if (normalized !== null) return `number:${normalized.toFixed(4)}`;
+  }
+  let normalized = normalizeText(value);
+  if (field === "color") normalized = normalized.replace(/\bgrey\b/gu, "gray");
+  if (field === "concentration") {
+    const aliases = new Map([
+      ["eau de parfum", "edp"], ["eau parfum", "edp"], ["edp", "edp"],
+      ["eau de toilette", "edt"], ["eau toilette", "edt"], ["edt", "edt"],
+      ["eau de cologne", "edc"], ["eau cologne", "edc"], ["edc", "edc"],
+    ]);
+    normalized = aliases.get(normalized) ?? normalized;
+  }
+  return normalized;
+}
 function variantValue(product, field) {
   return product.variant?.[field] ??
     product.attributes?.[field] ??
@@ -42,10 +107,13 @@ function variantValue(product, field) {
 function internalVariantConflicts(product) {
   const conflicts = [];
   for (const field of VARIANT_FIELDS) {
-    const variant = product.variant?.[field];
-    const attribute = product.attributes?.[field];
-    if (variant === undefined || variant === null || attribute === undefined || attribute === null) continue;
-    if (normalizeText(variant) !== normalizeText(attribute)) conflicts.push(field);
+    const values = [
+      product.variant?.[field],
+      product.attributes?.[field],
+      product[field],
+    ].filter(value => value !== undefined && value !== null && value !== "");
+    const normalized = new Set(values.map(value => canonicalVariantValue(field, value)));
+    if (normalized.size > 1) conflicts.push(field);
   }
   return conflicts;
 }
@@ -57,7 +125,7 @@ function compareVariants(left, right) {
     const b = variantValue(right, field);
     if (a === undefined || a === null || a === "" || b === undefined || b === null || b === "") continue;
     comparable.push(field);
-    if (normalizeText(a) !== normalizeText(b)) conflicts.push(field);
+    if (canonicalVariantValue(field, a) !== canonicalVariantValue(field, b)) conflicts.push(field);
   }
   return { conflicts, comparable };
 }
@@ -66,21 +134,40 @@ function identifierValue(product, field) {
   return value === undefined || value === null || value === "" ? null : normalizeIdentifier(value);
 }
 function sharedIdentifier(left, right) {
-  for (const field of UNIVERSAL_IDENTIFIERS) {
-    const a = identifierValue(left, field), b = identifierValue(right, field);
-    if (a && b && a === b) return { field, kind: "universal" };
+  const leftBarcodes = collectUniversalIdentifiers(left);
+  const rightBarcodes = collectUniversalIdentifiers(right);
+  for (const a of leftBarcodes) {
+    for (const b of rightBarcodes) {
+      if (a.value === b.value) {
+        return {
+          field: a.field === b.field ? a.field : `${a.field}/${b.field}`,
+          kind: "universal",
+          value: a.value,
+        };
+      }
+    }
   }
   for (const field of MANUFACTURER_IDENTIFIERS) {
     const a = identifierValue(left, field), b = identifierValue(right, field);
-    if (a && b && a === b) return { field, kind: "manufacturer" };
+    if (a && b && a === b) return { field, kind: "manufacturer", value: a };
   }
   return null;
 }
-function conflictingIdentifiers(left, right) {
-  return [...UNIVERSAL_IDENTIFIERS, ...MANUFACTURER_IDENTIFIERS].filter(field => {
+function conflictingManufacturerIdentifiers(left, right) {
+  return MANUFACTURER_IDENTIFIERS.filter(field => {
     const a = identifierValue(left, field), b = identifierValue(right, field);
     return Boolean(a && b && a !== b);
   });
+}
+function hasUniversalIdentifierConflict(left, right) {
+  const a = collectUniversalIdentifiers(left);
+  const b = collectUniversalIdentifiers(right);
+  if (!a.length || !b.length) return false;
+  return !a.some(leftItem => b.some(rightItem => leftItem.value === rightItem.value));
+}
+function hasInternalUniversalIdentifierConflict(product) {
+  const values = collectUniversalIdentifiers(product).map(item => item.value);
+  return new Set(values).size > 1;
 }
 function modelText(product) {
   const value = product.model ?? product.name;
@@ -102,6 +189,35 @@ function validateProduct(product, label) {
   if (typeof product.name !== "string" || !product.name.trim()) {
     throw new TypeError(`${label}.name must be a non-empty string`);
   }
+  for (const field of ["attributes", "identifiers", "variant"]) {
+    if (product[field] !== undefined && product[field] !== null &&
+        (typeof product[field] !== "object" || Array.isArray(product[field]))) {
+      throw new TypeError(`${label}.${field} must be an object`);
+    }
+  }
+  if (product.aliases !== undefined &&
+      (!Array.isArray(product.aliases) || product.aliases.some(alias => typeof alias !== "string" || !alias.trim()))) {
+    throw new TypeError(`${label}.aliases must be an array of non-empty strings`);
+  }
+  for (const field of UNIVERSAL_IDENTIFIERS) {
+    const value = product.identifiers?.[field] ?? product[field];
+    if (value !== undefined && value !== null && value !== "" && !canonicalBarcode(value)) {
+      throw new TypeError(`${label}.identifiers.${field} must be a valid GTIN/EAN/UPC barcode`);
+    }
+  }
+  for (const field of MANUFACTURER_IDENTIFIERS) {
+    const value = product.identifiers?.[field] ?? product[field];
+    if (value !== undefined && value !== null && value !== "" &&
+        (typeof value !== "string" && typeof value !== "number" || !normalizeIdentifier(value))) {
+      throw new TypeError(`${label}.identifiers.${field} must be a non-empty identifier`);
+    }
+  }
+  for (const field of ["brand", "model", "market", "deviceType", "productType"]) {
+    const value = product[field];
+    if (value !== undefined && value !== null && typeof value !== "string") {
+      throw new TypeError(`${label}.${field} must be a string when provided`);
+    }
+  }
   return product;
 }
 function rejected(left, right, reason, conflict, reviewRequired = false) {
@@ -109,7 +225,8 @@ function rejected(left, right, reason, conflict, reviewRequired = false) {
     leftId: left.id, rightId: right.id, score: 0, matchType: "no_match",
     sameVariant: false, matchedIdentifier: null,
     comparableVariantFields: Object.freeze([]), variantConflicts: Object.freeze([]),
-    reasons: Object.freeze([reason]), conflicts: Object.freeze([conflict]), reviewRequired,
+    reasons: Object.freeze([reason]), conflicts: Object.freeze(Array.isArray(conflict) ? conflict : [conflict]),
+    reviewRequired,
   });
 }
 
@@ -139,24 +256,29 @@ export function matchProducts(leftInput, rightInput) {
 
   const leftInternalConflicts = internalVariantConflicts(left);
   const rightInternalConflicts = internalVariantConflicts(right);
-  if (leftInternalConflicts.length || rightInternalConflicts.length) {
+  if (leftInternalConflicts.length || rightInternalConflicts.length ||
+      hasInternalUniversalIdentifierConflict(left) || hasInternalUniversalIdentifierConflict(right)) {
+    const conflicts = [
+      ...leftInternalConflicts.map(field => `left.${field}`),
+      ...rightInternalConflicts.map(field => `right.${field}`),
+      ...(hasInternalUniversalIdentifierConflict(left) ? ["left.universal_identifier"] : []),
+      ...(hasInternalUniversalIdentifierConflict(right) ? ["right.universal_identifier"] : []),
+    ];
     return rejected(
-      left, right, "A candidate contains inconsistent variant and specification values.",
-      [...leftInternalConflicts.map(field => `left.${field}`),
-       ...rightInternalConflicts.map(field => `right.${field}`)].join(","),
-      true,
+      left, right, "A candidate contains inconsistent variant or identity values.",
+      conflicts, true,
     );
   }
 
-  const identifierConflicts = conflictingIdentifiers(left, right);
+  const identifierConflicts = conflictingManufacturerIdentifiers(left, right);
   if (identifierConflicts.length) {
     return rejected(
-      left, right, "Conflicting manufacturer or universal identifiers.",
-      identifierConflicts.join(","), true,
+      left, right, "Conflicting manufacturer identifiers.", identifierConflicts, true,
     );
   }
 
   const identifier = sharedIdentifier(left, right);
+  const universalConflict = hasUniversalIdentifierConflict(left, right);
   const variants = compareVariants(left, right);
   const sameBrand = Boolean(leftBrand && rightBrand && leftBrand === rightBrand);
   const leftModel = modelText(left);
@@ -174,7 +296,7 @@ export function matchProducts(leftInput, rightInput) {
   const reasons = [];
   if (identifier?.kind === "universal") {
     score = 100;
-    reasons.push(`Exact ${identifier.field.toUpperCase()} identifier match.`);
+    reasons.push(`Exact ${identifier.field.toUpperCase()} barcode match.`);
   } else if (identifier?.kind === "manufacturer") {
     score = 98;
     reasons.push(`Exact manufacturer identifier match (${identifier.field}).`);
@@ -204,6 +326,10 @@ export function matchProducts(leftInput, rightInput) {
   }
 
   const conflicts = [...variants.conflicts];
+  if (universalConflict) {
+    conflicts.push("universal_identifier");
+    reasons.push("Universal product barcodes differ; only a family-level match can be returned.");
+  }
   const sameMarket = !left.market || !right.market ||
     normalizeText(left.market) === normalizeText(right.market);
   if (!sameMarket) {
@@ -218,6 +344,7 @@ export function matchProducts(leftInput, rightInput) {
   const familyMatch = score >= 65;
   const variantKnown = variants.comparable.length > 0 || Boolean(identifier);
   const sameVariant = familyMatch && variants.conflicts.length === 0 && sameMarket &&
+    !universalConflict &&
     Boolean(identifier || (score >= 85 && variants.comparable.length > 0));
 
   let matchType = "no_match";
@@ -242,7 +369,7 @@ export function matchProducts(leftInput, rightInput) {
     variantConflicts: Object.freeze(variants.conflicts),
     reasons: Object.freeze(reasons),
     conflicts: Object.freeze(conflicts),
-    reviewRequired: !sameVariant || !identifier || !sameMarket,
+    reviewRequired: !sameVariant || !identifier || !sameMarket || universalConflict,
   });
 }
 

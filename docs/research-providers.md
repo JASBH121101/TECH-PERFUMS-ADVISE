@@ -37,9 +37,10 @@ Terms: https://www.scento.com/terms-of-service#perfume-api
 - The adapter reads only the requested device record; it does not bulk-download or mirror the catalogue.
 - Fields are mapped from direct record properties and labelled specification groups; absent fields remain absent.
 - The price field preserves the original published amount and currency. It never substitutes the site's converted currency estimate or claims to be a Nicaragua retailer quote.
+- The adapter requires an exact slug and checks a returned slug when present; it does not expose broad catalogue search or guess model slugs.
 - The site states that reuse is allowed with attribution and that listed prices can be indicative; every claim still remains unconfirmed in JBAE until independently reviewed.
 
-CoreInfo reports more than 3,700 records across 11 device categories. Its catalogue is not a Nicaragua retailer feed, and its prices are not live local availability or checkout prices. See https://www.coreinfos.in/ and https://www.coreinfos.in/methodology.
+CoreInfo publishes device records across multiple consumer-electronics categories. Its catalogue is not a Nicaragua retailer feed, and its prices are not live local availability or checkout prices. See https://www.coreinfos.in/ and https://www.coreinfos.in/methodology.
 
 ## Wikidata
 
@@ -73,7 +74,7 @@ Documentation:
 
 ## Additional technology sources assessed
 
-- **CoreInfo:** publicly exposes per-device JSON and says reuse is allowed with attribution. Its catalogue covers phones, laptops, tablets, wearables, displays, audio and consoles, but the device JSON endpoint has not yet passed a direct runtime smoke test. Its price values are often INR and FX conversions are explicitly estimates; never treat those as Nicaragua retail prices. It is a candidate for a later opt-in source after endpoint validation.
+- **CoreInfo:** exposes exact-slug per-device JSON and is now enabled in the default technology provider registry. The bounded live workflow has successfully smoke-tested a Huawei Nova 16 SE smartphone and an HP 15-fc0500AU laptop. This is an endpoint/response-shape check, not a full catalogue quality audit. Its prices may be in INR and FX conversions are estimates; never treat those as Nicaragua retail prices.
 - **TechSpecs API:** broad coverage across phones, tablets, watches, desktops, laptops, displays and GPUs, but it requires a token and says commercial caching/storage requires a separate license. It is not enabled by default.
 - **Specspool:** covers phones, tablets and watches, but its free tier is non-commercial and its paid tier bills per unit. It is not enabled by default.
 - **Techfleet Atlas:** advertises a free monthly request allowance and CC BY attribution, but requires a key and needs independent runtime, terms and provenance validation before integration.

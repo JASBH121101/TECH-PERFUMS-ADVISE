@@ -12,12 +12,12 @@ const phone = (id, overrides = {}) => normalizeTechnologyProduct({
 
 test("identity normalization preserves validated identifiers and variant metadata", () => {
   const product = phone("a", {
-    identifiers: { gtin: "8806095811234", mpn: "SM-S938BZKGEUB" },
+    identifiers: { gtin: "4006381333931", mpn: "SM-S938BZKGEUB" },
     variant: { ramGB: 12, storageGB: 512, color: "Titanium Gray", region: "Global" },
     market: "Global",
     condition: "new",
   });
-  assert.equal(product.identifiers.gtin, "8806095811234");
+  assert.equal(product.identifiers.gtin, "4006381333931");
   assert.equal(product.variant.storageGB, 512);
   assert.equal(product.market, "Global");
   assert.equal(product.condition, "new");
@@ -26,10 +26,10 @@ test("identity normalization preserves validated identifiers and variant metadat
 });
 
 test("matches exact universal identifiers even when display names differ", () => {
-  const left = phone("a", { identifiers: { gtin: "8806095811234" } });
+  const left = phone("a", { identifiers: { gtin: "4006381333931" } });
   const right = phone("b", {
     name: "S25 Ultra 12GB/256GB", model: "Galaxy S25 Ultra",
-    identifiers: { gtin: "8806095811234" },
+    identifiers: { gtin: "4006381333931" },
   });
   const result = matchProducts(left, right);
   assert.equal(result.matchType, "exact_variant");
@@ -114,4 +114,74 @@ test("flags internal variant contradictions and regional differences for manual 
   assert.equal(regional.matchType, "same_product_family");
   assert.equal(regional.sameVariant, false);
   assert.ok(regional.conflicts.includes("market"));
+});
+
+
+test("accepts UPC-A and equivalent zero-prefixed EAN-13 as the same barcode", () => {
+  const upc = phone("upc", { identifiers: { upc: "123456789012" } });
+  const ean = phone("ean", { identifiers: { ean: "0123456789012" } });
+  const result = matchProducts(upc, ean);
+  assert.equal(result.matchType, "exact_variant");
+  assert.equal(result.matchedIdentifier, "upc/ean");
+  assert.equal(result.score, 100);
+});
+
+test("rejects malformed or invalid-check-digit universal barcodes during normalization", () => {
+  assert.throws(
+    () => phone("bad-length", { identifiers: { gtin: "123456" } }),
+    /8, 12, 13 or 14 digits/u,
+  );
+  assert.throws(
+    () => phone("bad-check", { identifiers: { ean: "4006381333932" } }),
+    /invalid barcode check digit/u,
+  );
+  assert.throws(
+    () => phone("numeric-barcode", { identifiers: { upc: 123456789012 } }),
+    /barcode string/u,
+  );
+});
+
+test("different valid universal barcodes restrict an otherwise identical model to family-level matching", () => {
+  const left = phone("barcode-a", { identifiers: { upc: "123456789012" } });
+  const right = phone("barcode-b", { identifiers: { ean: "4006381333931" } });
+  const result = matchProducts(left, right);
+  assert.equal(result.matchType, "same_product_family");
+  assert.equal(result.sameVariant, false);
+  assert.ok(result.conflicts.includes("universal_identifier"));
+  assert.equal(result.reviewRequired, true);
+});
+
+test("normalizes capacity units and common fragrance aliases before comparing variants", () => {
+  const oneTb = phone("one-tb", {
+    variant: { ramGB: 12, storageGB: "1 TB", color: "Space Grey" },
+    attributes: { ramGB: 12, storageGB: 1024 },
+  });
+  const thousandTwentyFourGb = phone("1024-gb", {
+    variant: { ramGB: 12, storageGB: 1024, color: "Space Gray" },
+    attributes: { ramGB: 12, storageGB: 1024 },
+  });
+  const result = matchProducts(oneTb, thousandTwentyFourGb);
+  assert.equal(result.matchType, "same_variant");
+  assert.deepEqual(result.variantConflicts, []);
+  assert.ok(result.comparableVariantFields.includes("storageGB"));
+
+  const perfumeA = normalizeFragranceProduct({
+    id: "edp-a", name: "Dior Sauvage", brand: "Dior", model: "Sauvage",
+    productType: "perfume", variant: { concentration: "EDP", volumeMl: 100 },
+    attributes: { concentration: "edp", volumeMl: 100 },
+  });
+  const perfumeB = normalizeFragranceProduct({
+    id: "edp-b", name: "Dior Sauvage", brand: "Dior", model: "Sauvage",
+    productType: "perfume", variant: { concentration: "eau de parfum", volumeMl: "0.1 L" },
+    attributes: { concentration: "edp", volumeMl: 100 },
+  });
+  assert.equal(matchProducts(perfumeA, perfumeB).matchType, "same_variant");
+});
+
+test("validates matcher input shapes and bounds candidate search", () => {
+  const target = phone("target");
+  assert.throws(() => matchProducts(target, { ...phone("bad"), aliases: "not-an-array" }), /aliases must be an array/u);
+  assert.throws(() => matchProducts(target, { ...phone("bad"), identifiers: "bad" }), /identifiers must be an object/u);
+  assert.throws(() => findProductMatches({ product: target, candidates: [], minScore: 101 }), /minScore/u);
+  assert.throws(() => findProductMatches({ product: target, candidates: [], limit: 51 }), /limit/u);
 });

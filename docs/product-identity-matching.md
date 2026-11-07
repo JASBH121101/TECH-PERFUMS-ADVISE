@@ -6,16 +6,18 @@ The Product Identity Matcher decides whether two catalog/provider records likely
 
 ## Identity evidence, strongest first
 
-1. GTIN, EAN or UPC exact match.
-2. Manufacturer part number, manufacturer SKU or model number exact match.
-3. Brand + normalized model + product category.
-4. Name and alias token similarity.
+1. Valid GTIN, EAN or UPC exact match (8, 12, 13 or 14 digits with a valid check digit; formatting separators are normalized).
+2. A UPC-A code and its zero-prefixed EAN-13 representation are treated as equivalent.
 
-Conflicting universal/manufacturer identifiers, explicit brand mismatches, different domains or incompatible categories block a positive match. A common family name does not override an explicit SKU conflict.
+3. Manufacturer part number, manufacturer SKU or model number exact match.
+4. Brand + normalized model + product category.
+5. Name and alias token similarity.
+
+Conflicting manufacturer identifiers, explicit brand mismatches, different domains or incompatible categories block a positive match. Different valid universal barcodes restrict the result to family-level matching and require review; an invalid barcode is rejected during normalization. A common family name does not override an explicit SKU conflict.
 
 ## Variant safety
 
-Technology variants compare available RAM, storage, color, edition, carrier, network and condition values. Fragrance variants compare concentration, volume, formulation, finish and packaging. Only fields present on both records are treated as comparable. Explicit variant differences return `same_product_family`, not an exact-variant match.
+Technology variants compare available RAM, storage, color, edition, carrier, network, region and condition values. RAM/storage values with explicit units are compared in GB (1 TB = 1024 GB); fragrance volume is compared in mL (1 L = 1000 mL). Common concentration aliases (EDP / eau de parfum) and grey/gray spelling are normalized. Fragrance variants compare concentration, volume, formulation, finish and packaging. Only fields present on both records are treated as comparable. Explicit variant differences return `same_product_family`, not an exact-variant match.
 
 Market/region differences are surfaced as review conflicts. They do not silently turn a regional listing into the same purchasable SKU.
 

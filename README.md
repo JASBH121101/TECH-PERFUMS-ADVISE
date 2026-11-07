@@ -22,7 +22,7 @@ JB Advisor Engine (JBAE) is the deterministic intelligence core planned for the 
 
 ## Implemented engine layers
 
-- **Domain adapters:** normalized fragrance types (perfume, body mist, body spray, attar/oil and body lotion) and technology device types (smartphone, tablet and laptop).
+- **Domain adapters:** normalized fragrance types (perfume, body mist, body spray, attar/oil and body lotion) and technology types spanning mobile, computing, gaming, displays, audio, imaging, networking and peripherals.
 - **Evidence Engine:** append-only claims, provenance, evidence statuses, deep immutable values and conflict detection.
 - **Comparison Engine:** domain- and category-safe comparison for 2–4 candidates, with missing-data and evidence coverage accounting.
 - **Recommendation Engine:** configurable priorities, domain profiles, minimum coverage gates, tie handling and explainable strengths/compromises.
@@ -54,7 +54,7 @@ The GitHub Actions validation workflow checks JavaScript syntax and runs the ful
 
 ## Current validation
 
-Validation is run on every branch update through GitHub Actions. The current branch has passed the most recent recorded CI (144 tests) and JB Expert QA (100/100, 19 rules, 0 findings) before this phase's new changes. The expanded identity tests and CoreInfo live-provider smoke must pass again on the new commit before this phase is considered validated.
+Validation is run on every branch update through GitHub Actions. The last completed validation before the current identity-hardening work passed 155 automated tests and JB Expert QA at 100/100 (19 rules, 0 rule execution errors, 0 findings). The expanded barcode, unit-normalization and identity-conflict tests are awaiting their next CI run.
 
 These checks validate deterministic engine logic and bounded provider endpoints. They do not certify native Android behavior, overall source accuracy, or Nicaragua-local price/availability coverage.
 
