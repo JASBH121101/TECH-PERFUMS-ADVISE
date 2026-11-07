@@ -59,3 +59,25 @@ test("rejects invalid confidence and non-HTTP source URLs", () => {
     source: { ...valid.source, url: "file:///etc/passwd" },
   }), /HTTP or HTTPS/);
 });
+
+test("deep-clones and freezes JSON evidence values", () => {
+  const mutable = { colors: ["black", "silver"], dimensions: { width: 7 } };
+  const record = createEvidenceRecord({ ...valid, value: mutable });
+  mutable.colors.push("red");
+  mutable.dimensions.width = 99;
+  assert.deepEqual(record.value, {
+    colors: ["black", "silver"],
+    dimensions: { width: 7 },
+  });
+  assert.equal(Object.isFrozen(record.value), true);
+  assert.equal(Object.isFrozen(record.value.colors), true);
+  assert.equal(Object.isFrozen(record.value.dimensions), true);
+});
+
+test("rejects non-JSON values in evidence records", () => {
+  assert.throws(() => createEvidenceRecord({ ...valid, value: new Date() }), /plain JSON objects/);
+  const circular = {};
+  circular.self = circular;
+  assert.throws(() => createEvidenceRecord({ ...valid, value: circular }), /circular references/);
+  assert.throws(() => createEvidenceRecord({ ...valid, value: Number.POSITIVE_INFINITY }), /non-finite numbers/);
+});

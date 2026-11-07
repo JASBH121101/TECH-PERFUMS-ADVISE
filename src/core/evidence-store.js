@@ -7,10 +7,20 @@ const comparableStatuses = new Set([
   EVIDENCE_STATUSES.UNCONFIRMED,
 ]);
 
+function canonicalValue(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalValue).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.keys(value).sort()
+      .map(key => `${JSON.stringify(key)}:${canonicalValue(value[key])}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
 function valueKey(value) {
   if (value === null || value === undefined) return "null";
-  if (typeof value === "string") return value.trim().toLocaleLowerCase();
-  return JSON.stringify(value);
+  if (typeof value === "string") return `string:${value.trim().toLocaleLowerCase()}`;
+  return canonicalValue(value);
 }
 
 export class EvidenceStore {

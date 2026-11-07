@@ -2,7 +2,7 @@
 
 ## Record lifecycle
 
-Evidence is append-only. A correction is a new record with a new ID; existing records are not silently overwritten or deleted. Each claim is scoped to a domain, subject, and field and records its source, observation timestamp, status, and confidence.
+Evidence is append-only. A correction is a new record with a new ID; existing records are not silently overwritten or deleted. Each claim is scoped to a domain, subject, and field and records its source, observation timestamp, status, and confidence. Values are cloned and deeply frozen as JSON-compatible data when a record is created, preventing callers from mutating historical evidence after insertion.
 
 ## Status semantics
 

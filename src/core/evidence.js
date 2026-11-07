@@ -1,4 +1,5 @@
 import { DOMAINS } from "./domains.js";
+import { cloneAndFreeze } from "./immutable.js";
 
 export const EVIDENCE_STATUSES = Object.freeze({
   VERIFIED: "verified",
@@ -81,7 +82,7 @@ export function createEvidenceRecord(input) {
     domain,
     subjectId,
     field,
-    value: input.value ?? null,
+    value: input.value == null ? null : cloneAndFreeze(input.value),
     status: input.status,
     confidence,
     source,

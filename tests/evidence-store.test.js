@@ -52,3 +52,16 @@ test("matching claims are not reported as conflicts", () => {
     domain: "technology", subjectId: "phone-001", field: "storage",
   }), []);
 });
+
+test("object-valued claims compare independently of property insertion order", () => {
+  const store = new EvidenceStore();
+  store.add(record("ev-object-a", { ram: 8, storage: 256 }));
+  store.add(record("ev-object-b", { storage: 256, ram: 8 }));
+  assert.deepEqual(store.conflicts({
+    domain: "technology", subjectId: "phone-001", field: "storage",
+  }), []);
+  store.add(record("ev-object-c", { ram: 12, storage: 512 }));
+  assert.equal(store.conflicts({
+    domain: "technology", subjectId: "phone-001", field: "storage",
+  }).length, 2);
+});
