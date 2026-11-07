@@ -47,10 +47,11 @@ test("does not compare fragrance and technology products together", () => {
 test("rejects more than four products, duplicate IDs and invalid weights", () => {
   assert.throws(() => compareProducts({ products: [...phones, ...phones.slice(0, 1), { ...phones[1], id: "d" }], criteria: [{ field: "performance", weight: 1 }] }), /between 2 and 4/);
   assert.throws(() => compareProducts({ products: phones, criteria: [{ field: "performance", weight: 0 }] }), /positive/);
+  assert.throws(() => compareProducts({ products: [phones[0], phones[0]], criteria: [{ field: "performance", weight: 1 }] }), /unique/);
 });
 
 test("returns tie or insufficient data instead of inventing a winner", () => {
-  const tied = compareProducts({ products: phones, criteria: [{ field: "performance", weight: 1 }] });
+  const tied = compareProducts({ products: phones.map(p => ({ ...p, attributes: { ...p.attributes, performance: 85 } })), criteria: [{ field: "performance", weight: 1 }] });
   assert.equal(tied.decision, "ranked");
   const empty = compareProducts({
     products: [
