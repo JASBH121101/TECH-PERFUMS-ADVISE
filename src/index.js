@@ -9,10 +9,8 @@ export const ENGINE_NAME = "JB Advisor Engine";
 export const ENGINE_ID = "JBAE";
 export const ENGINE_VERSION = "0.1.0";
 
-export const DOMAINS = Object.freeze({
-  FRAGRANCE: "fragrance",
-  TECHNOLOGY: "technology",
-});
+export { DOMAINS } from "./core/domains.js";
+import { DOMAINS } from "./core/domains.js";
 
 export function getEngineInfo() {
   return Object.freeze({
