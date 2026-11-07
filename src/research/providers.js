@@ -137,7 +137,7 @@ const WIKIDATA_FIELDS = Object.freeze({
   display_size: { property: "P2386", kind: "quantity" },
 });
 function parseWikidataSnak(snak, kind) {
-  const value = snak?.datavalue?.value;
+  const value = snak?.mainsnak?.datavalue?.value ?? snak?.datavalue?.value;
   if (value === undefined || value === null) return null;
   if (kind === "time" && typeof value.time === "string") {
     const date = value.time.match(/^[+-](\d{4}-\d{2}-\d{2})/u)?.[1];

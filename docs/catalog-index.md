@@ -19,7 +19,7 @@ await store.addProduct({
   aliases: ["S24 Ultra"],
   deviceType: "smartphone",
   attributes: { ramGB: 12, storageGB: 256, chipset: "Snapdragon 8 Gen 3" },
-  evidenceIds: [],
+  evidenceIds: {},
 });
 const matches = store.searchProducts({
   query: "Samsung S24 Ultra",

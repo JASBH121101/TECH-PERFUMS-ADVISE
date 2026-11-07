@@ -196,7 +196,7 @@ test("persists normalized catalog products and rebuilds local search after reope
     aliases: ["S24 Ultra"],
     deviceType: "smartphone",
     attributes: { ramGB: 12, storageGB: 256, chipset: "Snapdragon 8 Gen 3" },
-    evidenceIds: [],
+    evidenceIds: {},
   });
   assert.equal(product.model, "SM-S928B");
   const reopened = await KnowledgeStore.open({ adapter, clock: fixedClock });
@@ -210,7 +210,7 @@ test("catalog rejects duplicate IDs and missing evidence references", async () =
   const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
   const product = {
     id: "phone-duplicate", domain: "technology", name: "Phone",
-    deviceType: "smartphone", attributes: {}, evidenceIds: [],
+    deviceType: "smartphone", attributes: {}, evidenceIds: {},
   };
   await store.addProduct(product);
   await assert.rejects(() => store.addProduct(product), /already exists/);
@@ -225,7 +225,7 @@ test("backup merge includes new catalog records but never overwrites an existing
   const sourceStore = await KnowledgeStore.open({ adapter: sourceAdapter, clock: fixedClock });
   await sourceStore.addProduct({
     id: "product-new", domain: "fragrance", name: "Layton",
-    brand: "Parfums de Marly", productType: "perfume", attributes: {}, evidenceIds: [],
+    brand: "Parfums de Marly", productType: "perfume", attributes: {}, evidenceIds: {},
   });
   const backup = sourceStore.exportBackup();
   const targetAdapter = new MemoryKnowledgeAdapter();
