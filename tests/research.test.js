@@ -10,6 +10,15 @@ test("source policy is domain and field aware", () => {
   assert.ok(perfume.preferredTypes.includes(SOURCE_TYPES.INDEPENDENT_TEST));
   assert.ok(phone.preferredTypes.includes(SOURCE_TYPES.DISTRIBUTOR));
   assert.equal(phone.freshnessDays, 30);
+  const ram = getSourcePolicy({ domain: "technology", field: "ram_capacity" });
+  const storage = getSourcePolicy({ domain: "technology", field: "storage_capacity" });
+  const cpu = getSourcePolicy({ domain: "technology", field: "cpu" });
+  const gpu = getSourcePolicy({ domain: "technology", field: "gpu" });
+  assert.ok(ram.preferredTypes.includes(SOURCE_TYPES.DATABASE));
+  assert.ok(storage.preferredTypes.includes(SOURCE_TYPES.OFFICIAL));
+  assert.ok(cpu.preferredTypes.includes(SOURCE_TYPES.INDEPENDENT_TEST));
+  assert.ok(gpu.preferredTypes.includes(SOURCE_TYPES.DATABASE));
+  assert.equal(ram.freshnessDays, 3650);
 });
 
 test("source assessment discounts non-preferred and stale sources", () => {
