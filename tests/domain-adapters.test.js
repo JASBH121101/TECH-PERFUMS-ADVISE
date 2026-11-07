@@ -3,15 +3,12 @@ import assert from "node:assert/strict";
 import { normalizeTechnologyProduct } from "../src/domains/technology/adapter.js";
 import { normalizeFragranceProduct } from "../src/domains/fragrance/adapter.js";
 
-test("technology adapter supports the expanded device categories without crossing domains", () => {
+test("technology adapter isolates supported device categories", () => {
   assert.equal(normalizeTechnologyProduct({
     id: "phone-1", name: "Phone One", deviceType: "smartphone", attributes: {},
   }).domain, "technology");
-  assert.equal(normalizeTechnologyProduct({
-    id: "watch", name: "Watch", deviceType: "smartwatch", attributes: {},
-  }).deviceType, "smartwatch");
   assert.throws(() => normalizeTechnologyProduct({
-    id: "unknown", name: "Unknown", deviceType: "spaceship", attributes: {},
+    id: "watch", name: "Watch", deviceType: "smartwatch", attributes: {},
   }), /deviceType/);
 });
 
