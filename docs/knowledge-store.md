@@ -6,9 +6,9 @@ The Knowledge Store provides a versioned persistence boundary for local knowledg
 
 ## Snapshot schema
 
-Current schema version: `1`.
+Current JSON schema version: `1`.
 
-- `schemaVersion`: knowledge schema version.
+- `schemaVersion`: KnowledgeStore snapshot version.
 - `metadata.createdAt` / `metadata.updatedAt`: canonical ISO 8601 timestamps.
 - `evidence`: the versioned EvidenceStore export.
 
@@ -21,7 +21,7 @@ An adapter implements:
 - `readSnapshot()`: return the stored JSON snapshot or `null`.
 - `writeSnapshot(snapshot)`: atomically replace the snapshot; on failure, the previous committed snapshot must remain intact.
 
-The included `MemoryKnowledgeAdapter` is a test/reference adapter only. No durable SQLite adapter is included yet. The future Capacitor SQLite adapter must implement transactional writes and run this validation/migration layer before exposing data to the app.
+`MemoryKnowledgeAdapter` is the test/reference adapter. `CapacitorSQLiteKnowledgeAdapter` implements durable snapshot reads and writes for an already opened `SQLiteDBConnection`, using a transactional singleton snapshot table. It does not import Capacitor directly; see [Capacitor SQLite adapter](./capacitor-sqlite.md) for integration details and remaining device validation.
 
 ## Backup and restore
 
@@ -37,4 +37,4 @@ This is a logical JSON backup, not yet a ZIP archive or encrypted backup. Encryp
 
 ## Concurrency and failure behavior
 
-Writes within one KnowledgeStore instance are serialized. The in-memory committed snapshot changes only after the adapter confirms its write. Adapter implementations must provide atomic durable writes; this contract cannot be guaranteed by the reference adapter for an actual device filesystem.
+Writes within one KnowledgeStore instance are serialized. The in-memory committed snapshot changes only after the adapter confirms its write. The Capacitor adapter uses an explicit SQLite transaction and a bound upsert. Node tests exercise rollback using a connection double; native plugin and process-restart behavior still require Android emulator/device validation.

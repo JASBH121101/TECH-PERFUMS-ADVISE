@@ -42,6 +42,10 @@ export {
   MemoryKnowledgeAdapter,
 } from "./knowledge/knowledge-store.js";
 export {
+  CapacitorSQLiteKnowledgeAdapter,
+  CAPACITOR_SQLITE_SCHEMA_VERSION,
+} from "./knowledge/capacitor-sqlite-adapter.js";
+export {
   KNOWLEDGE_SCHEMA_VERSION,
   createEmptyKnowledgeSnapshot,
   migrateKnowledgeSnapshot,
