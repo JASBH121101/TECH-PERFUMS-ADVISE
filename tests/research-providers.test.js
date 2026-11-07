@@ -288,14 +288,15 @@ test("TechAPI never trusts the upstream verified flag as JBAE verification", asy
   assert.match(record.note, /not JBAE verification/u);
 });
 
-test("TechAPI is kept out of default providers until its share-alike terms are consciously enabled", () => {
+test("TechAPI stays opt-in while the local Nicaragua retailer provider is enabled by default", () => {
   const providers = createDefaultResearchProviders({
     scento: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
     wikidata: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
   });
   assert.deepEqual(providers.map(provider => provider.id), [
-    "scento-perfume-api", "wikidata", "coreinfo-device-catalog",
+    "scento-perfume-api", "wikidata", "coreinfo-device-catalog", "sicsa-nicaragua-retail",
   ]);
+  assert.ok(!providers.some(provider => provider.id === "techapi-static-specs"));
 });
 
 test("Wikidata retries maxlag responses only after the upstream-reported delay", async () => {
