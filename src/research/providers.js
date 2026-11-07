@@ -670,20 +670,20 @@ function coreInfoPrice(record, flattened) {
 function parseCoreInfoPriceText(text, currencyHint) {
   const input = text.trim();
   const symbols = { "₹": "INR", "$": "USD", "€": "EUR", "£": "GBP" };
-  const symbolMatch = input.match(/([₹$€£])\\s*([\\d,]+(?:\\.\\d+)?)/u);
+  const symbolMatch = input.match(/([₹$€£])\s*([\d,]+(?:\.\d+)?)/u);
   let amountText;
   let currency;
   if (symbolMatch) {
     amountText = symbolMatch[2];
     currency = symbols[symbolMatch[1]];
   } else {
-    const codeMatch = input.match(/\\b(INR|USD|EUR|GBP)\\s*([\\d,]+(?:\\.\\d+)?)\\b/iu) ??
-      input.match(/([\\d,]+(?:\\.\\d+)?)\\s*(INR|USD|EUR|GBP)\\b/iu);
+    const codeMatch = input.match(/\b(INR|USD|EUR|GBP)\s*([\d,]+(?:\.\d+)?)\b/iu) ??
+      input.match(/([\d,]+(?:\.\d+)?)\s*(INR|USD|EUR|GBP)\b/iu);
     if (codeMatch) {
       const codeFirst = /^[A-Za-z]{3}/u.test(codeMatch[0]);
       amountText = codeFirst ? codeMatch[2] : codeMatch[1];
       currency = (codeFirst ? codeMatch[1] : codeMatch[2]).toUpperCase();
-    } else if (/^[\\d,]+(?:\\.\\d+)?$/u.test(input) &&
+    } else if (/^[\d,]+(?:\.\d+)?$/u.test(input) &&
         typeof currencyHint === "string" && /^[A-Z]{3}$/iu.test(currencyHint.trim())) {
       amountText = input;
       currency = currencyHint.trim().toUpperCase();
