@@ -43,6 +43,9 @@ async function run() {
     ["smartphones:iphone-18-pro-max", "ram_gb"],
     ["laptops:hp-omnibook-3-14-ha0000au-abhinavflac-384", "name"],
     ["monitors:acer-cb241y-amazonmon-603", "name"],
+    ["socs:snapdragon-8-elite", "name"],
+    ["gpus:geforce-rtx-5090", "name"],
+    ["cpus:core-i9-14900k", "name"],
   ];
   for (const [query, field] of samples) {
     const result = await techapi.search({

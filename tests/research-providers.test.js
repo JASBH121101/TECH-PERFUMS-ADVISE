@@ -344,3 +344,28 @@ test("TechAPI maps published laptop, monitor and smartphone schema variants", as
   assert.equal(await value("monitors:acer-cb241y-amazonmon-603", "display_size"), 23.8);
   assert.equal(await value("monitors:acer-cb241y-amazonmon-603", "display_resolution"), "1920x1080");
 });
+
+test("TechAPI component resources return real record-shaped fields", async () => {
+  const samples = [
+    ["socs:snapdragon-8-elite", "Qualcomm Snapdragon 8 Elite"],
+    ["gpus:geforce-rtx-5090", "NVIDIA GeForce RTX 5090"],
+    ["cpus:core-i9-14900k", "Intel Core i9-14900K"],
+  ];
+  const provider = createTechApiResearchProvider({
+    fetchImpl: async url => {
+      const slug = String(url).split("/").at(-2);
+      const sample = samples.find(([query]) => query.endsWith(slug));
+      return response({
+        slug,
+        name: sample?.[1],
+        source_urls: ["https://www.vendor.example/specs"],
+      });
+    },
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  for (const [query, expected] of samples) {
+    const result = await provider.search({ query, field: "name" });
+    assert.equal(result[0].value, expected);
+  }
+});
