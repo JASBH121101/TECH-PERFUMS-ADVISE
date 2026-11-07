@@ -182,6 +182,23 @@ test("default research provider registry contains isolated fragrance and technol
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("gpu"));
 });
 
+test("Wikidata identifies the client and asks the API to defer under backend lag", async () => {
+  let options;
+  let requestUrl;
+  const provider = createWikidataResearchProvider({
+    fetchImpl: async (url, init) => {
+      requestUrl = String(url);
+      options = init;
+      return response({ search: [] });
+    },
+    minRequestIntervalMs: 0,
+  });
+  await provider.search({ query: "Example device", field: "name" });
+  const header = options.headers["User-Agent"] ?? options.headers["Api-User-Agent"];
+  assert.match(header, /^JB Advisor Engine\/0\.1 \(https:\/\/github\.com\//u);
+  assert.match(requestUrl, /maxlag=5/u);
+});
+
 test("Wikidata maps display size to the diagonal display-size property", async () => {
   const requested = [];
   const fetchImpl = async url => {

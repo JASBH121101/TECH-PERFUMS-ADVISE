@@ -30,7 +30,7 @@ Terms: https://www.scento.com/terms-of-service#perfume-api
 
 ## Wikidata
 
-The provider uses the public MediaWiki Action API and a bounded batch entity lookup. It resolves search results and fetches up to 20 entity records in one `wbgetentities` request rather than opening one network connection per item. It paces requests, uses a short-lived in-memory cache, applies a timeout and surfaces `Retry-After` when rate-limited.
+The provider uses the public MediaWiki Action API and a bounded batch entity lookup. It resolves search results and fetches up to 20 entity records in one `wbgetentities` request rather than opening one network connection per item. It sends a meaningful `User-Agent` in Node or `Api-User-Agent` from browser/WebView JavaScript, uses `maxlag=5`, paces requests, uses a short-lived in-memory cache, applies a timeout and surfaces `Retry-After` when rate-limited.
 
 | JBAE field | Wikidata property | Type | Handling |
 |---|---|---|---|

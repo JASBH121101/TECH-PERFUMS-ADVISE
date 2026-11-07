@@ -30,6 +30,7 @@ function createJsonReader(fetchImpl, {
   cacheTtlMs = 5 * 60_000,
   maxCacheEntries = 40,
   minRequestIntervalMs = 150,
+  requestHeaders = {},
 } = {}) {
   assertPositiveInteger(timeoutMs, "timeoutMs", 60_000);
   if (!Number.isSafeInteger(cacheTtlMs) || cacheTtlMs < 0) throw new TypeError("cacheTtlMs must be a non-negative integer");
@@ -59,7 +60,7 @@ function createJsonReader(fetchImpl, {
     try {
       response = await fetchImpl(key, {
         method: "GET",
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", ...requestHeaders },
         ...(controller ? { signal: controller.signal } : {}),
       });
       lastRequestAt = Date.now();
@@ -278,6 +279,7 @@ async function fetchWikidataEntities(readJson, entityIds, props = "claims|labels
   url.searchParams.set("languages", "en");
   url.searchParams.set("format", "json");
   url.searchParams.set("origin", "*");
+  url.searchParams.set("maxlag", "5");
   const response = await readJson(url, "Wikidata entity batch");
   if (!response.entities || typeof response.entities !== "object" || Array.isArray(response.entities)) {
     throw new TypeError("Wikidata entity response is missing entities");
@@ -301,7 +303,13 @@ export function createWikidataResearchProvider({
   assertFetch(fetchImpl);
   if (typeof clock !== "function") throw new TypeError("clock must be a function");
   assertPositiveInteger(maxResults, "maxResults", 20);
-  const readJson = createJsonReader(fetchImpl, { timeoutMs, cacheTtlMs, maxCacheEntries: 50, minRequestIntervalMs });
+  const clientIdentification = "JB Advisor Engine/0.1 (https://github.com/JASBH121101/TECH-PERFUMS-ADVISE)";
+  const requestHeaders = typeof window === "undefined"
+    ? { "User-Agent": clientIdentification }
+    : { "Api-User-Agent": clientIdentification };
+  const readJson = createJsonReader(fetchImpl, {
+    timeoutMs, cacheTtlMs, maxCacheEntries: 50, minRequestIntervalMs, requestHeaders,
+  });
 
   return Object.freeze({
     id: "wikidata",
@@ -319,6 +327,7 @@ export function createWikidataResearchProvider({
       searchUrl.searchParams.set("limit", String(limit));
       searchUrl.searchParams.set("format", "json");
       searchUrl.searchParams.set("origin", "*");
+      searchUrl.searchParams.set("maxlag", "5");
       const search = await readJson(searchUrl, "Wikidata search");
       if (!Array.isArray(search.search)) throw new TypeError("Wikidata search response is missing search results");
 
