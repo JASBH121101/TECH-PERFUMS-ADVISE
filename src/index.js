@@ -26,10 +26,12 @@ export function getEngineInfo() {
       "domain-isolated-normalization",
       "coverage-aware-recommendations",
       "versioned-local-knowledge",
+      "deterministic-advisor-orchestration",
     ],
   });
 }
 
+export { AdvisorCore, createAdvisorCore } from "./advisor/advisor-core.js";
 export {
   createEvidenceRecord,
   EVIDENCE_STATUSES,
