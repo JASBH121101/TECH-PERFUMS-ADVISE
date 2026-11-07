@@ -23,6 +23,8 @@ export function getEngineInfo() {
       "explainable-scoring",
       "offline-first",
       "human-approval-for-sensitive-changes",
+      "domain-isolated-normalization",
+      "coverage-aware-recommendations",
     ],
   });
 }
@@ -34,8 +36,23 @@ export {
 } from "./core/evidence.js";
 
 export { EvidenceStore } from "./core/evidence-store.js";
-
 export { getSourcePolicy, assessSource } from "./research/source-policy.js";
 export { createResearchCandidate } from "./research/research-candidate.js";
-
 export { compareProducts } from "./comparison/compare.js";
+
+export {
+  normalizeTechnologyProduct,
+  TECHNOLOGY_DEVICE_TYPES,
+} from "./domains/technology/adapter.js";
+export {
+  normalizeFragranceProduct,
+  FRAGRANCE_PRODUCT_TYPES,
+  FRAGRANCE_CONCENTRATIONS,
+} from "./domains/fragrance/adapter.js";
+
+export {
+  buildRecommendationCriteria,
+  getRecommendationProfiles,
+  RECOMMENDATION_PROFILES,
+  recommendProducts,
+} from "./recommendation/recommend.js";

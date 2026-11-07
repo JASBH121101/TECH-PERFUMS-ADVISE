@@ -11,10 +11,17 @@
 1. **Advisor Core:** request normalization, orchestration, policy enforcement.
 2. **Research Engine:** source discovery and retrieval adapters.
 3. **Evidence Engine:** provenance, timestamps, confidence, conflict handling.
-4. **Comparison Engine:** category-specific normalized comparisons.
-5. **Recommendation Engine:** user-priority weighting and explainable ranking.
-6. **Knowledge Engine:** local persistence, cache, import/export, and offline lookup.
-7. **Domain cores:** independent Fragrance Core and Tech Core.
+4. **Comparison Engine:** relative, domain-scoped scoring with optional strict evidence linkage.
+5. **Recommendation Engine:** user-priority weighting, profiles, coverage gates and explainable ranking.
+6. **Knowledge Engine:** planned durable local persistence, cache, import/export and offline lookup.
+7. **Domain cores:** independent Fragrance and Technology adapters with separate field schemas and units.
+
+## Domain boundaries
+
+- Technology covers smartphones, tablets and laptops only.
+- Fragrance treats perfume concentration separately from body mist, body spray, attar/oil and body lotion.
+- Unit conversion is explicit. USD and NIO prices remain separate until a caller supplies a dated FX conversion with its own evidence.
+- Missing facts are not imputed. Camera quality, real-world battery life, fragrance longevity and projection require measured or sourced values.
 
 ## Autonomy policy
 
@@ -39,11 +46,12 @@
 
 ## QA integration boundary
 
-JB Expert QA remains a separate private repository and an external quality gate. This public repository must not vendor, copy, or expose its source code. Integration must use a narrowly scoped, read-only credential stored as a GitHub Actions secret, and must be explicitly configured after the owner adds that secret. Until then, this repository runs its own Node.js checks and tests.
+JB Expert QA remains a separate private repository and an external quality gate. This public repository must not vendor, copy, or expose its source code. Integration uses a narrowly scoped, read-only credential stored as a GitHub Actions secret. A passing static audit is one quality signal, not proof of defect-free software.
 
-## Security and cost
+## Security, cost and offline behavior
 
 - Never commit credentials or customer data.
 - Paid APIs and external services are disabled by default.
 - Local deterministic rules must remain usable without network access.
 - External model output is advisory and cannot silently overwrite verified facts.
+- SQLite persistence is not yet implemented; current EvidenceStore is in-memory with JSON export/import.

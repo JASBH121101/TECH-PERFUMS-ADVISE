@@ -1,0 +1,19 @@
+# Domain Adapters
+
+## Technology Core
+
+`normalizeTechnologyProduct()` accepts only smartphones, tablets and laptops. It normalizes explicit unit-bearing values to canonical fields such as `ramGB`, `storageGB`, `displaySizeInches`, `weightGrams`, `batteryCapacityMah` and `batteryCapacityWh`.
+
+Storage TB is converted using 1 TB = 1024 GB. Display centimeters are converted to inches. Weight kilograms are converted to grams. Battery capacity requires an explicit mAh or Wh unit and remains in a separate canonical field; the adapter never compares unlike battery units.
+
+Price fields stay separate as `priceUSD` and `priceNIO`. Currency conversion is not performed implicitly. Quality scores are accepted only on the 0–100 scale and must be supplied by a measurement/research layer; raw megapixels are not treated as camera quality.
+
+## Fragrance Core
+
+`normalizeFragranceProduct()` accepts perfume, body mist, body spray, attar/oil and body lotion as separate product types. Concentration (Extrait, Parfum, EDP, EDT, EDC) is an independent perfume attribute; body products cannot silently inherit an EDP/EDT classification.
+
+Longevity intervals are preserved as `longevityMinHours` and `longevityMaxHours`; the adapter does not fabricate a midpoint. Projection, longevity and sillage remain separate measured/reported attributes, not deductions from concentration or notes.
+
+## Shared policy
+
+Both adapters preserve product IDs and evidence IDs, validate supported domain boundaries, normalize only explicit units, and avoid filling missing values. They are deterministic and usable offline.
