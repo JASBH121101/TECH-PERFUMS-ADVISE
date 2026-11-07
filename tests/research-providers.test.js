@@ -292,7 +292,9 @@ test("TechAPI is kept out of default providers until its share-alike terms are c
     scento: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
     wikidata: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
   });
-  assert.deepEqual(providers.map(provider => provider.id), ["scento-perfume-api", "wikidata"]);
+  assert.deepEqual(providers.map(provider => provider.id), [
+    "scento-perfume-api", "wikidata", "coreinfo-device-catalog",
+  ]);
 });
 
 test("Wikidata retries maxlag responses only after the upstream-reported delay", async () => {

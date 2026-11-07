@@ -38,8 +38,14 @@ test("matches exact universal identifiers even when display names differ", () =>
 });
 
 test("recognizes same model family but does not collapse different storage variants", () => {
-  const left = phone("a", { variant: { ramGB: 12, storageGB: 256, color: "Black" } });
-  const right = phone("b", { variant: { ramGB: 12, storageGB: 512, color: "Black" } });
+  const left = phone("a", {
+    variant: { ramGB: 12, storageGB: 256, color: "Black" },
+    attributes: { ramGB: 12, storageGB: 256 },
+  });
+  const right = phone("b", {
+    variant: { ramGB: 12, storageGB: 512, color: "Black" },
+    attributes: { ramGB: 12, storageGB: 512 },
+  });
   const result = matchProducts(left, right);
   assert.equal(result.matchType, "same_product_family");
   assert.equal(result.sameVariant, false);
