@@ -1,8 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeTechnologyProduct } from "../src/domains/technology/adapter.js";
+import { normalizeTechnologyProduct, TECHNOLOGY_DEVICE_TYPES } from "../src/domains/technology/adapter.js";
 
 const base = { id: "phone-1", name: "Phone", deviceType: "smartphone", attributes: {} };
+
+test("technology catalogue accepts the expanded device taxonomy", () => {
+  for (const deviceType of ["smartphone", "tablet", "laptop", "desktop", "console", "television", "monitor", "headphones", "earbuds", "speaker", "smartwatch", "camera", "router", "printer", "accessory"]) {
+    assert.equal(normalizeTechnologyProduct({ ...base, deviceType }).deviceType, deviceType);
+  }
+  assert.ok(TECHNOLOGY_DEVICE_TYPES.includes("handheld_console"));
+});
 
 test("normalizes explicit technology units without mixing battery units", () => {
   const result = normalizeTechnologyProduct({
@@ -23,11 +30,37 @@ test("normalizes explicit technology units without mixing battery units", () => 
   assert.equal(result.attributes.weightGrams, 1800);
 });
 
-test("rejects ambiguous units, invalid scores and unsupported device types", () => {
+test("supports structured specification fields for different technology categories", () => {
+  const result = normalizeTechnologyProduct({
+    ...base, deviceType: "laptop",
+    attributes: {
+      processor: "Intel Core Ultra 7",
+      gpu: "Intel Arc",
+      displayTechnology: "OLED",
+      displayResolution: "2880x1800",
+      ports: ["USB-C", "HDMI"],
+      hdrFormats: ["HDR10"],
+      keyboardSupport: true,
+      rayTracing: false,
+      cpuCores: 16,
+      memoryBandwidthGBs: 120,
+    },
+  });
+  assert.deepEqual(result.attributes.ports, ["USB-C", "HDMI"]);
+  assert.equal(result.attributes.processor, "Intel Core Ultra 7");
+  assert.equal(result.attributes.cpuCores, 16);
+  assert.equal(result.attributes.rayTracing, false);
+  assert.ok(Object.isFrozen(result.attributes.ports));
+});
+
+test("rejects ambiguous units, invalid scores, invalid typed specs and unknown device types", () => {
   assert.throws(() => normalizeTechnologyProduct({ ...base, attributes: { batteryCapacity: 5000 } }), /explicit unit/);
   assert.throws(() => normalizeTechnologyProduct({ ...base, attributes: { storage: { value: 1, unit: "PB" } } }), /unit/);
   assert.throws(() => normalizeTechnologyProduct({ ...base, attributes: { cameraScore: 101 } }), /between 0 and 100/);
-  assert.throws(() => normalizeTechnologyProduct({ ...base, deviceType: "television" }), /deviceType/);
+  assert.throws(() => normalizeTechnologyProduct({ ...base, deviceType: "spaceship" }), /deviceType/);
+  assert.throws(() => normalizeTechnologyProduct({ ...base, attributes: { ports: "USB-C" } }), /array/);
+  assert.throws(() => normalizeTechnologyProduct({ ...base, attributes: { rayTracing: "yes" } }), /boolean/);
+  assert.throws(() => normalizeTechnologyProduct({ ...base, attributes: { processor: 123 } }), /string/);
 });
 
 test("deep-freezes copied attributes and validates evidence ID lists", () => {

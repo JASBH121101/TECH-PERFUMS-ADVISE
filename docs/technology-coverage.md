@@ -1,0 +1,28 @@
+# Technology coverage model
+
+The technology domain accepts a shared normalized product envelope while retaining category-specific attributes. The current taxonomy includes:
+
+- Mobile: smartphone, tablet, smartwatch, fitness tracker.
+- Computing: laptop, desktop, workstation.
+- Gaming: console, handheld console.
+- Displays: television, monitor, projector.
+- Audio: headphones, earbuds, speaker.
+- Imaging: camera.
+- Networking and peripherals: router, network device, printer, accessory, other.
+
+## Attribute groups
+
+- Compute: processor/chipset, CPU model and cores, GPU, compute units, memory bandwidth.
+- Memory and storage: RAM, storage capacity and type, memory type, SSD read/write rates, expandable storage.
+- Display: panel/display technology, resolution, aspect ratio, diagonal size, refresh rate, brightness, HDR formats, variable refresh rate and touch.
+- Power and thermal: battery capacity (mAh and Wh kept separate), measured battery life, charging power, fan count and power supply.
+- Imaging and audio: camera system, megapixels, video resolution/FPS, camera features, audio codec, supported codecs, noise cancellation and speaker power.
+- Connectivity and I/O: network bands/generation, Wi-Fi, Bluetooth, wireless standards, ports, SIM types and wireless range.
+- Form, support and compatibility: weight, build material, software support, stylus/keyboard support, compatible devices/platforms, water resistance.
+- Advisory scores: performance, camera, video, display, gaming, productivity, portability, thermal stability, efficiency, build quality, audio, connectivity, repairability and value.
+
+The adapter validates field types and positive numeric metrics, freezes copied attributes, and normalizes explicit units. Battery mAh and Wh remain distinct; no conversion is attempted without voltage. Unknown category-specific attributes may still be retained as JSON-compatible data, but only allowlisted typed fields receive strict type validation. Evidence IDs remain field-scoped and must be resolved by the EvidenceStore before strict comparison.
+
+## Coverage is not verification
+
+A supported field means the local model can represent it; it does not mean a provider supplies it. Each imported value must carry its own source, timestamp, status and evidence ID. Provider coverage must be measured per category and field. Missing data must remain missing rather than being inferred. The current Wikidata provider is intentionally limited and does not provide a complete spec sheet.
