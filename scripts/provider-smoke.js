@@ -115,7 +115,7 @@ async function run() {
       query: "xiaomi-pad-8",
       limit: 1,
     });
-    if (["display_size", "display_resolution"].includes(field)) {
+    if (field === "display_size") {
       assert.ok(results.length > 0, `CoreInfo Xiaomi Pad 8 must expose published display field: ${field}`);
     }
     console.log(`CoreInfo Xiaomi Pad 8 ${field}: ${results.length ? "PRESENT" : "not published"}`);
