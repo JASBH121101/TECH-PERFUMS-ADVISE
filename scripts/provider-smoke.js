@@ -25,7 +25,7 @@ async function run() {
   assert.match(fragrance[0].source.url, /^https:\/\/www\.scento\.com\//u);
   console.log(`Scento: PASS — ${fragrance.length} profile; source ${fragrance[0].source.url}`);
 
-  const wikidata = createWikidataResearchProvider({ timeoutMs, maxResults: 5, cacheTtlMs: 0 });
+  const wikidata = createWikidataResearchProvider({ timeoutMs, maxResults: 5, cacheTtlMs: 5 * 60_000 });
   const technology = await wikidata.search({
     domain: DOMAINS.TECHNOLOGY,
     subjectId: "smoke-steam-deck",
