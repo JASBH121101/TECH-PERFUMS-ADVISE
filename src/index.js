@@ -32,3 +32,5 @@ export {
   EVIDENCE_STATUSES,
   SOURCE_TYPES,
 } from "./core/evidence.js";
+
+export { EvidenceStore } from "./core/evidence-store.js";
