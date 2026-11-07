@@ -53,13 +53,8 @@ export class EvidenceStore {
       groups.get(key).push(record);
     }
 
-    return Object.freeze(
-      [...groups.values()]
-        .filter(group => group.length > 1 || records.some(other =>
-          valueKey(other.value) !== valueKey(group[0].value)
-        ))
-        .map(group => Object.freeze([...group]))
-    );
+    if (groups.size < 2) return Object.freeze([]);
+    return Object.freeze([...groups.values()].map(group => Object.freeze([...group])));
   }
 
   get size() {
