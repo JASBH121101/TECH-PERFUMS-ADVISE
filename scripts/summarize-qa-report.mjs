@@ -30,7 +30,11 @@ const lines = [
   "|---|---:|",
   ...Object.entries(counts).filter(([, value]) => value > 0).map(([key, value]) => `| ${key} | ${value} |`),
   "",
-  "> This summary intentionally omits source excerpts, file contents, secrets, and full diagnostic payloads."
+  "",
+  "### Findings (metadata only)",
+  ...diagnostics.map((item, index) => `- ${index + 1}. [${String(item.severity ?? "unknown").toUpperCase()}] ${item.ruleId ?? "unclassified"} — ${item.title ?? "Untitled"}${typeof item.location?.file === "string" ? ` (${item.location.file})` : ""}`),
+  "",
+  "> Source excerpts, descriptions, evidence payloads, secrets, and full diagnostic details are intentionally omitted."
 ];
 
 await appendFile(summaryPath, lines.join("\n") + "\n", "utf8");
