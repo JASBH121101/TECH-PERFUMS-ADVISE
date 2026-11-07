@@ -26,18 +26,27 @@ async function run() {
     timeoutMs, maxResults: 5, cacheTtlMs: 5 * 60_000, minRequestIntervalMs: 1_000,
     maxlagRetries: 4,
   });
-  const technology = await wikidata.search({
-    domain: DOMAINS.TECHNOLOGY, subjectId: "smoke-steam-deck", field: "ram_capacity",
-    query: "Steam Deck LCD Model 1", limit: 5,
-  });
-  assert.ok(technology.length > 0, "Wikidata must return a RAM-capacity claim for Steam Deck LCD");
-  console.log(`Wikidata: PASS — ${technology.length} RAM claim(s)`);
-  for (const field of ["storage_capacity", "cpu", "gpu", "display_size"]) {
-    const results = await wikidata.search({
-      domain: DOMAINS.TECHNOLOGY, subjectId: `smoke-steam-deck-${field}`,
-      field, query: "Steam Deck LCD Model 1", limit: 5,
+  try {
+    const technology = await wikidata.search({
+      domain: DOMAINS.TECHNOLOGY, subjectId: "smoke-steam-deck", field: "ram_capacity",
+      query: "Steam Deck LCD Model 1", limit: 5,
     });
-    console.log(`Wikidata ${field}: ${results.length} claim(s)`);
+    assert.ok(technology.length > 0, "Wikidata must return a RAM-capacity claim for Steam Deck LCD");
+    console.log(`Wikidata: PASS — ${technology.length} RAM claim(s)`);
+    for (const field of ["storage_capacity", "cpu", "gpu", "display_size"]) {
+      const results = await wikidata.search({
+        domain: DOMAINS.TECHNOLOGY, subjectId: `smoke-steam-deck-${field}`,
+        field, query: "Steam Deck LCD Model 1", limit: 5,
+      });
+      console.log(`Wikidata ${field}: ${results.length} claim(s)`);
+    }
+  } catch (error) {
+    const message = String(error?.message ?? error);
+    if (/maxlag|HTTP 429|timed out after/i.test(message)) {
+      console.log(`Wikidata: DEFERRED — upstream temporarily unavailable (${message})`);
+    } else {
+      throw error;
+    }
   }
 
   const techapi = createTechApiResearchProvider({ timeoutMs, minRequestIntervalMs: 500 });
