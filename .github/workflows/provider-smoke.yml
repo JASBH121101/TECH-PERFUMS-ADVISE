@@ -5,7 +5,7 @@ on:
     branches:
       - feature/jb-advisor-engine
     paths:
-      - "src/research/providers.js"
+      - "src/research/**"
       - "scripts/provider-smoke.js"
       - "package.json"
       - ".github/workflows/provider-smoke.yml"
