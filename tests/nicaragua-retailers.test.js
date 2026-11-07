@@ -168,3 +168,21 @@ test("SICSA falls back to the visible local price when structured price text is 
   assert.equal(result[0].value.currency, "NIO");
   assert.equal(result[0].value.taxIncluded, false);
 });
+
+
+test("SICSA extracts SKU labels with or without a colon", async () => {
+  const html = [
+    "<html><body>",
+    "<h1>Example laptop</h1>",
+    "<p>Producto SICSA SKU LAPT0185</p>",
+    "<p>C$72,666.89 + IVA</p>",
+    "</body></html>",
+  ].join("");
+  const provider = createSicsaResearchProvider({
+    fetchImpl: async () => htmlResponse(html),
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  const result = await provider.search({ query: slug, field: "sku" });
+  assert.equal(result[0].value, "LAPT0185");
+});

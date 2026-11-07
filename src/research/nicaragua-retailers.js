@@ -104,8 +104,8 @@ function parseSicsaPage(html) {
   const pageText = stripHtml(html);
   const h1 = html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/iu)?.[1];
   const name = product.name ?? readMeta(html, "og:title") ?? stripHtml(h1);
-  const skuText = stripHtml(html.match(/(?:Producto\s+SICSA\s+)?SKU\s*:\s*([A-Z0-9_-]+)/iu)?.[0]);
-  const sku = product.sku ?? skuText.match(/([A-Z0-9_-]+)$/u)?.[1] ?? null;
+  const skuMatch = pageText.match(/\bSKU\b\s*:?\s*([A-Z0-9_-]+)/iu);
+  const sku = product.sku ?? skuMatch?.[1] ?? null;
 
   const priceContainer = html.match(
     /<(p|div|span)\b(?=[^>]*class=["'][^"']*\bprice\b[^"']*["'])[^>]*>([\s\S]*?)<\/\1>/iu,
