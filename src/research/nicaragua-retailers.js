@@ -101,6 +101,7 @@ function parseSicsaPage(html) {
   const products = collectJsonLdProducts(html);
   const product = products[0] ?? {};
   const offer = firstOffer(product) ?? {};
+  const pageText = stripHtml(html);
   const h1 = html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/iu)?.[1];
   const name = product.name ?? readMeta(html, "og:title") ?? stripHtml(h1);
   const skuText = stripHtml(html.match(/(?:Producto\s+SICSA\s+)?SKU\s*:\s*([A-Z0-9_-]+)/iu)?.[0]);
@@ -112,7 +113,13 @@ function parseSicsaPage(html) {
   const priceText = stripHtml(priceContainer);
   const productSectionHtml = html.match(/<h1\b[^>]*>[\s\S]*?<\/h1>([\s\S]{0,3000})/iu)?.[1] ?? "";
   const productSectionText = stripHtml(productSectionHtml);
-  const visibleProductPrice = productSectionText.match(
+  const skuIndex = sku ? pageText.toLowerCase().indexOf(String(sku).toLowerCase()) : -1;
+  const nameIndex = typeof name === "string"
+    ? pageText.toLowerCase().indexOf(stripHtml(name).toLowerCase()) : -1;
+  const productStart = skuIndex >= 0 ? skuIndex : nameIndex;
+  const productText = productStart >= 0
+    ? pageText.slice(productStart, productStart + 1800) : productSectionText;
+  const visibleProductPrice = productText.match(
     /(?:C\$\s*[\d,]+(?:\.\d{1,2})?|NIO\s*[\d,]+(?:\.\d{1,2})?)(?:\s*\+\s*IVA)?/iu,
   )?.[0] ?? "";
   const effectivePriceText = priceText || visibleProductPrice;
@@ -131,15 +138,17 @@ function parseSicsaPage(html) {
   const stockText = stripHtml(
     html.match(/<(p|div|span)\b(?=[^>]*class=["'][^"']*\bstock\b[^"']*["'])[^>]*>([\s\S]*?)<\/\1>/iu)?.[2] ?? "",
   );
-  const pageText = stripHtml(html);
-  const quantityMatch = (stockText || pageText).match(/\b(\d+)\s*(?:disponibles?|available)\b/iu);
+  const stockScope = stockText || productText;
+  const quantityMatch = stockScope.match(/\b(\d+)\s*(?:disponibles?|available)\b/iu);
   const availabilityUrl = String(offer.availability ?? "").toLowerCase();
   let availability = null;
   if (quantityMatch) {
     availability = { status: "in_stock", quantity: Number(quantityMatch[1]) };
-  } else if (/\b(?:outofstock|soldout)\b/u.test(availabilityUrl) || /\b(?:agotado|sin existencias|out of stock)\b/iu.test(stockText)) {
+  } else if (/\b(?:outofstock|soldout)\b/u.test(availabilityUrl) ||
+      /\b(?:agotado|sin existencias|out of stock)\b/iu.test(stockText)) {
     availability = { status: "out_of_stock" };
-  } else if (/\binstock\b/u.test(availabilityUrl) || /\b(?:hay existencias|en existencia|in stock)\b/iu.test(stockText)) {
+  } else if (/\binstock\b/u.test(availabilityUrl) ||
+      /\b(?:hay existencias|en existencia|in stock)\b/iu.test(stockText)) {
     availability = { status: "in_stock" };
   }
 
