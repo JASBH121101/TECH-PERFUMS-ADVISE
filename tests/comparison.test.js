@@ -11,7 +11,7 @@ test("ranks products by explicit weighted criteria and direction", () => {
   const result = compareProducts({
     products: phones,
     criteria: [
-      { field: "performance", weight: 3, direction: "higher" },
+      { field: "performance", weight: 4, direction: "higher" },
       { field: "battery", weight: 2, direction: "higher" },
       { field: "price", weight: 1, direction: "lower" },
     ],
@@ -45,7 +45,17 @@ test("does not compare fragrance and technology products together", () => {
 });
 
 test("rejects more than four products, duplicate IDs and invalid weights", () => {
-  assert.throws(() => compareProducts({ products: [...phones, ...phones.slice(0, 1), { ...phones[1], id: "d" }], criteria: [{ field: "performance", weight: 1 }] }), /between 2 and 4/);
+  const fiveProducts = [
+    ...phones,
+    ...["c", "d", "e"].map(id => ({
+      id,
+      name: `Phone ${id.toUpperCase()}`,
+      domain: "technology",
+      attributes: { performance: 70, battery: 70, price: 700 },
+    })),
+  ];
+  assert.equal(fiveProducts.length, 5);
+  assert.throws(() => compareProducts({ products: fiveProducts, criteria: [{ field: "performance", weight: 1 }] }), /between 2 and 4/);
   assert.throws(() => compareProducts({ products: phones, criteria: [{ field: "performance", weight: 0 }] }), /positive/);
   assert.throws(() => compareProducts({ products: [phones[0], phones[0]], criteria: [{ field: "performance", weight: 1 }] }), /unique/);
 });
