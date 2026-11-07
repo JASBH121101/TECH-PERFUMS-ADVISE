@@ -34,4 +34,4 @@ const lines = [
 ];
 
 await appendFile(summaryPath, lines.join("\n") + "\n", "utf8");
-console.log("Sanitized QA summary written to the workflow summary.");
+console.log(lines.join("\n"));
