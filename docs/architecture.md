@@ -13,7 +13,7 @@
 3. **Evidence Engine:** provenance, timestamps, confidence, conflict handling.
 4. **Comparison Engine:** relative, domain-scoped scoring with optional strict evidence linkage.
 5. **Recommendation Engine:** user-priority weighting, profiles, coverage gates and explainable ranking.
-6. **Knowledge Engine:** planned durable local persistence, cache, import/export and offline lookup.
+6. **Knowledge Engine:** versioned local snapshots, validated migrations, append-only evidence persistence boundary, JSON backup and safe merge restore.
 7. **Domain cores:** independent Fragrance and Technology adapters with separate field schemas and units.
 
 ## Domain boundaries
@@ -54,4 +54,4 @@ JB Expert QA remains a separate private repository and an external quality gate.
 - Paid APIs and external services are disabled by default.
 - Local deterministic rules must remain usable without network access.
 - External model output is advisory and cannot silently overwrite verified facts.
-- SQLite persistence is not yet implemented; current EvidenceStore is in-memory with JSON export/import.
+- Knowledge schema and backup validation are implemented; the included memory adapter is only a test/reference adapter. Durable SQLite persistence still requires the future Android/Capacitor adapter.

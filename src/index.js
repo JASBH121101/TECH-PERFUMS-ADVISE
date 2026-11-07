@@ -25,6 +25,7 @@ export function getEngineInfo() {
       "human-approval-for-sensitive-changes",
       "domain-isolated-normalization",
       "coverage-aware-recommendations",
+      "versioned-local-knowledge",
     ],
   });
 }
@@ -36,6 +37,16 @@ export {
 } from "./core/evidence.js";
 
 export { EvidenceStore } from "./core/evidence-store.js";
+export {
+  KnowledgeStore,
+  MemoryKnowledgeAdapter,
+} from "./knowledge/knowledge-store.js";
+export {
+  KNOWLEDGE_SCHEMA_VERSION,
+  createEmptyKnowledgeSnapshot,
+  migrateKnowledgeSnapshot,
+  validateKnowledgeSnapshot,
+} from "./knowledge/migrations.js";
 export { getSourcePolicy, assessSource } from "./research/source-policy.js";
 export { createResearchCandidate } from "./research/research-candidate.js";
 export { compareProducts } from "./comparison/compare.js";
