@@ -1,4 +1,4 @@
-import { DOMAINS } from "../index.js";
+import { DOMAINS } from "./domains.js";
 
 export const EVIDENCE_STATUSES = Object.freeze({
   VERIFIED: "verified",
