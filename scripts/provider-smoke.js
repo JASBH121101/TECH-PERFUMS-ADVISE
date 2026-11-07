@@ -23,6 +23,7 @@ async function run() {
 
   const wikidata = createWikidataResearchProvider({
     timeoutMs, maxResults: 5, cacheTtlMs: 5 * 60_000, minRequestIntervalMs: 1_000,
+    maxlagRetries: 4,
   });
   const technology = await wikidata.search({
     domain: DOMAINS.TECHNOLOGY, subjectId: "smoke-steam-deck", field: "ram_capacity",
