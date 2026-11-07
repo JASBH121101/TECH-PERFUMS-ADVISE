@@ -100,6 +100,7 @@ const evidence = (id, value) => ({
   confidence: 0.95,
   source,
   observedAt: "2026-11-07T18:00:00.000Z",
+  note: null,
 });
 const snapshot = (id = "ev-1") => ({
   schemaVersion: 1,
