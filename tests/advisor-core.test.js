@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { AdvisorCore, createAdvisorCore } from "../src/advisor/advisor-core.js";
 import { KnowledgeStore, MemoryKnowledgeAdapter } from "../src/knowledge/knowledge-store.js";
 import { EVIDENCE_STATUSES, SOURCE_TYPES } from "../src/core/evidence.js";
+import { normalizeTechnologyProduct } from "../src/domains/technology/adapter.js";
 
 const phones = [
   {
@@ -91,14 +92,16 @@ test("orchestrates Technology Advisor normalization and recommendation", () => {
   assert.equal(result.evidence.mode, "not_assessed");
 });
 
-test("normalizes explicit storage units without mutating request data", () => {
+test("normalizes storage units and keeps the original advisor request immutable", () => {
   const request = structuredClone({
     domain: "technology",
     products: phones,
     profile: "balanced",
   });
+  const normalized = normalizeTechnologyProduct(request.products[0]);
   const advisor = new AdvisorCore();
-  const result = advisor.advise(request);
+  const result = advisor.advise({ ...request, profile: "photography_video" });
+  assert.equal(normalized.attributes.storageGB, 1024);
   assert.equal(phones[0].attributes.storage.value, 1);
   assert.equal(result.recommendation.ranking[0].id, "phone-a");
   assert.equal(Object.isFrozen(result.products), true);
