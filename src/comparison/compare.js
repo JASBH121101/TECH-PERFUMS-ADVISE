@@ -34,7 +34,10 @@ function normalizeCriteria(criteria) {
     if (direction === "target" && (typeof item.target !== "number" || !Number.isFinite(item.target))) {
       throw new TypeError("Target direction requires a finite numeric target");
     }
-    if (direction === "match" && (typeof item.target !== "string" || !item.target.trim())) {\n      throw new TypeError("Match direction requires a non-empty string target");\n    }\n    return Object.freeze({ field, weight, direction, target: item.target ?? null });
+    if (direction === "match" && (typeof item.target !== "string" || !item.target.trim())) {
+      throw new TypeError("Match direction requires a non-empty string target");
+    }
+    return Object.freeze({ field, weight, direction, target: item.target ?? null });
   });
 }
 
