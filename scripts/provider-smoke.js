@@ -69,6 +69,31 @@ async function run() {
     assert.ok(result.length > 0, `TechAPI must return ${field} for ${query}`);
     console.log(`TechAPI ${query}: PASS — ${result[0].value}`);
   }
+
+  const fieldChecks = [
+    ["smartphones:iphone-18-pro-max", ["ram_gb"]],
+    ["monitors:acer-cb241y-amazonmon-603", ["display_size", "display_resolution", "ppi"]],
+    ["socs:snapdragon-8-elite", ["manufacturer", "process_nm", "cpu_config", "gpu", "gpu_clock_mhz", "npu_tops"]],
+    ["gpus:geforce-rtx-5090", ["manufacturer", "memory_gb", "memory_type", "memory_bandwidth_gbps", "tensor_cores", "fp32_tflops"]],
+    ["cpus:core-i9-14900k", ["manufacturer", "architecture", "cpu_cores", "cpu_threads", "boost_clock_ghz", "tdp_w"]],
+    ["tablets:xiaomi-poco-pad-8gb-256gb-3g", ["ram_gb", "storage_options_gb"]],
+    ["watches:apple-watch-series-11-42mm", ["ram_gb", "battery_mah", "storage_options_gb"]],
+    ["pdas:ipaq-glisten", ["ram_gb", "battery_mah", "display_size"]],
+    ["device-catalog:samsung-galaxy-a08", ["form_factor", "model_numbers", "ram_gb"]],
+  ];
+  for (const [query, fields] of fieldChecks) {
+    for (const field of fields) {
+      const results = await techapi.search({
+        domain: DOMAINS.TECHNOLOGY,
+        subjectId: `smoke-${query}-${field}`,
+        query,
+        field,
+        limit: 1,
+      });
+      assert.ok(results.length > 0, `TechAPI must expose ${field} for ${query}`);
+      console.log(`TechAPI field ${query} / ${field}: PRESENT`);
+    }
+  }
   const coreInfo = createCoreInfoResearchProvider({ timeoutMs, minRequestIntervalMs: 500 });
   const coreInfoResult = await coreInfo.search({
     domain: DOMAINS.TECHNOLOGY,
