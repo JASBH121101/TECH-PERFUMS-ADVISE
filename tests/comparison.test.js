@@ -62,3 +62,21 @@ test("returns tie or insufficient data instead of inventing a winner", () => {
   assert.equal(empty.decision, "insufficient_data");
   assert.equal(empty.winnerId, null);
 });
+
+test("match criteria require and honor an explicit preference", () => {
+  const result = compareProducts({
+    products: [
+      { id: "dark", name: "Dark", domain: "fragrance", attributes: { profile: "woody" } },
+      { id: "fresh", name: "Fresh", domain: "fragrance", attributes: { profile: "fresh" } },
+    ],
+    criteria: [{ field: "profile", weight: 1, direction: "match", target: "fresh" }],
+  });
+  assert.equal(result.winnerId, "fresh");
+  assert.throws(() => compareProducts({
+    products: [
+      { id: "a", name: "A", domain: "fragrance", attributes: { profile: "woody" } },
+      { id: "b", name: "B", domain: "fragrance", attributes: { profile: "fresh" } },
+    ],
+    criteria: [{ field: "profile", weight: 1, direction: "match" }],
+  }), /target/);
+});
