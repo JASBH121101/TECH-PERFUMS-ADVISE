@@ -37,7 +37,7 @@ export function getEngineInfo() {
 export { AdvisorCore, createAdvisorCore } from "./advisor/advisor-core.js";
 export { ResearchEngine } from "./research/research-engine.js";
 export { CatalogIndex, searchCatalog } from "./knowledge/catalog-index.js";
-export { createScentoResearchProvider, createWikidataResearchProvider, createTechApiResearchProvider, createDefaultResearchProviders } from "./research/providers.js";
+export { createScentoResearchProvider, createWikidataResearchProvider, createTechApiResearchProvider, createCoreInfoResearchProvider, createDefaultResearchProviders } from "./research/providers.js";
 export {
   createEvidenceRecord,
   EVIDENCE_STATUSES,
@@ -63,6 +63,7 @@ export {
 export { getSourcePolicy, assessSource } from "./research/source-policy.js";
 export { createResearchCandidate } from "./research/research-candidate.js";
 export { compareProducts } from "./comparison/compare.js";
+export { matchProducts, findProductMatches, ProductIdentityMatcher } from "./core/product-matching.js";
 
 export {
   normalizeTechnologyProduct,

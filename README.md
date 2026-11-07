@@ -27,10 +27,11 @@ JB Advisor Engine (JBAE) is the deterministic intelligence core planned for the 
 - **Comparison Engine:** domain- and category-safe comparison for 2–4 candidates, with missing-data and evidence coverage accounting.
 - **Recommendation Engine:** configurable priorities, domain profiles, minimum coverage gates, tie handling and explainable strengths/compromises.
 - **Knowledge Engine:** schema v2 snapshot, persisted domain-separated product catalog, evidence-linked products, version migrations, validated JSON backup and non-destructive merge restore.
-- **Local Catalog Index:** offline search by exact ID/model/name, aliases, brand and selected attributes; case/diacritic insensitive, bounded, deterministic and domain-filtered. Potential duplicates are flagged for review, never auto-merged.
+- **Product Identity Matcher:** deterministic cross-source identity matching using GTIN/EAN/UPC, manufacturer identifiers, brand, model, category and variant attributes. Distinguishes exact variants from same-family candidates; never auto-merges.
+- **Local Catalog Index:** offline search by exact ID/model/name, aliases, brand and selected attributes; case/diacritic insensitive, bounded, deterministic and domain-filtered. Supports identity-aware match lookup; potential duplicates are flagged for review, never auto-merged.
 - **SQLite adapter:** transactional persistence adapter for an already opened Capacitor SQLite connection, with schema version checks and SQLite quick integrity check.
 - **Advisor Core:** deterministic orchestration of normalization, evidence integration and recommendation.
-- **Research Engine:** provider-agnostic research intake; Scento (fragrance) and Wikidata (selected technology fields) providers return unconfirmed candidates that require explicit approval before staging.
+- **Research Engine:** provider-agnostic research intake; Scento (fragrance), Wikidata, TechAPI (opt-in) and CoreInfo (technology) return unconfirmed candidates that require explicit approval before staging.
 
 ## Repository workflow
 
@@ -53,12 +54,9 @@ The GitHub Actions validation workflow checks JavaScript syntax and runs the ful
 
 ## Current validation
 
-Latest validation on commit `d75571f`:
+Validation is run on every branch update through GitHub Actions. The current branch has passed the most recent recorded CI (144 tests) and JB Expert QA (100/100, 19 rules, 0 findings) before this phase's new changes. The expanded identity tests and CoreInfo live-provider smoke must pass again on the new commit before this phase is considered validated.
 
-- **Automated tests:** 117 passed, 0 failed.
-- **JB Expert QA:** 100/100, 19 rules executed, 0 rule execution errors, 0 findings.
-
-These checks validate engine code and mocked provider contracts. They do not certify native Android behavior or guarantee defect-free software. Live provider endpoint smoke tests and broader authoritative technology coverage remain pending.
+These checks validate deterministic engine logic and bounded provider endpoints. They do not certify native Android behavior, overall source accuracy, or Nicaragua-local price/availability coverage.
 
 ## Not yet implemented / device validation pending
 

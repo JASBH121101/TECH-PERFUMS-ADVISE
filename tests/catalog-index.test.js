@@ -62,3 +62,29 @@ test("rejects mixed-domain invalid products and duplicate IDs", () => {
   assert.throws(() => new CatalogIndex([phone("same", "Phone"), phone("same", "Other")]), /Duplicate/);
   assert.throws(() => new CatalogIndex([{ id: "x", name: "bad", domain: "other" }]), /domain/);
 });
+
+
+test("catalog index can find identity matches across entries without merging records", async () => {
+  const { CatalogIndex } = await import("../src/knowledge/catalog-index.js");
+  const products = [
+    {
+      id: "local-1", domain: "technology", name: "Samsung Galaxy S25 Ultra",
+      brand: "Samsung", model: "Galaxy S25 Ultra", deviceType: "smartphone",
+      attributes: { ramGB: 12, storageGB: 256 },
+    },
+    {
+      id: "local-2", domain: "technology", name: "Samsung Galaxy S24 Ultra",
+      brand: "Samsung", model: "Galaxy S24 Ultra", deviceType: "smartphone",
+      attributes: { ramGB: 12, storageGB: 256 },
+    },
+  ];
+  const index = new CatalogIndex(products);
+  const incoming = {
+    id: "incoming", domain: "technology", name: "Samsung S25 Ultra",
+    brand: "Samsung", model: "Galaxy S25 Ultra", deviceType: "smartphone",
+    attributes: { ramGB: 12, storageGB: 256 },
+  };
+  const matches = index.findMatches(incoming, { minScore: 45 });
+  assert.equal(matches[0].rightId, "local-1");
+  assert.equal(index.size, 2);
+});

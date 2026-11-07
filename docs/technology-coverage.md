@@ -21,6 +21,8 @@ The technology domain accepts a shared normalized product envelope while retaini
 - Form, support and compatibility: weight, build material, software support, stylus/keyboard support, compatible devices/platforms, water resistance.
 - Advisory scores: performance, camera, video, display, gaming, productivity, portability, thermal stability, efficiency, build quality, audio, connectivity, repairability and value.
 
+Provider coverage now includes CoreInfo device records (exact-slug JSON), TechAPI exact-slug component/device records, and selected Wikidata facts. CoreInfo currently lists smartphones, tablets, smartwatches, laptops, earbuds, TVs, speakers, headphones, monitors, consoles/handhelds and smart rings; TechAPI exposes smartphone, tablet, laptop, monitor, watch, SoC, GPU and CPU resources. Provider coverage is record- and field-dependent, not a guarantee that every product has a complete spec sheet.
+
 The adapter validates field types and positive numeric metrics, freezes copied attributes, and normalizes explicit units. Battery mAh and Wh remain distinct; no conversion is attempted without voltage. Unknown category-specific attributes may still be retained as JSON-compatible data, but only allowlisted typed fields receive strict type validation. Evidence IDs remain field-scoped and must be resolved by the EvidenceStore before strict comparison.
 
 ## Coverage is not verification

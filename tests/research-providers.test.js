@@ -6,6 +6,7 @@ import {
   createScentoResearchProvider,
   createWikidataResearchProvider,
   createTechApiResearchProvider,
+  createCoreInfoResearchProvider,
   WIKIDATA_RESEARCH_FIELDS,
 } from "../src/research/providers.js";
 
@@ -174,9 +175,12 @@ test("default research provider registry contains isolated fragrance and technol
     scento: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
     wikidata: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
   });
-  assert.deepEqual(providers.map(provider => provider.id), ["scento-perfume-api", "wikidata"]);
+  assert.deepEqual(providers.map(provider => provider.id), [
+    "scento-perfume-api", "wikidata", "coreinfo-device-catalog",
+  ]);
   assert.deepEqual(providers[0].domains, [DOMAINS.FRAGRANCE]);
   assert.deepEqual(providers[1].domains, [DOMAINS.TECHNOLOGY]);
+  assert.deepEqual(providers[2].domains, [DOMAINS.TECHNOLOGY]);
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("ram_capacity"));
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("storage_capacity"));
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("cpu"));
@@ -368,4 +372,63 @@ test("TechAPI component resources return real record-shaped fields", async () =>
     const result = await provider.search({ query, field: "name" });
     assert.equal(result[0].value, expected);
   }
+});
+
+
+test("CoreInfo exact-slug provider maps device identity, specification labels and published price", async () => {
+  const calls = [];
+  const provider = createCoreInfoResearchProvider({
+    fetchImpl: async url => {
+      calls.push(String(url));
+      return response({
+        slug: "huawei-nova-16-se",
+        name: "Huawei Nova 16 SE",
+        brand: "Huawei",
+        category: "smartphones",
+        price: { amount: 39990, currency: "INR", display: "₹39,990" },
+        specifications: [
+          { category: "Memory", items: [
+            { name: "RAM", value: "12 GB" },
+            { name: "Internal Storage", value: "256 GB" },
+          ] },
+        ],
+        source_urls: ["https://consumer.huawei.com/example/nova-16-se/specs/"],
+      });
+    },
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  const base = {
+    domain: DOMAINS.TECHNOLOGY,
+    subjectId: "huawei-nova-16-se",
+    query: "huawei-nova-16-se",
+    limit: 1,
+  };
+  const name = await provider.search({ ...base, field: "name" });
+  const ram = await provider.search({ ...base, field: "ram" });
+  const price = await provider.search({ ...base, field: "price" });
+  assert.equal(name[0].value, "Huawei Nova 16 SE");
+  assert.equal(ram[0].value, "12 GB");
+  assert.deepEqual(price[0].value, {
+    amount: 39990, currency: "INR", indicative: true, basis: "published_reference",
+  });
+  assert.equal(price[0].source.attribution, "Data from CoreInfo");
+  assert.ok(price[0].note.includes("not be current"));
+  assert.equal(calls.length, 1);
+  assert.match(calls[0], /\/api\/device\/huawei-nova-16-se\.json$/u);
+});
+
+test("CoreInfo exact-slug provider rejects broad search phrases and mismatched records", async () => {
+  const provider = createCoreInfoResearchProvider({
+    fetchImpl: async () => response({ slug: "different-device", name: "Different Device" }),
+    minRequestIntervalMs: 0,
+  });
+  await assert.rejects(
+    () => provider.search({ query: "Samsung Galaxy S25", field: "name" }),
+    /exact device slug/u,
+  );
+  await assert.rejects(
+    () => provider.search({ query: "huawei-nova-16-se", field: "name" }),
+    /does not match the requested device slug/u,
+  );
 });

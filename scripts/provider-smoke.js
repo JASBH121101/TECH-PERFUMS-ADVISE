@@ -4,6 +4,7 @@ import {
   createScentoResearchProvider,
   createWikidataResearchProvider,
   createTechApiResearchProvider,
+  createCoreInfoResearchProvider,
 } from "../src/research/providers.js";
 
 const timeoutMs = 15_000;
@@ -55,6 +56,30 @@ async function run() {
     assert.ok(result.length > 0, `TechAPI must return ${field} for ${query}`);
     console.log(`TechAPI ${query}: PASS — ${result[0].value}`);
   }
+  const coreInfo = createCoreInfoResearchProvider({ timeoutMs, minRequestIntervalMs: 500 });
+  const coreInfoResult = await coreInfo.search({
+    domain: DOMAINS.TECHNOLOGY,
+    subjectId: "smoke-huawei-nova-16-se",
+    field: "name",
+    query: "huawei-nova-16-se",
+    limit: 1,
+  });
+  assert.ok(coreInfoResult.length > 0, "CoreInfo must return the Huawei Nova 16 SE exact-slug device record");
+  assert.equal(coreInfoResult[0].source.attribution, "Data from CoreInfo");
+  assert.ok(coreInfoResult[0].source.url.startsWith("https://www.coreinfos.in/"));
+  console.log(`CoreInfo smartphone: PASS — ${coreInfoResult[0].value}`);
+
+  const coreInfoLaptop = await coreInfo.search({
+    domain: DOMAINS.TECHNOLOGY,
+    subjectId: "smoke-hp-15-fc0500au",
+    field: "name",
+    query: "hp-15-fc0500au-laptop-amd-ryzen-3-7320u-8gb-512gb-ssd-win11-home",
+    limit: 1,
+  });
+  assert.ok(coreInfoLaptop.length > 0, "CoreInfo must return an exact-slug laptop record");
+  assert.equal(coreInfoLaptop[0].source.attribution, "Data from CoreInfo");
+  console.log(`CoreInfo laptop: PASS — ${coreInfoLaptop[0].value}`);
+
   console.log("External provider smoke tests passed. Research results remain unconfirmed candidates.");
 }
 

@@ -262,3 +262,23 @@ test("catalog evidence references are grouped by attribute and checked against t
   assert.deepEqual(product.evidenceIds, { storageGB: ["ev-storage"] });
   assert.equal(store.getProducts()[0].evidenceIds.storageGB[0], "ev-storage");
 });
+
+
+test("KnowledgeStore exposes identity-aware matching without changing persisted catalog rows", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  await store.addProduct({
+    id: "catalog-s25", domain: "technology", name: "Samsung Galaxy S25 Ultra",
+    brand: "Samsung", model: "Galaxy S25 Ultra", deviceType: "smartphone",
+    attributes: { ramGB: 12, storageGB: 256 },
+  });
+  const incoming = {
+    id: "incoming-s25", domain: "technology", name: "Samsung S25 Ultra",
+    brand: "Samsung", model: "Galaxy S25 Ultra", deviceType: "smartphone",
+    attributes: { ramGB: 12, storageGB: 256 },
+  };
+  const before = store.getProducts().length;
+  const matches = store.findProductMatches(incoming);
+  assert.equal(matches[0].rightId, "catalog-s25");
+  assert.equal(store.getProducts().length, before);
+});

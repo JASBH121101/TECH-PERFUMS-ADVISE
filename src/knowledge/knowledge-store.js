@@ -133,6 +133,9 @@ export class KnowledgeStore {
   searchProducts(options = {}) {
     return new CatalogIndex(this.#snapshot.catalog.products).search(options);
   }
+  findProductMatches(product, options = {}) {
+    return new CatalogIndex(this.#snapshot.catalog.products).findMatches(product, options);
+  }
   findPotentialDuplicateProducts() {
     return new CatalogIndex(this.#snapshot.catalog.products).findPotentialDuplicates();
   }

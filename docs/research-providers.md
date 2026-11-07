@@ -7,6 +7,7 @@ JBAE's provider adapters are read-only candidate collectors. Every returned clai
 | Domain / category | Current source | Supported fields in this adapter | Coverage status |
 |---|---|---|---|
 | Fragrance | Scento | Identity, house, perfumer, year, concentration, family, subfamily, character, notes, accords, signature materials, seasons and wear hours | Live provider; bounded smoke test |
+| Technology categories | CoreInfo | Smartphones, laptops, tablets, smartwatches, headphones, earbuds, speakers, TVs, monitors and consoles/handhelds (record-dependent) | Live exact-slug JSON provider; bounded smoke test |
 | Smartphones / tablets | Wikidata | Identity, manufacturer, OS, device type, release date, display diagonal, RAM, storage, CPU and GPU | Partial and uneven |
 | Laptops / desktops / workstations | Wikidata | Identity, manufacturer, OS, device type, release date, display diagonal, RAM, storage, CPU and GPU | Partial and uneven |
 | Consoles / handhelds | Wikidata | Identity, manufacturer, OS where present, device type, release date, RAM, storage, CPU and GPU | Partial and uneven |
@@ -27,6 +28,18 @@ A mapped field means the provider understands its Wikidata property. It does not
 
 Documentation: https://www.scento.com/developers/perfume-api  
 Terms: https://www.scento.com/terms-of-service#perfume-api
+
+## CoreInfo device JSON
+
+- Provider ID: `coreinfo-device-catalog`; enabled in the default technology provider registry.
+- Read-only exact-slug endpoint: `GET https://www.coreinfos.in/api/device/{slug}.json`.
+- A device page is linked as the canonical source and CoreInfo is attributed as the database publisher.
+- The adapter reads only the requested device record; it does not bulk-download or mirror the catalogue.
+- Fields are mapped from direct record properties and labelled specification groups; absent fields remain absent.
+- The price field preserves the original published amount and currency. It never substitutes the site's converted currency estimate or claims to be a Nicaragua retailer quote.
+- The site states that reuse is allowed with attribution and that listed prices can be indicative; every claim still remains unconfirmed in JBAE until independently reviewed.
+
+CoreInfo reports more than 3,700 records across 11 device categories. Its catalogue is not a Nicaragua retailer feed, and its prices are not live local availability or checkout prices. See https://www.coreinfos.in/ and https://www.coreinfos.in/methodology.
 
 ## Wikidata
 
@@ -81,6 +94,6 @@ Each candidate preserves up to ten canonical `source_urls` from the record. Its 
 
 Provider confidence values are input heuristics, not calibrated probabilities and not verification. A recent retrieval does not prove the product identity matches the intended regional SKU, that the claim is complete, or that a retailer listing applies in Nicaragua. Claims should be cross-checked against manufacturer documentation or independent tests before verification.
 
-The live smoke workflow performs a bounded Scento Layton lookup, Wikidata Steam Deck probes and exact-slug TechAPI lookups for a published smartphone, laptop and monitor. It tests current endpoint shape, but it does not certify overall data coverage or accuracy. Results always remain unconfirmed candidates.
+The live smoke workflow performs a bounded Scento Layton lookup, Wikidata Steam Deck probes, exact-slug TechAPI lookups for a smartphone, laptop, monitor, SoC, GPU and CPU, and a CoreInfo Huawei Nova 16 SE exact-slug lookup. It tests current endpoint shape, but it does not certify overall data coverage or accuracy. Results always remain unconfirmed candidates.
 
 If the network is unavailable, provider calls fail explicitly; local catalog search, comparison and recommendations remain usable from persisted knowledge.

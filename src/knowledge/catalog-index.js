@@ -1,5 +1,6 @@
 import { DOMAINS } from "../core/domains.js";
 import { normalizeCatalogProduct } from "./migrations.js";
+import { findProductMatches } from "../core/product-matching.js";
 
 const SEARCHABLE_ATTRIBUTES = Object.freeze({
   [DOMAINS.FRAGRANCE]: Object.freeze([
@@ -114,6 +115,15 @@ export class CatalogIndex {
       Number(b.matchType === "exact") - Number(a.matchType === "exact") ||
       b.score - a.score || compareText(a.product.id, b.product.id));
     return Object.freeze(results.slice(0, limit).map(result => Object.freeze(result)));
+  }
+  findMatches(product, { minScore = 45, limit = 10 } = {}) {
+    const normalized = normalizeCatalogProduct(product);
+    return findProductMatches({
+      product: normalized,
+      candidates: this.#products,
+      minScore,
+      limit,
+    });
   }
   findPotentialDuplicates() {
     const groups = new Map();

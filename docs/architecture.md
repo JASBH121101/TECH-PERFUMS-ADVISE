@@ -12,9 +12,10 @@
 2. **Research Engine:** source discovery and retrieval adapters.
 3. **Evidence Engine:** provenance, timestamps, confidence, conflict handling.
 4. **Comparison Engine:** relative, domain-scoped scoring with optional strict evidence linkage.
-5. **Recommendation Engine:** user-priority weighting, profiles, coverage gates and explainable ranking.
-6. **Knowledge Engine:** versioned local snapshots, validated migrations, append-only evidence persistence, JSON backup and safe merge restore, with a Capacitor SQLite adapter.
-7. **Domain cores:** independent Fragrance and Technology adapters with separate field schemas and units.
+5. **Product Identity Matcher:** cross-source product/variant matching using universal identifiers, manufacturer identifiers, normalized brand/model/category and variant conflicts; never auto-merges.
+6. **Recommendation Engine:** user-priority weighting, profiles, coverage gates and explainable ranking.
+7. **Knowledge Engine:** versioned local snapshots, validated migrations, append-only evidence persistence, JSON backup and safe merge restore, with a Capacitor SQLite adapter.
+8. **Domain cores:** independent Fragrance and Technology adapters with separate field schemas and units.
 
 ## Domain boundaries
 
