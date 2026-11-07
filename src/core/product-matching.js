@@ -199,6 +199,20 @@ function validateProduct(product, label) {
       (!Array.isArray(product.aliases) || product.aliases.some(alias => typeof alias !== "string" || !alias.trim()))) {
     throw new TypeError(`${label}.aliases must be an array of non-empty strings`);
   }
+  for (const field of VARIANT_FIELDS) {
+    const values = [
+      product.variant?.[field],
+      product.attributes?.[field],
+      product[field],
+    ].filter(value => value !== undefined && value !== null);
+    if (values.some(value =>
+      (typeof value !== "string" && typeof value !== "number") ||
+      (typeof value === "string" && !value.trim()) ||
+      (typeof value === "number" && !Number.isFinite(value))
+    )) {
+      throw new TypeError(`${label} variant field ${field} must be a non-empty string or finite number`);
+    }
+  }
   for (const field of UNIVERSAL_IDENTIFIERS) {
     const value = product.identifiers?.[field] ?? product[field];
     if (value !== undefined && value !== null && value !== "" && !canonicalBarcode(value)) {

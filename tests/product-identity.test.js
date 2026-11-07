@@ -185,3 +185,16 @@ test("validates matcher input shapes and bounds candidate search", () => {
   assert.throws(() => findProductMatches({ product: target, candidates: [], minScore: 101 }), /minScore/u);
   assert.throws(() => findProductMatches({ product: target, candidates: [], limit: 51 }), /limit/u);
 });
+
+
+test("rejects object-valued variant fields instead of coercing them into text", () => {
+  const left = phone("left");
+  const right = {
+    ...phone("right"),
+    attributes: { ramGB: 12, storageGB: { value: 1, unit: "TB" } },
+  };
+  assert.throws(
+    () => matchProducts(left, right),
+    /variant field storageGB must be a non-empty string or finite number/u,
+  );
+});
