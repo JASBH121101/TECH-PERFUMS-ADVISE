@@ -133,6 +133,16 @@ async function run() {
   const sicsa = createSicsaResearchProvider({ timeoutMs, minRequestIntervalMs: 500 });
   const sicsaSlug = "laptop-gaming-msi-crosshair-a16-hx-ingles-16-pulg-amd-ryzen-9-8940hx-16gb-ram-1tb-ssd-rtx-5060-8gb-win-11-d8wfkg-090us-c-gris";
   try {
+    const localIdentity = await sicsa.search({
+      domain: DOMAINS.TECHNOLOGY, subjectId: "smoke-sicsa-msi-crosshair-a16-identity",
+      field: "name", query: sicsaSlug, limit: 1,
+    });
+    const localSku = await sicsa.search({
+      domain: DOMAINS.TECHNOLOGY, subjectId: "smoke-sicsa-msi-crosshair-a16-sku",
+      field: "sku", query: sicsaSlug, limit: 1,
+    });
+    console.log("SICSA diagnostics: identity=" + (localIdentity[0]?.value ?? "missing") +
+      "; sku=" + (localSku[0]?.value ?? "missing"));
     const localPrice = await sicsa.search({
       domain: DOMAINS.TECHNOLOGY, subjectId: "smoke-sicsa-msi-crosshair-a16",
       field: "price", query: sicsaSlug, limit: 1,
