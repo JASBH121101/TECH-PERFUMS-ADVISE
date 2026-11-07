@@ -526,3 +526,136 @@ test("CoreInfo maps display size and resolution label variants from display spec
   assert.equal(size[0].value, "11.2 inches");
   assert.equal(resolution[0].value, "2136 x 3200 pixels");
 });
+
+
+test("TechAPI keeps fixed storage capacity separate from selectable storage options", async () => {
+  const records = {
+    "smartphones:example-phone": {
+      slug: "example-phone", name: "Example Phone",
+      brand: { name: "Example" }, ram_gb: 12,
+      storage_options_gb: [256, 512, 1024], source_urls: [],
+    },
+    "laptops:example-laptop": {
+      slug: "example-laptop", name: "Example Laptop",
+      brand: { name: "Example" }, ram_gb: 16,
+      storage_gb: 1024, source_urls: [],
+    },
+  };
+  const provider = createTechApiResearchProvider({
+    fetchImpl: async url => {
+      const entry = Object.entries(records).find(([key]) => {
+        const [resource, slug] = key.split(":");
+        return String(url).endsWith(`/${resource}/${slug}/index.json`);
+      });
+      return response(entry?.[1] ?? {});
+    },
+    minRequestIntervalMs: 0,
+  });
+  assert.deepEqual(
+    await provider.search({ query: "smartphones:example-phone", field: "storage_gb" }),
+    [],
+  );
+  assert.deepEqual(
+    (await provider.search({ query: "smartphones:example-phone", field: "storage_options_gb" }))[0].value,
+    [256, 512, 1024],
+  );
+  assert.equal(
+    (await provider.search({ query: "laptops:example-laptop", field: "storage_gb" }))[0].value,
+    1024,
+  );
+});
+
+test("TechAPI maps expanded SoC, CPU, GPU and monitor detail fields", async () => {
+  const records = {
+    "socs:example-soc": {
+      slug: "example-soc", name: "Example SoC",
+      manufacturer: { name: "Example Silicon" },
+      process_nm: 3, cpu_config: { architecture: "Example Core", performance: 2, efficiency: 6 },
+      gpu_name: "Example GPU", gpu_cores: 8, gpu_clock_mhz: 1100,
+      npu_tops: 45, modem: "Example X80", source_urls: [],
+    },
+    "cpus:example-cpu": {
+      slug: "example-cpu", name: "Example CPU",
+      manufacturer: { name: "Example CPU Co." },
+      architecture: "Example Lake", socket: "LGA-test", process_node: "5 nm",
+      cores: 24, threads: 32, p_cores: 8, e_cores: 16,
+      base_clock_ghz: 3.2, boost_clock_ghz: 6,
+      l3_cache_mb: 36, tdp_w: 125, max_tdp_w: 253,
+      integrated_graphics: "Example Graphics", memory_support: "DDR5",
+      source_urls: [],
+    },
+    "gpus:example-gpu": {
+      slug: "example-gpu", name: "Example GPU",
+      manufacturer: { name: "Example Graphics Co." },
+      architecture: "Example Arch", memory_gb: 24, memory_type: "GDDR7",
+      memory_bus_bit: 384, memory_bandwidth_gbps: 1200,
+      base_clock_mhz: 1800, boost_clock_mhz: 2500, tdp_w: 350,
+      pcie_version: "PCIe 5.0", fp32_tflops: 80,
+      cuda_cores: 12000, stream_processors: 7000, rt_cores: 90, tensor_cores: 360,
+      source_urls: [],
+    },
+    "monitors:example-monitor": {
+      slug: "example-monitor", name: "Example Monitor",
+      brand: { name: "Example Displays" },
+      size_inch: 27, resolution: "2560x1440", panel_type: "IPS",
+      ppi: 109, curvature: "flat", hdr: "HDR10", rating: 4.5,
+      features: { usbHub: true }, source_urls: [],
+    },
+  };
+  const provider = createTechApiResearchProvider({
+    fetchImpl: async url => {
+      const entry = Object.entries(records).find(([key]) => {
+        const [resource, slug] = key.split(":");
+        return String(url).endsWith(`/${resource}/${slug}/index.json`);
+      });
+      return response(entry?.[1] ?? {});
+    },
+    minRequestIntervalMs: 0,
+  });
+  const get = async (query, field) => (await provider.search({ query, field }))[0]?.value;
+  assert.equal(await get("socs:example-soc", "manufacturer"), "Example Silicon");
+  assert.deepEqual(await get("socs:example-soc", "cpu_config"), records["socs:example-soc"].cpu_config);
+  assert.equal(await get("socs:example-soc", "npu_tops"), 45);
+  assert.equal(await get("socs:example-soc", "gpu_clock_mhz"), 1100);
+  assert.equal(await get("cpus:example-cpu", "manufacturer"), "Example CPU Co.");
+  assert.equal(await get("cpus:example-cpu", "architecture"), "Example Lake");
+  assert.equal(await get("cpus:example-cpu", "cpu_cores"), 24);
+  assert.equal(await get("cpus:example-cpu", "boost_clock_ghz"), 6);
+  assert.equal(await get("gpus:example-gpu", "manufacturer"), "Example Graphics Co.");
+  assert.equal(await get("gpus:example-gpu", "memory_gb"), 24);
+  assert.equal(await get("gpus:example-gpu", "memory_bandwidth_gbps"), 1200);
+  assert.equal(await get("gpus:example-gpu", "tensor_cores"), 360);
+  assert.equal(await get("monitors:example-monitor", "display_type"), "IPS");
+  assert.equal(await get("monitors:example-monitor", "ppi"), 109);
+  assert.deepEqual(await get("monitors:example-monitor", "features"), { usbHub: true });
+});
+
+test("TechAPI exposes PDA and identity-only device-catalog exact-slug resources", async () => {
+  const requests = [];
+  const provider = createTechApiResearchProvider({
+    fetchImpl: async url => {
+      requests.push(String(url));
+      if (String(url).includes("/pdas/example-pda/")) {
+        return response({ slug: "example-pda", name: "Example PDA", form_factor: "pda", model_numbers: ["A-1"], source_urls: [] });
+      }
+      return response({
+        slug: "example-unlisted-device", name: "Example Unlisted Device",
+        form_factor: "tablet", device_type_guess: "tablet",
+        model_numbers: ["T-100"], screen_resolution: "1920x1200",
+        source_urls: [],
+      });
+    },
+    minRequestIntervalMs: 0,
+  });
+  const pda = await provider.search({ query: "pdas:example-pda", field: "name" });
+  const catalog = await provider.search({
+    query: "device-catalog:example-unlisted-device", field: "model_numbers",
+  });
+  assert.equal(pda[0].value, "Example PDA");
+  assert.deepEqual(catalog[0].value, ["T-100"]);
+  assert.equal(requests.length, 2);
+  await assert.rejects(
+    () => provider.search({ query: "device-catalog example", field: "name" }),
+    /exact resource:slug/u,
+  );
+});
