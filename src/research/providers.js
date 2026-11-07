@@ -322,6 +322,8 @@ export function createWikidataResearchProvider({
   timeoutMs = 12_000,
   cacheTtlMs = 5 * 60_000,
   minRequestIntervalMs = 250,
+  maxlagRetries = 2,
+  sleepImpl = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)),
 } = {}) {
   assertFetch(fetchImpl);
   if (typeof clock !== "function") throw new TypeError("clock must be a function");
