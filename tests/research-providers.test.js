@@ -291,13 +291,39 @@ test("TechAPI is kept out of default providers until its share-alike terms are c
   assert.deepEqual(providers.map(provider => provider.id), ["scento-perfume-api", "wikidata"]);
 });
 
-test("Wikidata propagates structured API maxlag errors for retry by the caller", async () => {
+test("Wikidata retries maxlag responses only after the upstream-reported delay", async () => {
+  let calls = 0;
+  const waits = [];
   const provider = createWikidataResearchProvider({
-    fetchImpl: async () => response({ error: { code: "maxlag", info: "Waiting for replica lag", lag: 8 } }),
+    fetchImpl: async () => {
+      calls += 1;
+      return calls < 3
+        ? response({ error: { code: "maxlag", info: "Waiting for replica lag", lag: 8 } })
+        : response({ search: [] });
+    },
     minRequestIntervalMs: 0,
+    sleepImpl: async milliseconds => waits.push(milliseconds),
+  });
+  const results = await provider.search({ query: "example phone", field: "name" });
+  assert.deepEqual(results, []);
+  assert.equal(calls, 3);
+  assert.deepEqual(waits, [9_000, 9_000]);
+});
+
+test("Wikidata stops after the configured maximum maxlag retries", async () => {
+  let calls = 0;
+  const provider = createWikidataResearchProvider({
+    fetchImpl: async () => {
+      calls += 1;
+      return response({ error: { code: "maxlag", info: "Replica remains behind", lag: 3 } });
+    },
+    minRequestIntervalMs: 0,
+    sleepImpl: async () => {},
+    maxlagRetries: 1,
   });
   await assert.rejects(
     () => provider.search({ query: "example phone", field: "name" }),
-    /maxlag \(8s\).*Waiting for replica lag/u,
+    /maxlag \(3s\) after 1 retries/u,
   );
+  assert.equal(calls, 2);
 });

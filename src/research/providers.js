@@ -31,6 +31,8 @@ function createJsonReader(fetchImpl, {
   maxCacheEntries = 40,
   minRequestIntervalMs = 150,
   requestHeaders = {},
+  maxlagRetries = 2,
+  sleepImpl = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)),
 } = {}) {
   assertPositiveInteger(timeoutMs, "timeoutMs", 60_000);
   if (!Number.isSafeInteger(cacheTtlMs) || cacheTtlMs < 0) throw new TypeError("cacheTtlMs must be a non-negative integer");
@@ -38,10 +40,14 @@ function createJsonReader(fetchImpl, {
   if (!Number.isSafeInteger(minRequestIntervalMs) || minRequestIntervalMs < 0 || minRequestIntervalMs > 10_000) {
     throw new TypeError("minRequestIntervalMs must be between 0 and 10000");
   }
+  if (!Number.isSafeInteger(maxlagRetries) || maxlagRetries < 0 || maxlagRetries > 5) {
+    throw new TypeError("maxlagRetries must be an integer between 0 and 5");
+  }
+  if (typeof sleepImpl !== "function") throw new TypeError("sleepImpl must be a function");
   const cache = new Map();
   let lastRequestAt = 0;
 
-  return async function readJson(url, label) {
+  return async function readJson(url, label, retryCount = 0) {
     const key = String(url);
     const cached = cache.get(key);
     if (cached && cached.expiresAt > Date.now()) {
@@ -91,7 +97,13 @@ function createJsonReader(fetchImpl, {
       const info = String(body.error.info ?? "The upstream API rejected the request");
       const retryAfter = Number(body.error.lag);
       if (code === "maxlag" && Number.isFinite(retryAfter)) {
-        throw new Error(`${label} deferred by upstream maxlag (${retryAfter}s): ${info}`);
+        if (retryCount < maxlagRetries) {
+          // Wait for the upstream-reported lag plus a small buffer; never hammer retries.
+          const delayMs = Math.min(30_000, Math.max(1_000, Math.ceil(retryAfter * 1_000) + 1_000));
+          await sleepImpl(delayMs);
+          return readJson(url, label, retryCount + 1);
+        }
+        throw new Error(`${label} deferred by upstream maxlag (${retryAfter}s) after ${retryCount} retries: ${info}`);
       }
       throw new Error(`${label} returned upstream API error ${code}: ${info}`);
     }
@@ -170,6 +182,8 @@ export function createScentoResearchProvider({
   timeoutMs = 12_000,
   cacheTtlMs = 15 * 60_000,
   minRequestIntervalMs = 250,
+  maxlagRetries = 2,
+  sleepImpl = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)),
 } = {}) {
   assertFetch(fetchImpl);
   if (typeof clock !== "function") throw new TypeError("clock must be a function");
@@ -318,6 +332,7 @@ export function createWikidataResearchProvider({
     : { "Api-User-Agent": clientIdentification };
   const readJson = createJsonReader(fetchImpl, {
     timeoutMs, cacheTtlMs, maxCacheEntries: 50, minRequestIntervalMs, requestHeaders,
+    maxlagRetries, sleepImpl,
   });
 
   return Object.freeze({
