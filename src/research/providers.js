@@ -623,8 +623,8 @@ const COREINFO_FIELD_ALIASES = Object.freeze({
   ram_gb: ["ram_gb", "ram", "ram_size"],
   storage: ["storage", "internal_storage", "storage_capacity", "rom"],
   storage_gb: ["storage_gb", "storage", "internal_storage"],
-  display_size: ["display_size", "screen_size", "screen_diagonal", "diagonal"],
-  display_resolution: ["display_resolution", "resolution", "screen_resolution"],
+  display_size: ["display_size", "display_size_inches", "screen_size", "screen_size_inches", "screen_diagonal", "diagonal", "diagonal_size", "size"],
+  display_resolution: ["display_resolution", "display_resolution_px", "resolution", "resolution_px", "resolution_pixels", "screen_resolution"],
   display_type: ["display_type", "screen_type", "panel_type"],
   refresh_rate: ["refresh_rate", "refresh_rate_hz"],
   battery: ["battery", "battery_capacity", "capacity"],
@@ -721,7 +721,14 @@ function coreInfoValue(record, field) {
   const flattened = collectCoreInfoValues(record);
   for (const alias of aliases) {
     const key = normalizeCoreInfoKey(alias);
-    const result = flattened.find(item => item.key === key);
+    const result = flattened.find(item => {
+      if (item.key !== key) return false;
+      if (field === "display_size" && key === "size") {
+        const path = normalizeCoreInfoKey(item.path);
+        return path.includes("display") || path.includes("screen");
+      }
+      return true;
+    });
     if (result && result.value !== undefined && result.value !== null && result.value !== "") return result.value;
   }
   return undefined;

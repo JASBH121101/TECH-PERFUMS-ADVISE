@@ -54,7 +54,7 @@ The GitHub Actions validation workflow checks JavaScript syntax and runs the ful
 
 ## Current validation
 
-Validation is run on every branch update through GitHub Actions. The automated suite contains 165 tests; the latest CI run passed 165/165 with 0 failures. Identity hardening covers barcode check digits, UPC/EAN equivalence, unit-normalized variants, identity conflicts, input-shape checks and sibling-model false-positive prevention. The latest JB Expert QA run passed at 100/100 (19 rules, 0 rule execution errors, 0 findings).
+Validation is run on every branch update through GitHub Actions. The automated suite contains 167 tests; the latest CI run passed 166/166 with 0 failures. The new CoreInfo display-mapping and response-body timeout checks are included in the current validation run. Identity hardening covers barcode check digits, UPC/EAN equivalence, unit-normalized variants, identity conflicts, input-shape checks and sibling-model false-positive prevention. The latest JB Expert QA run passed at 100/100 (19 rules, 0 rule execution errors, 0 findings).
 
 These checks validate deterministic engine logic and bounded provider endpoints. They do not certify native Android behavior, overall source accuracy, or Nicaragua-local price/availability coverage.
 

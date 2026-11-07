@@ -505,3 +505,24 @@ test("JSON reader timeout covers response-body parsing, not only response header
     /timed out after 10 ms/u,
   );
 });
+
+
+test("CoreInfo maps display size and resolution label variants from display specification groups", async () => {
+  const provider = createCoreInfoResearchProvider({
+    fetchImpl: async () => response({
+      slug: "display-label-variants",
+      name: "Display Label Variants",
+      specifications: [
+        { category: "Display", items: [
+          { name: "Size", value: "11.2 inches" },
+          { name: "Resolution", value: "2136 x 3200 pixels" },
+        ] },
+      ],
+    }),
+    minRequestIntervalMs: 0,
+  });
+  const size = await provider.search({ query: "display-label-variants", field: "display_size" });
+  const resolution = await provider.search({ query: "display-label-variants", field: "display_resolution" });
+  assert.equal(size[0].value, "11.2 inches");
+  assert.equal(resolution[0].value, "2136 x 3200 pixels");
+});
