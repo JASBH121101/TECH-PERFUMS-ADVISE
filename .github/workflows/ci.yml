@@ -26,7 +26,10 @@ jobs:
         with:
           node-version: 22
 
-      - name: Run checks
+      - name: Check JavaScript syntax
         run: |
-          node --check src/index.js
-          npm test
+          set -euo pipefail
+          find src tests scripts -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+
+      - name: Run automated tests
+        run: npm test
