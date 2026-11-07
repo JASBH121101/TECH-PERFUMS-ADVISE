@@ -359,7 +359,7 @@ export function matchProducts(leftInput, rightInput) {
   const variantKnown = variants.comparable.length > 0 || Boolean(identifier);
   const sameVariant = familyMatch && variants.conflicts.length === 0 && sameMarket &&
     !universalConflict &&
-    Boolean(identifier || (score >= 85 && variants.comparable.length > 0));
+    Boolean(identifier || (score >= 85 && variants.comparable.length > 0 && (exactModel || modelSimilarity >= 0.95)));
 
   let matchType = "no_match";
   if (sameVariant) matchType = identifier ? "exact_variant" : "same_variant";

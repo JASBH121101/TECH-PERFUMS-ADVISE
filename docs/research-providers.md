@@ -74,7 +74,7 @@ Documentation:
 
 ## Additional technology sources assessed
 
-- **CoreInfo:** exposes exact-slug per-device JSON and is now enabled in the default technology provider registry. The bounded live workflow has successfully smoke-tested a Huawei Nova 16 SE smartphone and an HP 15-fc0500AU laptop. This is an endpoint/response-shape check, not a full catalogue quality audit. Its prices may be in INR and FX conversions are estimates; never treat those as Nicaragua retail prices.
+- **CoreInfo:** enabled in the default technology provider registry and smoke-tested through exact-slug JSON lookups for a Huawei Nova 16 SE smartphone and an HP 15-fc0500AU laptop. This verifies bounded endpoint access and response parsing only; it is not a full catalogue quality audit or a certification of every mapped field. Prices may be in INR and FX conversions are estimates; never treat those as Nicaragua retail prices.
 - **TechSpecs API:** broad coverage across phones, tablets, watches, desktops, laptops, displays and GPUs, but it requires a token and says commercial caching/storage requires a separate license. It is not enabled by default.
 - **Specspool:** covers phones, tablets and watches, but its free tier is non-commercial and its paid tier bills per unit. It is not enabled by default.
 - **Techfleet Atlas:** advertises a free monthly request allowance and CC BY attribution, but requires a key and needs independent runtime, terms and provenance validation before integration.

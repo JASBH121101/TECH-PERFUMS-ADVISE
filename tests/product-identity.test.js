@@ -198,3 +198,45 @@ test("rejects object-valued variant fields instead of coercing them into text", 
     /variant field storageGB must be a non-empty string or finite number/u,
   );
 });
+
+
+test("does not mistake a base model for its Ultra or Pro sibling", () => {
+  const samsungBase = phone("s25", {
+    name: "Samsung Galaxy S25", model: "Galaxy S25",
+    variant: { ramGB: 12, storageGB: 256 },
+    attributes: { ramGB: 12, storageGB: 256 },
+  });
+  const samsungUltra = phone("s25-ultra", {
+    variant: { ramGB: 12, storageGB: 256 },
+    attributes: { ramGB: 12, storageGB: 256 },
+  });
+  const samsung = matchProducts(samsungBase, samsungUltra);
+  assert.equal(samsung.matchType, "same_product_family");
+  assert.equal(samsung.sameVariant, false);
+
+  const iphoneBase = phone("iphone-15", {
+    name: "Apple iPhone 15", brand: "Apple", model: "iPhone 15",
+    variant: { storageGB: 128 }, attributes: { storageGB: 128 },
+  });
+  const iphonePro = phone("iphone-15-pro", {
+    name: "Apple iPhone 15 Pro", brand: "Apple", model: "iPhone 15 Pro",
+    variant: { storageGB: 128 }, attributes: { storageGB: 128 },
+  });
+  const iphone = matchProducts(iphoneBase, iphonePro);
+  assert.equal(iphone.matchType, "same_product_family");
+  assert.equal(iphone.sameVariant, false);
+});
+
+test("allows formatting differences but requires a full model-token match for variant identity", () => {
+  const left = phone("formatted-a", {
+    name: "Samsung Galaxy S25 Ultra", model: "Galaxy S25 Ultra",
+    variant: { ramGB: 12, storageGB: 256 }, attributes: { ramGB: 12, storageGB: 256 },
+  });
+  const right = phone("formatted-b", {
+    name: "SAMSUNG Galaxy-S25 Ultra", model: "GALAXY S25 ULTRA",
+    variant: { ramGB: 12, storageGB: 256 }, attributes: { ramGB: 12, storageGB: 256 },
+  });
+  const result = matchProducts(left, right);
+  assert.equal(result.matchType, "same_variant");
+  assert.equal(result.sameVariant, true);
+});
