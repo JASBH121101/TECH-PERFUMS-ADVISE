@@ -69,9 +69,9 @@ No paid provider is mandatory. A provider requiring paid access, commercial lice
 
 ## TechAPI static specifications (optional; not enabled by default)
 
-TechAPI serves static JSON records without an API key. The current public catalogue lists smartphones, tablets, laptops, monitors, watches, SoCs, discrete GPUs and CPUs. JBAE integrates an exact-slug detail lookup only; it does not fetch or mirror category-wide index files.
+TechAPI serves static JSON records without an API key. The current public catalogue lists smartphones, laptops, monitors, watches, SoCs, discrete GPUs and CPUs; tablet support exists in the API schema but current published tablet coverage must be verified before claiming breadth. JBAE integrates an exact-slug detail lookup only; it does not fetch or mirror category-wide index files.
 
-Use `createTechApiResearchProvider()` and query with an exact `resource:slug`, for example `smartphones:galaxy-s26-ultra`. Supported resources are `smartphones`, `tablets`, `laptops`, `monitors`, `watches`, `socs`, `gpus` and `cpus`. Mapped fields include identity, manufacturer, release date, reference MSRP in USD, RAM, storage options, SoC, GPU, display, camera arrays, battery, wired/wireless charging, weight, dimensions, IP rating, OS and connectivity where present in the record.
+Use `createTechApiResearchProvider()` and query with an exact `resource:slug`, for example `smartphones:iphone-18-pro-max`. Supported resources are `smartphones`, `tablets`, `laptops`, `monitors`, `watches`, `socs`, `gpus` and `cpus`. Mapped fields include identity, manufacturer, release date, reference MSRP in USD, RAM, storage capacity/options, CPU/SoC, GPU, display size/resolution/aspect ratio/refresh, camera arrays, battery, wired/wireless charging, weight, dimensions, IP rating, OS and connectivity where present in the record. Schema variants include laptop cpu_name, gpu_name, storage_gb, and monitor size_inch/resolution fields.
 
 Each candidate preserves up to ten canonical `source_urls` from the record. Its own `verified` flag is recorded only as upstream metadata; JBAE forces the evidence status to `unconfirmed` and requires human review. Exact model/variant identity still needs checking.
 
@@ -81,6 +81,6 @@ Each candidate preserves up to ten canonical `source_urls` from the record. Its 
 
 Provider confidence values are input heuristics, not calibrated probabilities and not verification. A recent retrieval does not prove the product identity matches the intended regional SKU, that the claim is complete, or that a retailer listing applies in Nicaragua. Claims should be cross-checked against manufacturer documentation or independent tests before verification.
 
-The live smoke workflow performs a small Scento Layton lookup and a Wikidata Steam Deck RAM lookup. It tests current endpoint shape, but it does not certify overall data coverage or accuracy. Results always remain unconfirmed candidates.
+The live smoke workflow performs a bounded Scento Layton lookup, Wikidata Steam Deck probes and exact-slug TechAPI lookups for a published smartphone, laptop and monitor. It tests current endpoint shape, but it does not certify overall data coverage or accuracy. Results always remain unconfirmed candidates.
 
 If the network is unavailable, provider calls fail explicitly; local catalog search, comparison and recommendations remain usable from persisted knowledge.

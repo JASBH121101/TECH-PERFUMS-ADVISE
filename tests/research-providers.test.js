@@ -327,3 +327,20 @@ test("Wikidata stops after the configured maximum maxlag retries", async () => {
   );
   assert.equal(calls, 2);
 });
+
+test("TechAPI maps published laptop, monitor and smartphone schema variants", async () => {
+  const records = [
+    { slug: "iphone-18-pro-max", name: "iPhone 18 Pro Max", ram_gb: 12, soc: "apple-a20-pro", source_urls: [] },
+    { slug: "hp-omnibook-3-14-ha0000au-abhinavflac-384", name: "HP OmniBook 3", cpu_name: "AMD Ryzen Ai 5 340", gpu_name: "AMD Radeon Radeon", storage_gb: 512, source_urls: [] },
+    { slug: "acer-cb241y-amazonmon-603", name: "acer CB241Y", size_inch: 23.8, resolution: "1920x1080", source_urls: [] },
+  ];
+  const provider = createTechApiResearchProvider({ fetchImpl: async url => response(records.find(item => url.endsWith("/" + item.slug + "/index.json")) ?? {}), minRequestIntervalMs: 0 });
+  const value = async (query, field) => (await provider.search({ query, field }))[0]?.value;
+  assert.equal(await value("smartphones:iphone-18-pro-max", "ram_gb"), 12);
+  assert.equal(await value("smartphones:iphone-18-pro-max", "soc"), "apple-a20-pro");
+  assert.equal(await value("laptops:hp-omnibook-3-14-ha0000au-abhinavflac-384", "chipset"), "AMD Ryzen Ai 5 340");
+  assert.equal(await value("laptops:hp-omnibook-3-14-ha0000au-abhinavflac-384", "gpu"), "AMD Radeon Radeon");
+  assert.equal(await value("laptops:hp-omnibook-3-14-ha0000au-abhinavflac-384", "storage_gb"), 512);
+  assert.equal(await value("monitors:acer-cb241y-amazonmon-603", "display_size"), 23.8);
+  assert.equal(await value("monitors:acer-cb241y-amazonmon-603", "display_resolution"), "1920x1080");
+});

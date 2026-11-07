@@ -40,10 +40,9 @@ async function run() {
 
   const techapi = createTechApiResearchProvider({ timeoutMs, minRequestIntervalMs: 500 });
   const samples = [
-    ["smartphones:galaxy-s26-ultra", "ram_gb"],
-    ["laptops:hp-omnibook-x-flip-14-fm0026tu-abhinavflac-563", "name"],
-    ["tablets:apple-ipad-pro-13-m5", "name"],
-    ["monitors:samsung-samsung-odyssey-series-amazonmon-41", "name"],
+    ["smartphones:iphone-18-pro-max", "ram_gb"],
+    ["laptops:hp-omnibook-3-14-ha0000au-abhinavflac-384", "name"],
+    ["monitors:acer-cb241y-amazonmon-603", "name"],
   ];
   for (const [query, field] of samples) {
     const result = await techapi.search({
