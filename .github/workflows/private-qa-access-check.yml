@@ -1,0 +1,37 @@
+name: JB Expert QA private access check
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/jb-advisor-engine
+    paths:
+      - .github/workflows/private-qa-access-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-private-read:
+    name: Verify read-only access to JB-Expert-QA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secret is available
+        env:
+          QA_TOKEN: ${{ secrets.JB_EXPERT_QA_READ }}
+        run: |
+          if [ -z "$QA_TOKEN" ]; then
+            echo "::error::Required repository secret JB_EXPERT_QA_READ is missing."
+            exit 1
+          fi
+          echo "Secret is present (value hidden)."
+
+      - name: Verify private repository read access
+        env:
+          QA_TOKEN: ${{ secrets.JB_EXPERT_QA_READ }}
+        run: |
+          set +x
+          AUTH="$(printf 'x-access-token:%s' "$QA_TOKEN" | base64 -w 0)"
+          git -c http.extraheader="AUTHORIZATION: basic $AUTH" \
+            ls-remote https://github.com/JASBH121101/JB-Expert-QA.git HEAD >/dev/null
+          echo "Private repository read access verified."
