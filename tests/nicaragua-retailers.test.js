@@ -119,3 +119,29 @@ test("SICSA HTML reader times out while waiting for the response body", async ()
     /timed out after 10 ms/u,
   );
 });
+
+
+test("SICSA fallback extracts a visible NIO price from the primary product section without price CSS classes", async () => {
+  const html = [
+    "<html><body>",
+    "<h1>Example laptop</h1>",
+    "<div>C$12,345.67 + IVA</div>",
+    "<div>2 disponibles</div>",
+    "</body></html>",
+  ].join("");
+  const provider = createSicsaResearchProvider({
+    fetchImpl: async () => htmlResponse(html),
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  const price = await provider.search({ query: slug, field: "price" });
+  const stock = await provider.search({ query: slug, field: "availability" });
+  assert.deepEqual(price[0].value, {
+    amount: 12345.67,
+    currency: "NIO",
+    taxIncluded: false,
+    display: "C$12,345.67 + IVA",
+    basis: "retailer_page",
+  });
+  assert.deepEqual(stock[0].value, { status: "in_stock", quantity: 2 });
+});

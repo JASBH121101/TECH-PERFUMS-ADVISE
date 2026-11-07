@@ -110,17 +110,23 @@ function parseSicsaPage(html) {
     /<(p|div|span)\b(?=[^>]*class=["'][^"']*\bprice\b[^"']*["'])[^>]*>([\s\S]*?)<\/\1>/iu,
   )?.[2] ?? "";
   const priceText = stripHtml(priceContainer);
+  const productSectionHtml = html.match(/<h1\b[^>]*>[\s\S]*?<\/h1>([\s\S]{0,3000})/iu)?.[1] ?? "";
+  const productSectionText = stripHtml(productSectionHtml);
+  const visibleProductPrice = productSectionText.match(
+    /(?:C\$\s*[\d,]+(?:\.\d{1,2})?|NIO\s*[\d,]+(?:\.\d{1,2})?)(?:\s*\+\s*IVA)?/iu,
+  )?.[0] ?? "";
+  const effectivePriceText = priceText || visibleProductPrice;
   const metaAmount = readMeta(html, "product:price:amount") ?? readMeta(html, "og:price:amount");
   const rawAmount = offer.price ?? metaAmount ??
-    priceText.match(/(?:C\$|NIO\s*)\s*([\d,]+(?:\.\d{1,2})?)/iu)?.[1];
+    effectivePriceText.match(/(?:C\$|NIO\s*)\s*([\d,]+(?:\.\d{1,2})?)/iu)?.[1];
   const amount = typeof rawAmount === "number" ? rawAmount :
     typeof rawAmount === "string" ? Number(rawAmount.replace(/,/gu, "")) : NaN;
   const rawCurrency = offer.priceCurrency ?? readMeta(html, "product:price:currency") ??
-    (/C\$/iu.test(priceText) ? "NIO" : null);
+    (/C\$/iu.test(effectivePriceText) ? "NIO" : /NIO/iu.test(effectivePriceText) ? "NIO" : null);
   const currency = typeof rawCurrency === "string" && rawCurrency.trim()
     ? (rawCurrency.toUpperCase() === "C$" ? "NIO" : rawCurrency.toUpperCase()) : null;
-  const displayPrice = priceText || (Number.isFinite(amount) ? currency + " " + String(amount) : "");
-  const taxExclusive = /\+\s*IVA\b/iu.test(priceText);
+  const displayPrice = effectivePriceText || (Number.isFinite(amount) ? currency + " " + String(amount) : "");
+  const taxExclusive = /\+\s*IVA\b/iu.test(effectivePriceText);
 
   const stockText = stripHtml(
     html.match(/<(p|div|span)\b(?=[^>]*class=["'][^"']*\bstock\b[^"']*["'])[^>]*>([\s\S]*?)<\/\1>/iu)?.[2] ?? "",
@@ -204,7 +210,7 @@ function createHtmlReader(fetchImpl, {
         throw new Error("SICSA product page request failed with HTTP " + (response?.status ?? "unknown"));
       }
       const body = await Promise.race([response.text(), timeoutPromise]);
-      if (typeof body !== "string" || body.length === 0 || body.length > 3_000_000) {
+      if (typeof body !== "string" || body.length === 0 || body.length > 3000_000) {
         throw new TypeError("SICSA returned an invalid product page");
       }
       if (cacheTtlMs > 0) cache.set(url, { body, expiresAt: Date.now() + cacheTtlMs });
