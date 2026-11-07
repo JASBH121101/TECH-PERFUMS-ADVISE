@@ -52,7 +52,7 @@ test("rejects more than four products, duplicate IDs and invalid weights", () =>
 
 test("returns tie or insufficient data instead of inventing a winner", () => {
   const tied = compareProducts({ products: phones.map(p => ({ ...p, attributes: { ...p.attributes, performance: 85 } })), criteria: [{ field: "performance", weight: 1 }] });
-  assert.equal(tied.decision, "ranked");
+  assert.equal(tied.decision, "tie");
   const empty = compareProducts({
     products: [
       { id: "x", name: "X", domain: "technology", attributes: {} },
