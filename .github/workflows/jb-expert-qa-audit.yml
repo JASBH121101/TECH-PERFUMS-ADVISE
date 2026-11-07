@@ -10,6 +10,7 @@ on:
       - "tests/**"
       - "docs/**"
       - "package.json"
+      - "package-lock.json"
       - ".github/workflows/jb-expert-qa-audit.yml"
       - "scripts/summarize-qa-report.mjs"
 
