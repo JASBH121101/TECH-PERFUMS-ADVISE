@@ -61,15 +61,21 @@ function createJsonReader(fetchImpl, {
     if (waitMs > 0) await new Promise(resolve => setTimeout(resolve, waitMs));
 
     const controller = typeof AbortController === "function" ? new AbortController() : null;
-    const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    let rejectTimeout;
+    const timeoutPromise = new Promise((resolve, reject) => { rejectTimeout = reject; });
+    const timeoutError = new Error(label + " timed out after " + timeoutMs + " ms");
+    const timeout = setTimeout(() => {
+      controller?.abort();
+      rejectTimeout(timeoutError);
+    }, timeoutMs);
     let response;
     let body;
     try {
-      response = await fetchImpl(key, {
+      response = await Promise.race([fetchImpl(key, {
         method: "GET",
         headers: { Accept: "application/json", ...requestHeaders },
         ...(controller ? { signal: controller.signal } : {}),
-      });
+      }), timeoutPromise]);
       lastRequestAt = Date.now();
       if (!response || response.ok !== true) {
         const status = response?.status ?? "unknown";
@@ -78,16 +84,16 @@ function createJsonReader(fetchImpl, {
         throw new Error(label + " request failed with HTTP " + status + suffix);
       }
       try {
-        body = await response.json();
+        body = await Promise.race([response.json(), timeoutPromise]);
       } catch {
-        if (controller?.signal.aborted) throw new Error(label + " timed out after " + timeoutMs + " ms");
+        if (controller?.signal.aborted) throw timeoutError;
         throw new TypeError(label + " returned invalid JSON");
       }
     } catch (error) {
-      if (controller?.signal.aborted) throw new Error(label + " timed out after " + timeoutMs + " ms");
+      if (controller?.signal.aborted || error === timeoutError) throw timeoutError;
       throw error;
     } finally {
-      if (timeout !== null) clearTimeout(timeout);
+      clearTimeout(timeout);
     }
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       throw new TypeError(`${label} returned an invalid JSON object`);
