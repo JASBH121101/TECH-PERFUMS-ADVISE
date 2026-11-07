@@ -1,0 +1,88 @@
+name: JB Expert QA project audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/jb-advisor-engine
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "docs/**"
+      - "package.json"
+      - ".github/workflows/jb-expert-qa-audit.yml"
+      - "scripts/summarize-qa-report.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jb-expert-qa-project-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit JBAE with private JB Expert QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout JBAE
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Check private QA secret
+        env:
+          QA_TOKEN: ${{ secrets.JB_EXPERT_QA_READ }}
+        run: |
+          if [ -z "$QA_TOKEN" ]; then
+            echo "::error::Repository secret JB_EXPERT_QA_READ is missing."
+            exit 1
+          fi
+          echo "Private QA credential is available."
+
+      - name: Fetch private QA source without exposing the token
+        env:
+          QA_TOKEN: ${{ secrets.JB_EXPERT_QA_READ }}
+        run: |
+          set -euo pipefail
+          set +x
+          AUTH="$(printf 'x-access-token:%s' "$QA_TOKEN" | base64 -w 0)"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.extraheader
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $AUTH"
+          git clone --depth 1 --branch main https://github.com/JASBH121101/JB-Expert-QA.git "$RUNNER_TEMP/jb-expert-qa"
+          unset QA_TOKEN AUTH GIT_CONFIG_VALUE_0
+          echo "Private QA source retrieved into the temporary runner workspace."
+
+      - name: Install private QA runtime dependencies
+        working-directory: ${{ runner.temp }}/jb-expert-qa
+        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+
+      - name: Run static project audit
+        id: audit
+        continue-on-error: true
+        run: |
+          node "$RUNNER_TEMP/jb-expert-qa/src/project-cli.js" "$GITHUB_WORKSPACE" \
+            --format=json \
+            --output="$RUNNER_TEMP/jb-expert-qa-report.json"
+
+      - name: Publish sanitized audit summary
+        if: always()
+        run: |
+          if [ ! -f "$RUNNER_TEMP/jb-expert-qa-report.json" ]; then
+            echo "## JB Expert QA" >> "$GITHUB_STEP_SUMMARY"
+            echo "The audit did not produce a report. Check the preceding step logs." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node scripts/summarize-qa-report.mjs "$RUNNER_TEMP/jb-expert-qa-report.json" "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce QA result
+        if: steps.audit.outcome == 'failure'
+        run: |
+          echo "JB Expert QA reported a failed audit or execution error."
+          exit 1
