@@ -122,7 +122,7 @@ function parseSicsaPage(html) {
   const visibleProductPrice = productText.match(
     /(?:C\$\s*[\d,]+(?:\.\d{1,2})?|NIO\s*[\d,]+(?:\.\d{1,2})?)(?:\s*\+\s*IVA)?/iu,
   )?.[0] ?? "";
-  const effectivePriceText = priceText || visibleProductPrice;
+  const effectivePriceText = visibleProductPrice || priceText;
   const metaAmount = readMeta(html, "product:price:amount") ?? readMeta(html, "og:price:amount");
   const visibleAmount = effectivePriceText.match(
     /(?:C\$|NIO\s*)\s*([\d,]+(?:\.\d{1,2})?)/iu,

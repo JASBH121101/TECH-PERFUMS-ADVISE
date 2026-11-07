@@ -186,3 +186,23 @@ test("SICSA extracts SKU labels with or without a colon", async () => {
   const result = await provider.search({ query: slug, field: "sku" });
   assert.equal(result[0].value, "LAPT0185");
 });
+
+
+test("SICSA prefers the price scoped to the exact SKU over an unrelated page price widget", async () => {
+  const html = [
+    "<html><body>",
+    "<p class='price'>C$999.00</p>",
+    "<p>Producto SICSA SKU: LAPT0185</p>",
+    "<h1>Example laptop</h1>",
+    "<p>C$72,666.89 + IVA</p>",
+    "</body></html>",
+  ].join("");
+  const provider = createSicsaResearchProvider({
+    fetchImpl: async () => htmlResponse(html),
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  const result = await provider.search({ query: slug, field: "price" });
+  assert.equal(result[0].value.amount, 72666.89);
+  assert.equal(result[0].value.taxIncluded, false);
+});
