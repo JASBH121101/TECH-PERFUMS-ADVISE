@@ -160,7 +160,7 @@ test("excludes reported-only claims by default and allows them only by explicit 
     evidenceStore: store,
     evidencePolicy: { allowReported: true },
   });
-  assert.equal(permissive.ranking.find(item => item.id === "a").score, 0);
+  assert.equal(permissive.ranking.find(item => item.id === "a").score, 100);
   assert.equal(permissive.ranking.find(item => item.id === "a").evidenceCoverage, 100);
   assert.equal(permissive.ranking.find(item => item.id === "a").verifiedCoverage, 0);
 });
@@ -222,4 +222,32 @@ test("validates evidence policy and evidence ID collections", () => {
     criteria: [{ field: "performance", weight: 1 }],
     evidencePolicy: { allowReported: "yes" },
   }), /must be a boolean/);
+});
+
+test("unverified values cannot distort relative normalization of verified products", () => {
+  const store = new EvidenceStore();
+  const productC = {
+    id: "c",
+    name: "Phone C",
+    domain: "technology",
+    attributes: { performance: 60 },
+    evidenceIds: { performance: ["c-performance"] },
+  };
+  store.add(evidenceInput({ id: "b-performance", subjectId: "b", value: 80, confidence: 0.9 }));
+  store.add(evidenceInput({ id: "c-performance", subjectId: "c", value: 60, confidence: 0.9 }));
+
+  const result = compareProducts({
+    products: [
+      { ...phones[0], attributes: { performance: 100 } },
+      { ...phones[1], attributes: { performance: 80 }, evidenceIds: { performance: ["b-performance"] } },
+      productC,
+    ],
+    criteria: [{ field: "performance", weight: 1 }],
+    evidenceStore: store,
+  });
+
+  assert.equal(result.ranking.find(item => item.id === "a").score, null);
+  assert.equal(result.ranking.find(item => item.id === "b").score, 100);
+  assert.equal(result.ranking.find(item => item.id === "c").score, 0);
+  assert.equal(result.winnerId, "b");
 });

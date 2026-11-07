@@ -221,6 +221,16 @@ export function compareProducts({ products, criteria, evidenceStore = null, evid
   const options = normalizeEvidenceOptions(evidenceStore, evidencePolicy);
   const normalizedCriteria = normalizeCriteria(criteria);
   const totalWeight = normalizedCriteria.reduce((sum, criterion) => sum + criterion.weight, 0);
+  const eligibleProductsByField = new Map(
+    normalizedCriteria.map(criterion => [
+      criterion.field,
+      normalized.filter(product => {
+        const value = product.attributes[criterion.field];
+        return value !== null && value !== undefined &&
+          resolveEvidence(product, criterion.field, value, options).eligible;
+      }),
+    ])
+  );
 
   const results = normalized.map(product => {
     let weightedScore = 0;
@@ -236,7 +246,7 @@ export function compareProducts({ products, criteria, evidenceStore = null, evid
       const hasValue = raw !== null && raw !== undefined;
       const evidence = resolveEvidence(product, criterion.field, raw, options);
       const score = hasValue && evidence.eligible
-        ? scoreValue(raw, criterion, normalized, criterion.field)
+        ? scoreValue(raw, criterion, eligibleProductsByField.get(criterion.field), criterion.field)
         : null;
 
       if (hasValue) dataWeight += criterion.weight;
