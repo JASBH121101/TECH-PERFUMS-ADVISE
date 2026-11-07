@@ -28,3 +28,9 @@ export function getEngineInfo() {
     ],
   });
 }
+
+export {
+  createEvidenceRecord,
+  EVIDENCE_STATUSES,
+  SOURCE_TYPES,
+} from "./core/evidence.js";
