@@ -57,6 +57,10 @@ async function run() {
     ["socs:snapdragon-8-elite", "name"],
     ["gpus:geforce-rtx-5090", "name"],
     ["cpus:core-i9-14900k", "name"],
+    ["tablets:xiaomi-poco-pad-8gb-256gb-3g", "name"],
+    ["watches:apple-watch-series-11-42mm", "name"],
+    ["pdas:ipaq-glisten", "name"],
+    ["device-catalog:samsung-galaxy-a08", "name"],
   ];
   for (const [query, field] of samples) {
     const result = await techapi.search({
