@@ -11,6 +11,13 @@ import {
 const BACKUP_FORMAT = "jbae-knowledge-backup";
 const BACKUP_VERSION = 1;
 function cloneJson(value) { return JSON.parse(JSON.stringify(value)); }
+function* iterateProductEvidenceIds(evidenceIds) {
+  for (const ids of Object.values(evidenceIds ?? {})) {
+    for (const id of ids) yield id;
+  }
+}
+
+
 function freezeDeep(value) {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
     for (const child of Object.values(value)) freezeDeep(child);
@@ -148,7 +155,7 @@ export class KnowledgeStore {
         throw new Error(`Catalog product ID already exists: ${product.id}`);
       }
       const ledger = this.getEvidenceStore();
-      for (const evidenceId of product.evidenceIds) {
+      for (const evidenceId of iterateProductEvidenceIds(product.evidenceIds)) {
         if (!ledger.getById(evidenceId)) {
           throw new Error(`Catalog product references missing evidence: ${evidenceId}`);
         }

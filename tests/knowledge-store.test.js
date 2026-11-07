@@ -215,7 +215,7 @@ test("catalog rejects duplicate IDs and missing evidence references", async () =
   await store.addProduct(product);
   await assert.rejects(() => store.addProduct(product), /already exists/);
   await assert.rejects(() => store.addProduct({
-    ...product, id: "phone-bad-evidence", evidenceIds: ["missing-evidence"],
+    ...product, id: "phone-bad-evidence", evidenceIds: { storageGB: ["missing-evidence"] },
   }), /missing evidence/);
   assert.equal(store.getProducts().length, 1);
 });
@@ -248,4 +248,17 @@ test("migrates version one evidence snapshots to version two with an empty catal
   }, { clock: fixedClock });
   assert.equal(migrated.schemaVersion, 2);
   assert.deepEqual(migrated.catalog.products, []);
+});
+
+test("catalog evidence references are grouped by attribute and checked against the ledger", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  await store.addEvidence(evidence("ev-storage", "256 GB"));
+  const product = await store.addProduct({
+    id: "phone-evidence-linked", domain: "technology", name: "Evidence Phone",
+    deviceType: "smartphone", attributes: { storageGB: 256 },
+    evidenceIds: { storageGB: ["ev-storage"] },
+  });
+  assert.deepEqual(product.evidenceIds, { storageGB: ["ev-storage"] });
+  assert.equal(store.getProducts()[0].evidenceIds.storageGB[0], "ev-storage");
 });

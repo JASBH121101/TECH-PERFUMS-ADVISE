@@ -7,6 +7,11 @@ export const KNOWLEDGE_SCHEMA_VERSION = 2;
 const EVIDENCE_SCHEMA_VERSION = 1;
 const CATALOG_SCHEMA_VERSION = 1;
 
+function* iterateProductEvidenceIds(evidenceIds) {
+  for (const ids of Object.values(evidenceIds ?? {})) {
+    for (const id of ids) yield id;
+  }
+}
 function isPlainObject(value) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
   const prototype = Object.getPrototypeOf(value);
@@ -90,7 +95,7 @@ export function validateKnowledgeSnapshot(snapshot) {
   for (const product of products) {
     if (productIds.has(product.id)) throw new Error(`Duplicate catalog product ID: ${product.id}`);
     productIds.add(product.id);
-    for (const evidenceId of product.evidenceIds) {
+    for (const evidenceId of iterateProductEvidenceIds(product.evidenceIds)) {
       if (!ledger.getById(evidenceId)) {
         throw new Error(`Catalog product ${product.id} references missing evidence: ${evidenceId}`);
       }
