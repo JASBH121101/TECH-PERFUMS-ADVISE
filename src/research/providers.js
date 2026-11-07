@@ -269,12 +269,12 @@ function parseWikidataSnak(statement, kind) {
   return null;
 }
 
-async function fetchWikidataEntities(readJson, entityIds) {
+async function fetchWikidataEntities(readJson, entityIds, props = "claims|labels") {
   if (entityIds.length === 0) return {};
   const url = new URL(WIKIDATA_API);
   url.searchParams.set("action", "wbgetentities");
   url.searchParams.set("ids", [...new Set(entityIds)].join("|"));
-  url.searchParams.set("props", "claims|labels");
+  url.searchParams.set("props", props);
   url.searchParams.set("languages", "en");
   url.searchParams.set("format", "json");
   url.searchParams.set("origin", "*");
@@ -324,6 +324,19 @@ export function createWikidataResearchProvider({
 
       const selected = search.search.filter(item => /^Q\d+$/u.test(item?.id ?? "")).slice(0, limit);
       const entityMap = await fetchWikidataEntities(readJson, selected.map(item => item.id));
+      const linkedEntityIds = [];
+      if (mapping.kind === "entity") {
+        for (const item of selected) {
+          const entity = entityMap[item.id];
+          for (const statement of getUsableStatements(entity, mapping.property)) {
+            const parsed = parseWikidataSnak(statement, "entity");
+            if (parsed && !entityMap[parsed.entityId]) linkedEntityIds.push(parsed.entityId);
+          }
+        }
+      }
+      // Resolve referenced CPU/GPU/manufacturer entities in one small label batch.
+      // The search-result batch does not automatically include linked entity items.
+      const linkedEntityMap = await fetchWikidataEntities(readJson, [...new Set(linkedEntityIds)].slice(0, 50), "labels");
       const retrievedAt = isoNow(clock);
       const output = [];
 
@@ -337,7 +350,10 @@ export function createWikidataResearchProvider({
           const statements = getUsableStatements(entity, mapping.property);
           const values = statements.map(statement => parseWikidataSnak(statement, mapping.kind)).filter(Boolean);
           if (mapping.kind === "entity") {
-            for (const entry of values) entry.label = entityMap[entry.entityId]?.labels?.en?.value ?? null;
+            for (const entry of values) {
+              entry.label = entityMap[entry.entityId]?.labels?.en?.value ??
+                linkedEntityMap[entry.entityId]?.labels?.en?.value ?? null;
+            }
           }
           value = values.length === 1 ? values[0] : values;
         }

@@ -37,6 +37,17 @@ async function run() {
   assert.ok(technology.every(item => typeof item.value.amount === "number" && typeof item.value.unit === "string"),
     "Wikidata RAM claims must preserve numeric amounts and unit URIs");
   console.log(`Wikidata: PASS — ${technology.length} RAM claim(s) from real search/entity responses`);
+
+  for (const field of ["storage_capacity", "cpu", "gpu", "display_size"]) {
+    const results = await wikidata.search({
+      domain: DOMAINS.TECHNOLOGY,
+      subjectId: `smoke-steam-deck-${field}`,
+      field,
+      query: "Steam Deck LCD Model 1",
+      limit: 5,
+    });
+    console.log(`Wikidata ${field}: ${results.length} supported claim(s) in this sample`);
+  }
   console.log("External provider smoke tests passed. Results remain unconfirmed candidates.");
 }
 

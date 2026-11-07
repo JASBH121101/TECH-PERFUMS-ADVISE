@@ -116,12 +116,15 @@ test("Wikidata maps CPU and GPU as labelled entity references", async () => {
   ]) {
     const fetchImpl = async url => {
       if (String(url).includes("wbsearchentities")) return response({ search: [{ id: "Q123", label: "Example device" }] });
-      return response({ entities: {
+      if (String(url).includes("ids=Q123")) return response({ entities: {
         Q123: { claims: { [property]: [
           { mainsnak: { snaktype: "value", datavalue: { value: { id: itemId } } } },
         ] } },
+      } });
+      if (String(url).includes(`ids=${itemId}`)) return response({ entities: {
         [itemId]: { labels: { en: { value: field === "cpu" ? "Example CPU" : "Example GPU" } } },
       } });
+      throw new Error("unexpected entity batch");
     };
     const provider = createWikidataResearchProvider({ fetchImpl, clock: fixedClock, minRequestIntervalMs: 0 });
     const records = await provider.search({ query: "Example device", field });
