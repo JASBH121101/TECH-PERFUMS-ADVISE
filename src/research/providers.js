@@ -600,9 +600,13 @@ function collectCoreInfoValues(value, path = [], output = []) {
       (typeof value.value !== "object" || value.value === null)) {
     output.push({ key: normalizeCoreInfoKey(label), path: [...path, label].join("."), value: value.value });
   }
+  const groupLabel = value.category ?? value.group ?? value.section;
   for (const [key, child] of Object.entries(value)) {
-    if (key === "name" || key === "label" || key === "key" || key === "title") continue;
-    collectCoreInfoValues(child, [...path, key], output);
+    if (["name", "label", "key", "title", "category", "group", "section"].includes(key)) continue;
+    const childPath = key === "items" && typeof groupLabel === "string" && groupLabel.trim()
+      ? [...path, groupLabel, key]
+      : [...path, key];
+    collectCoreInfoValues(child, childPath, output);
   }
   return output;
 }
