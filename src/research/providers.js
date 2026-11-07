@@ -3,35 +3,114 @@ import { SOURCE_TYPES } from "../core/evidence.js";
 
 const SCENTO_BASE = "https://www.scento.com/api/perfume/v1";
 const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
-const WIKIDATA_ENTITY_BASE = "https://www.wikidata.org/wiki/Special:EntityData";
 
 function assertFetch(fetchImpl) {
   if (typeof fetchImpl !== "function") throw new TypeError("fetchImpl must be a function");
 }
-async function readJson(fetchImpl, url, label) {
-  const response = await fetchImpl(url, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-  });
-  if (!response || response.ok !== true) {
-    throw new Error(`${label} request failed with HTTP ${response?.status ?? "unknown"}`);
+
+function assertPositiveInteger(value, field, max) {
+  if (!Number.isSafeInteger(value) || value < 1 || (max !== undefined && value > max)) {
+    throw new TypeError(`${field} must be an integer between 1 and ${max ?? "MAX_SAFE_INTEGER"}`);
   }
-  const body = await response.json();
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    throw new TypeError(`${label} returned an invalid JSON object`);
-  }
-  return body;
 }
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+/**
+ * Bounded per-provider JSON reader:
+ * - GET only
+ * - timeout and explicit retry-after errors
+ * - small in-memory cache to avoid repeated catalogue requests
+ * - sequential pacing to avoid bursts against public APIs
+ */
+function createJsonReader(fetchImpl, {
+  timeoutMs = 12_000,
+  cacheTtlMs = 5 * 60_000,
+  maxCacheEntries = 40,
+  minRequestIntervalMs = 150,
+} = {}) {
+  assertPositiveInteger(timeoutMs, "timeoutMs", 60_000);
+  if (!Number.isSafeInteger(cacheTtlMs) || cacheTtlMs < 0) throw new TypeError("cacheTtlMs must be a non-negative integer");
+  assertPositiveInteger(maxCacheEntries, "maxCacheEntries", 500);
+  if (!Number.isSafeInteger(minRequestIntervalMs) || minRequestIntervalMs < 0 || minRequestIntervalMs > 10_000) {
+    throw new TypeError("minRequestIntervalMs must be between 0 and 10000");
+  }
+  const cache = new Map();
+  let lastRequestAt = 0;
+
+  return async function readJson(url, label) {
+    const key = String(url);
+    const cached = cache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      cache.delete(key);
+      cache.set(key, cached);
+      return cloneJson(cached.body);
+    }
+    if (cached) cache.delete(key);
+
+    const waitMs = Math.max(0, minRequestIntervalMs - (Date.now() - lastRequestAt));
+    if (waitMs > 0) await new Promise(resolve => setTimeout(resolve, waitMs));
+
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    let response;
+    try {
+      response = await fetchImpl(key, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        ...(controller ? { signal: controller.signal } : {}),
+      });
+      lastRequestAt = Date.now();
+    } catch (error) {
+      if (controller?.signal.aborted) throw new Error(`${label} timed out after ${timeoutMs} ms`);
+      throw error;
+    } finally {
+      if (timeout !== null) clearTimeout(timeout);
+    }
+
+    if (!response || response.ok !== true) {
+      const status = response?.status ?? "unknown";
+      const retryAfter = response?.headers?.get?.("retry-after");
+      const suffix = retryAfter ? `; retry after ${retryAfter} seconds` : "";
+      throw new Error(`${label} request failed with HTTP ${status}${suffix}`);
+    }
+    let body;
+    try {
+      body = await response.json();
+    } catch {
+      throw new TypeError(`${label} returned invalid JSON`);
+    }
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      throw new TypeError(`${label} returned an invalid JSON object`);
+    }
+    if (cacheTtlMs > 0) {
+      cache.set(key, { body: cloneJson(body), expiresAt: Date.now() + cacheTtlMs });
+      while (cache.size > maxCacheEntries) cache.delete(cache.keys().next().value);
+    }
+    return body;
+  };
+}
+
 function requireText(value, field) {
   if (typeof value !== "string" || !value.trim()) throw new TypeError(`${field} must be a non-empty string`);
   return value.trim();
 }
+
+function readLimit(value, fallback, maximum) {
+  const limit = value ?? fallback;
+  assertPositiveInteger(limit, "limit", maximum);
+  return limit;
+}
+
 function isoNow(clock) {
   const value = clock();
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) throw new TypeError("clock must return a valid date");
   return date.toISOString();
 }
+
 function safeScentoSlug(page) {
   let url;
   try { url = new URL(page); } catch { return null; }
@@ -40,6 +119,7 @@ function safeScentoSlug(page) {
   const slug = url.pathname.split("/").filter(Boolean).at(-1);
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(slug ?? "") ? slug : null;
 }
+
 function pickFragranceValue(detail, field) {
   const pyramid = detail.pyramid ?? {};
   const map = {
@@ -53,6 +133,7 @@ function pickFragranceValue(detail, field) {
     launch_date: detail.year,
     concentration: detail.concentration,
     family: detail.family,
+    subfamily: detail.subfamily,
     character: detail.character,
     character_words: detail.character_words,
     notes: detail.notes ?? pyramid,
@@ -65,29 +146,38 @@ function pickFragranceValue(detail, field) {
     baseNotes: pyramid.base,
     accords: detail.character_words,
     signature_materials: detail.signature_materials,
+    seasons: detail.wears?.seasons,
+    wear_hours: detail.wears?.hours,
   };
   return map[field] ?? map[field.replace(/[A-Z]/gu, letter => `_${letter.toLowerCase()}`)];
 }
 
 /** Scento's read-only perfume API. Requires no account or API key. */
-export function createScentoResearchProvider({ fetchImpl = globalThis.fetch, clock = () => new Date(), maxProfiles = 5 } = {}) {
+export function createScentoResearchProvider({
+  fetchImpl = globalThis.fetch,
+  clock = () => new Date(),
+  maxProfiles = 5,
+  timeoutMs = 12_000,
+  cacheTtlMs = 15 * 60_000,
+  minRequestIntervalMs = 250,
+} = {}) {
   assertFetch(fetchImpl);
   if (typeof clock !== "function") throw new TypeError("clock must be a function");
-  if (!Number.isSafeInteger(maxProfiles) || maxProfiles < 1 || maxProfiles > 10) {
-    throw new TypeError("maxProfiles must be an integer between 1 and 10");
-  }
+  assertPositiveInteger(maxProfiles, "maxProfiles", 10);
+  const readJson = createJsonReader(fetchImpl, { timeoutMs, cacheTtlMs, maxCacheEntries: 40, minRequestIntervalMs });
+
   return Object.freeze({
     id: "scento-perfume-api",
     domains: Object.freeze([DOMAINS.FRAGRANCE]),
     async search(request) {
       const query = requireText(request.query, "query");
       const field = requireText(request.field, "field");
-      const limit = Math.min(request.limit ?? 5, maxProfiles);
+      const limit = Math.min(readLimit(request.limit, 5, 20), maxProfiles);
       const searchUrl = new URL(`${SCENTO_BASE}/search`);
       searchUrl.searchParams.set("q", query);
       searchUrl.searchParams.set("kind", "perfume");
       searchUrl.searchParams.set("lang", "en");
-      const search = await readJson(fetchImpl, searchUrl, "Scento search");
+      const search = await readJson(searchUrl, "Scento search");
       const matches = search.detail?.matches;
       if (!Array.isArray(matches)) throw new TypeError("Scento search response is missing detail.matches");
 
@@ -96,7 +186,6 @@ export function createScentoResearchProvider({ fetchImpl = globalThis.fetch, clo
         const slug = safeScentoSlug(match.page);
         if (!slug) continue;
         const profile = await readJson(
-          fetchImpl,
           `${SCENTO_BASE}/perfumes/${encodeURIComponent(slug)}?lang=en`,
           "Scento perfume profile",
         );
@@ -124,6 +213,10 @@ export function createScentoResearchProvider({ fetchImpl = globalThis.fetch, clo
   });
 }
 
+/**
+ * Only mapped Wikidata properties with documented meaning are enabled.
+ * Quantities preserve amount and unit URI; JBAE does not guess conversions.
+ */
 const WIKIDATA_FIELDS = Object.freeze({
   name: { property: null, kind: "label" },
   identity: { property: null, kind: "label" },
@@ -135,9 +228,30 @@ const WIKIDATA_FIELDS = Object.freeze({
   release_date: { property: "P577", kind: "time" },
   launch_date: { property: "P577", kind: "time" },
   display_size: { property: "P13749", kind: "quantity" },
+  ram: { property: "P13525", kind: "quantity" },
+  ram_capacity: { property: "P13525", kind: "quantity" },
+  storage: { property: "P2928", kind: "quantity" },
+  storage_capacity: { property: "P2928", kind: "quantity" },
+  cpu: { property: "P880", kind: "entity" },
+  processor: { property: "P880", kind: "entity" },
+  gpu: { property: "P2560", kind: "entity" },
 });
-function parseWikidataSnak(snak, kind) {
-  const value = snak?.mainsnak?.datavalue?.value ?? snak?.datavalue?.value;
+
+function getUsableStatements(entity, property) {
+  const statements = entity?.claims?.[property];
+  if (!Array.isArray(statements)) return [];
+  const usable = statements.filter(statement =>
+    statement && statement.rank !== "deprecated" &&
+    (!statement.mainsnak?.snaktype || statement.mainsnak.snaktype === "value")
+  );
+  const preferred = usable.filter(statement => statement.rank === "preferred");
+  return preferred.length > 0 ? preferred : usable.filter(statement => statement.rank !== "preferred");
+}
+
+function parseWikidataSnak(statement, kind) {
+  const snak = statement?.mainsnak ?? statement;
+  if (snak?.snaktype && snak.snaktype !== "value") return null;
+  const value = snak?.datavalue?.value;
   if (value === undefined || value === null) return null;
   if (kind === "time" && typeof value.time === "string") {
     const date = value.time.match(/^[+-](\d{4}-\d{2}-\d{2})/u)?.[1];
@@ -154,34 +268,41 @@ function parseWikidataSnak(snak, kind) {
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
   return null;
 }
-async function resolveEntityLabels(fetchImpl, entityIds) {
-  if (!entityIds.length) return {};
+
+async function fetchWikidataEntities(readJson, entityIds) {
+  if (entityIds.length === 0) return {};
   const url = new URL(WIKIDATA_API);
   url.searchParams.set("action", "wbgetentities");
   url.searchParams.set("ids", [...new Set(entityIds)].join("|"));
-  url.searchParams.set("props", "labels");
+  url.searchParams.set("props", "claims|labels");
   url.searchParams.set("languages", "en");
   url.searchParams.set("format", "json");
   url.searchParams.set("origin", "*");
-  const response = await readJson(fetchImpl, url, "Wikidata label lookup");
-  const labels = {};
-  for (const [id, entity] of Object.entries(response.entities ?? {})) {
-    const label = entity.labels?.en?.value;
-    if (typeof label === "string" && label.trim()) labels[id] = label.trim();
+  const response = await readJson(url, "Wikidata entity batch");
+  if (!response.entities || typeof response.entities !== "object" || Array.isArray(response.entities)) {
+    throw new TypeError("Wikidata entity response is missing entities");
   }
-  return labels;
+  return response.entities;
 }
 
 /**
  * Wikidata browser-compatible research provider.
- * It deliberately supports only fields with a stable, known property mapping.
+ * Entity details for up to 20 matches are fetched in one bounded request.
+ * It deliberately does not infer missing technical specifications.
  */
-export function createWikidataResearchProvider({ fetchImpl = globalThis.fetch, clock = () => new Date(), maxResults = 8 } = {}) {
+export function createWikidataResearchProvider({
+  fetchImpl = globalThis.fetch,
+  clock = () => new Date(),
+  maxResults = 8,
+  timeoutMs = 12_000,
+  cacheTtlMs = 5 * 60_000,
+  minRequestIntervalMs = 250,
+} = {}) {
   assertFetch(fetchImpl);
   if (typeof clock !== "function") throw new TypeError("clock must be a function");
-  if (!Number.isSafeInteger(maxResults) || maxResults < 1 || maxResults > 20) {
-    throw new TypeError("maxResults must be an integer between 1 and 20");
-  }
+  assertPositiveInteger(maxResults, "maxResults", 20);
+  const readJson = createJsonReader(fetchImpl, { timeoutMs, cacheTtlMs, maxCacheEntries: 50, minRequestIntervalMs });
+
   return Object.freeze({
     id: "wikidata",
     domains: Object.freeze([DOMAINS.TECHNOLOGY]),
@@ -190,7 +311,7 @@ export function createWikidataResearchProvider({ fetchImpl = globalThis.fetch, c
       const field = requireText(request.field, "field");
       const mapping = WIKIDATA_FIELDS[field];
       if (!mapping) throw new Error(`Wikidata provider does not support field: ${field}`);
-      const limit = Math.min(request.limit ?? 5, maxResults);
+      const limit = Math.min(readLimit(request.limit, 5, 20), maxResults);
       const searchUrl = new URL(WIKIDATA_API);
       searchUrl.searchParams.set("action", "wbsearchentities");
       searchUrl.searchParams.set("search", query);
@@ -198,37 +319,25 @@ export function createWikidataResearchProvider({ fetchImpl = globalThis.fetch, c
       searchUrl.searchParams.set("limit", String(limit));
       searchUrl.searchParams.set("format", "json");
       searchUrl.searchParams.set("origin", "*");
-      const search = await readJson(fetchImpl, searchUrl, "Wikidata search");
+      const search = await readJson(searchUrl, "Wikidata search");
       if (!Array.isArray(search.search)) throw new TypeError("Wikidata search response is missing search results");
 
       const selected = search.search.filter(item => /^Q\d+$/u.test(item?.id ?? "")).slice(0, limit);
-      const entities = await Promise.all(selected.map(async item => {
-        const json = await readJson(fetchImpl, `${WIKIDATA_ENTITY_BASE}/${item.id}.json`, "Wikidata entity");
-        return { item, entity: json.entities?.[item.id] };
-      }));
-      const entityIds = [];
-      if (mapping.kind === "entity") {
-        for (const { entity } of entities) {
-          const snaks = entity?.claims?.[mapping.property] ?? [];
-          for (const snak of snaks) {
-            const value = parseWikidataSnak(snak, "entity");
-            if (value) entityIds.push(value.entityId);
-          }
-        }
-      }
-      const labels = await resolveEntityLabels(fetchImpl, entityIds);
+      const entityMap = await fetchWikidataEntities(readJson, selected.map(item => item.id));
       const retrievedAt = isoNow(clock);
       const output = [];
-      for (const { item, entity } of entities) {
+
+      for (const item of selected) {
+        const entity = entityMap[item.id];
         if (!entity) continue;
         let value;
         if (mapping.kind === "label") {
           value = item.label || entity.labels?.en?.value;
         } else {
-          const snaks = entity.claims?.[mapping.property] ?? [];
-          const values = snaks.map(snak => parseWikidataSnak(snak, mapping.kind)).filter(Boolean);
+          const statements = getUsableStatements(entity, mapping.property);
+          const values = statements.map(statement => parseWikidataSnak(statement, mapping.kind)).filter(Boolean);
           if (mapping.kind === "entity") {
-            for (const entry of values) entry.label = labels[entry.entityId] ?? null;
+            for (const entry of values) entry.label = entityMap[entry.entityId]?.labels?.en?.value ?? null;
           }
           value = values.length === 1 ? values[0] : values;
         }
@@ -244,7 +353,7 @@ export function createWikidataResearchProvider({ fetchImpl = globalThis.fetch, c
             type: SOURCE_TYPES.DATABASE,
           },
           observedAt: retrievedAt,
-          note: "Structured Wikidata claim; review item identity, statement qualifiers and completeness before approval. JBAE retains this as unconfirmed.",
+          note: `Wikidata property ${mapping.property ?? "label"}; review item identity, claim rank, qualifiers and statement references before approval. JBAE retains this as unconfirmed.`,
         });
       }
       return output;
@@ -258,3 +367,5 @@ export function createDefaultResearchProviders(options = {}) {
     createWikidataResearchProvider(options.wikidata),
   ]);
 }
+
+export const WIKIDATA_RESEARCH_FIELDS = Object.freeze(Object.keys(WIKIDATA_FIELDS));
