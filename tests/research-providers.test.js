@@ -614,6 +614,7 @@ test("TechAPI maps expanded SoC, CPU, GPU and monitor detail fields", async () =
   });
   const get = async (query, field) => (await provider.search({ query, field }))[0]?.value;
   assert.equal(await get("socs:example-soc", "manufacturer"), "Example Silicon");
+  assert.equal(await get("socs:example-soc", "soc"), "Example SoC");
   assert.deepEqual(await get("socs:example-soc", "cpu_config"), records["socs:example-soc"].cpu_config);
   assert.equal(await get("socs:example-soc", "npu_tops"), 45);
   assert.equal(await get("socs:example-soc", "gpu_clock_mhz"), 1100);
@@ -622,6 +623,7 @@ test("TechAPI maps expanded SoC, CPU, GPU and monitor detail fields", async () =
   assert.equal(await get("cpus:example-cpu", "cpu_cores"), 24);
   assert.equal(await get("cpus:example-cpu", "boost_clock_ghz"), 6);
   assert.equal(await get("gpus:example-gpu", "manufacturer"), "Example Graphics Co.");
+  assert.equal(await get("gpus:example-gpu", "gpu"), "Example GPU");
   assert.equal(await get("gpus:example-gpu", "memory_gb"), 24);
   assert.equal(await get("gpus:example-gpu", "memory_bandwidth_gbps"), 1200);
   assert.equal(await get("gpus:example-gpu", "tensor_cores"), 360);

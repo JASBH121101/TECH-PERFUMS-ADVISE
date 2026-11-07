@@ -120,7 +120,7 @@ export function requireText(value, field) {
   return value.trim();
 }
 
-function readLimit(value, fallback, maximum) {
+export function readLimit(value, fallback, maximum) {
   const limit = value ?? fallback;
   assertPositiveInteger(limit, "limit", maximum);
   return limit;
