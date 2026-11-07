@@ -34,19 +34,36 @@ function requireText(value, field) {
   return value.trim();
 }
 
+function normalizeHttpUrl(value, field) {
+  const raw = requireText(value, field);
+  let parsed;
+  try { parsed = new URL(raw); } catch { throw new TypeError(`${field} must be a valid URL`); }
+  if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) {
+    throw new TypeError(`${field} must be a public HTTP or HTTPS URL`);
+  }
+  return parsed.href;
+}
+
 function validateSource(source) {
   if (!source || typeof source !== "object" || Array.isArray(source)) {
     throw new TypeError("source must be an object");
   }
   const name = requireText(source.name, "source.name");
-  const url = requireText(source.url, "source.url");
-  let parsed;
-  try { parsed = new URL(url); } catch { throw new TypeError("source.url must be a valid URL"); }
-  if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new TypeError("source.url must use HTTP or HTTPS");
-  }
+  const url = normalizeHttpUrl(source.url, "source.url");
   if (!sourceTypes.has(source.type)) throw new TypeError("source.type is not supported");
-  return Object.freeze({ name, url: parsed.href, type: source.type });
+
+  const normalized = { name, url, type: source.type };
+  if (source.references !== undefined) {
+    if (!Array.isArray(source.references) || source.references.length > 20) {
+      throw new TypeError("source.references must be an array with at most 20 URLs");
+    }
+    normalized.references = Object.freeze([...new Set(
+      source.references.map((reference, index) => normalizeHttpUrl(reference, `source.references[${index}]`))
+    )]);
+  }
+  if (source.license !== undefined) normalized.license = requireText(source.license, "source.license");
+  if (source.attribution !== undefined) normalized.attribution = requireText(source.attribution, "source.attribution");
+  return Object.freeze(normalized);
 }
 
 export function createEvidenceRecord(input) {
@@ -63,7 +80,7 @@ export function createEvidenceRecord(input) {
   if (!statusValues.has(input.status)) throw new TypeError("status is not supported");
 
   const observedAt = requireText(input.observedAt, "observedAt");
-  if (!/^\d{4}-\d{2}-\d{2}T/.test(observedAt) || Number.isNaN(Date.parse(observedAt))) {
+  if (!/^\d{4}-\d{2}-\d{2}T/u.test(observedAt) || Number.isNaN(Date.parse(observedAt))) {
     throw new TypeError("observedAt must be an ISO 8601 date-time");
   }
 

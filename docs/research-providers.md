@@ -67,6 +67,16 @@ Documentation:
 
 No paid provider is mandatory. A provider requiring paid access, commercial licensing, or user-held API credentials remains opt-in and cannot be activated without an explicit decision.
 
+## TechAPI static specifications (optional; not enabled by default)
+
+TechAPI serves static JSON records without an API key. The current public catalogue lists smartphones, tablets, laptops, monitors, watches, SoCs, discrete GPUs and CPUs. JBAE integrates an exact-slug detail lookup only; it does not fetch or mirror category-wide index files.
+
+Use `createTechApiResearchProvider()` and query with an exact `resource:slug`, for example `smartphones:galaxy-s26-ultra`. Supported resources are `smartphones`, `tablets`, `laptops`, `monitors`, `watches`, `socs`, `gpus` and `cpus`. Mapped fields include identity, manufacturer, release date, reference MSRP in USD, RAM, storage options, SoC, GPU, display, camera arrays, battery, wired/wireless charging, weight, dimensions, IP rating, OS and connectivity where present in the record.
+
+Each candidate preserves up to ten canonical `source_urls` from the record. Its own `verified` flag is recorded only as upstream metadata; JBAE forces the evidence status to `unconfirmed` and requires human review. Exact model/variant identity still needs checking.
+
+**License warning:** TechAPI's data is CC BY-SA 4.0, not MIT. Reuse requires attribution ("Data from TechAPI") and share-alike compliance for adaptations/redistributions. The code adapter is optional and the provider is excluded from the default registry. It is not enabled for commercial distribution until the product's data licensing plan is reviewed. Do not copy or redistribute its full catalogue. See https://github.com/GetTechAPI/TechAPI and https://creativecommons.org/licenses/by-sa/4.0/.
+
 ## Trust and limitations
 
 Provider confidence values are input heuristics, not calibrated probabilities and not verification. A recent retrieval does not prove the product identity matches the intended regional SKU, that the claim is complete, or that a retailer listing applies in Nicaragua. Claims should be cross-checked against manufacturer documentation or independent tests before verification.

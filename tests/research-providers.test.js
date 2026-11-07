@@ -5,6 +5,7 @@ import {
   createDefaultResearchProviders,
   createScentoResearchProvider,
   createWikidataResearchProvider,
+  createTechApiResearchProvider,
   WIKIDATA_RESEARCH_FIELDS,
 } from "../src/research/providers.js";
 
@@ -213,4 +214,79 @@ test("Wikidata maps display size to the diagonal display-size property", async (
   const results = await provider.search({ query: "Example tablet", field: "display_size" });
   assert.equal(results[0].value.amount, 11);
   assert.match(requested[1], /wbgetentities/u);
+});
+
+test("TechAPI exact-slug provider maps real device fields and retains CC BY-SA attribution", async () => {
+  const calls = [];
+  const provider = createTechApiResearchProvider({
+    fetchImpl: async url => {
+      calls.push(String(url));
+      return response({
+        slug: "galaxy-s26-ultra",
+        name: "Galaxy S26 Ultra",
+        brand: { name: "Samsung", country: "KR" },
+        soc: { name: "Snapdragon 8 Elite Gen 5", gpu_name: "Adreno 840" },
+        ram_gb: 12,
+        storage_options_gb: [256, 512, 1024],
+        display: { size_inch: 6.9, resolution: "3120x1440", refresh_hz: 120 },
+        cameras: [{ type: "main", mp: 200 }, { type: "ultrawide", mp: 50 }],
+        battery_mah: 5000,
+        source_urls: ["https://www.samsung.com/global/galaxy/galaxy-s26-ultra/specs/"],
+        verified: true,
+      });
+    },
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  const results = await provider.search({ query: "smartphones:galaxy-s26-ultra", field: "main_camera_mp" });
+  assert.equal(results.length, 1);
+  assert.equal(results[0].value, 200);
+  assert.equal(results[0].confidence, 0.8);
+  assert.equal(results[0].source.license, "CC-BY-SA-4.0");
+  assert.equal(results[0].source.attribution, "Data from TechAPI");
+  assert.equal(results[0].source.references[0], "https://www.samsung.com/global/galaxy/galaxy-s26-ultra/specs/");
+  assert.equal(calls.length, 1);
+  assert.match(calls[0], /\/smartphones\/galaxy-s26-ultra\/index.json$/u);
+});
+
+test("TechAPI supports distinct laptop and monitor resources and refuses guessed slugs", async () => {
+  const requested = [];
+  const provider = createTechApiResearchProvider({
+    fetchImpl: async url => {
+      requested.push(String(url));
+      const isLaptop = String(url).includes("/laptops/");
+      return response(isLaptop
+        ? { slug: "hp-omnibook-x-flip", name: "HP OmniBook X Flip", cpu: { cores: 8 }, source_urls: [] }
+        : { slug: "samsung-g93sc", name: "Samsung Odyssey G9", display: { refresh_hz: 240 }, source_urls: [] });
+    },
+    minRequestIntervalMs: 0,
+  });
+  const laptop = await provider.search({ query: "laptops:hp-omnibook-x-flip", field: "name" });
+  const monitor = await provider.search({ query: "monitors:samsung-g93sc", field: "name" });
+  assert.equal(laptop[0].value, "HP OmniBook X Flip");
+  assert.equal(monitor[0].value, "Samsung Odyssey G9");
+  await assert.rejects(() => provider.search({ query: "HP OmniBook X Flip", field: "name" }), /exact resource:slug/);
+  assert.equal(requested.length, 2);
+});
+
+test("TechAPI never trusts the upstream verified flag as JBAE verification", async () => {
+  const provider = createTechApiResearchProvider({
+    fetchImpl: async () => response({
+      slug: "galaxy-s26-ultra", name: "Galaxy S26 Ultra", verified: true, ram_gb: 12,
+      source_urls: [],
+    }),
+    minRequestIntervalMs: 0,
+  });
+  const record = (await provider.search({
+    query: "smartphones:galaxy-s26-ultra", field: "ram_gb",
+  }))[0];
+  assert.match(record.note, /upstream's label, not JBAE verification/u);
+});
+
+test("TechAPI is kept out of default providers until its share-alike terms are consciously enabled", () => {
+  const providers = createDefaultResearchProviders({
+    scento: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
+    wikidata: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
+  });
+  assert.deepEqual(providers.map(provider => provider.id), ["scento-perfume-api", "wikidata"]);
 });

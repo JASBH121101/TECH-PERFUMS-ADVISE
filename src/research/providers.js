@@ -386,6 +386,141 @@ export function createWikidataResearchProvider({
   });
 }
 
+const TECHAPI_BASE = "https://gettechapi.github.io/TechAPI/v1";
+const TECHAPI_RESOURCE_TYPES = Object.freeze({
+  smartphones: "smartphone",
+  tablets: "tablet",
+  laptops: "laptop",
+  monitors: "monitor",
+  watches: "smartwatch",
+  socs: "soc",
+  gpus: "gpu",
+  cpus: "cpu",
+});
+
+const TECHAPI_FIELDS = Object.freeze({
+  name: ["name"],
+  identity: ["name"],
+  manufacturer: ["brand.name"],
+  manufacturer_country: ["brand.country"],
+  release_date: ["release_date"],
+  msrp_usd: ["msrp_usd"],
+  ram_gb: ["ram_gb", "memory.ram_gb"],
+  storage_options_gb: ["storage_options_gb", "storage.options_gb"],
+  chipset: ["soc.name", "processor.name", "chipset"],
+  soc: ["soc.name"],
+  gpu: ["soc.gpu_name", "gpu.name", "gpu"],
+  process_nm: ["soc.process_nm", "process_nm"],
+  display_size: ["display.size_inch", "display.size_in", "display_size_inch"],
+  display_resolution: ["display.resolution", "display.resolution_px"],
+  refresh_rate: ["display.refresh_hz", "display.refresh_rate_hz"],
+  display_type: ["display.type", "display.technology"],
+  brightness_nits: ["display.brightness_nits", "display.brightness"],
+  ppi: ["display.ppi"],
+  cameras: ["cameras", "camera"],
+  main_camera_mp: ["cameras"],
+  battery_mah: ["battery_mah", "battery.capacity_mah"],
+  battery_wh: ["battery_wh", "battery.capacity_wh"],
+  charging_wired_w: ["charging_wired_w", "charging.wired_w"],
+  charging_wireless_w: ["charging_wireless_w", "charging.wireless_w"],
+  weight_g: ["weight_g", "weight.grams"],
+  dimensions: ["dimensions"],
+  water_resistance: ["ip_rating", "water_resistance"],
+  operating_system: ["os", "operating_system"],
+  os_version: ["os_version"],
+  connectivity: ["connectivity"],
+  audio: ["audio"],
+  ports: ["ports"],
+  memory_type: ["memory_type", "ram_type"],
+  storage_type: ["storage_type"],
+  cpu_cores: ["cpu.cores", "processor.cores", "cpu_cores"],
+  cpu_threads: ["cpu.threads", "processor.threads", "cpu_threads"],
+  gpu_memory_gb: ["gpu.memory_gb", "gpu_memory_gb"],
+});
+
+function readPath(object, path) {
+  return path.split(".").reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, object);
+}
+
+function pickTechApiValue(record, field) {
+  if (field === "main_camera_mp") {
+    if (!Array.isArray(record.cameras)) return undefined;
+    const primary = record.cameras.find(camera => ["main", "wide", "primary"].includes(String(camera?.type ?? "").toLowerCase()));
+    return typeof primary?.mp === "number" ? primary.mp : undefined;
+  }
+  const paths = TECHAPI_FIELDS[field];
+  if (!paths) throw new Error(`TechAPI provider does not support field: ${field}`);
+  for (const path of paths) {
+    const value = readPath(record, path);
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+  return undefined;
+}
+
+/**
+ * TechAPI is an optional, exact-slug lookup against its public static JSON files.
+ * It deliberately does not download the category-wide catalogue indexes.
+ *
+ * IMPORTANT: dataset license is CC-BY-SA 4.0. Reusers must attribute TechAPI
+ * and comply with share-alike requirements for adapted/redistributed data.
+ */
+export function createTechApiResearchProvider({
+  fetchImpl = globalThis.fetch,
+  clock = () => new Date(),
+  timeoutMs = 12_000,
+  cacheTtlMs = 60 * 60_000,
+  minRequestIntervalMs = 150,
+} = {}) {
+  assertFetch(fetchImpl);
+  if (typeof clock !== "function") throw new TypeError("clock must be a function");
+  const readJson = createJsonReader(fetchImpl, {
+    timeoutMs, cacheTtlMs, maxCacheEntries: 100, minRequestIntervalMs,
+  });
+
+  return Object.freeze({
+    id: "techapi-static-specs",
+    domains: Object.freeze([DOMAINS.TECHNOLOGY]),
+    async search(request) {
+      const query = requireText(request.query, "query");
+      const field = requireText(request.field, "field");
+      const match = query.match(/^([a-z]+):([a-z0-9]+(?:-[a-z0-9]+)*)$/u);
+      if (!match) throw new TypeError("TechAPI query must be an exact resource:slug pair, e.g. smartphones:galaxy-s26-ultra");
+      const [, resource, slug] = match;
+      if (!Object.hasOwn(TECHAPI_RESOURCE_TYPES, resource)) {
+        throw new TypeError(`TechAPI resource is not supported: ${resource}`);
+      }
+      const valueField = field.trim().toLowerCase();
+      const recordUrl = `${TECHAPI_BASE}/${resource}/${encodeURIComponent(slug)}/index.json`;
+      const record = await readJson(recordUrl, "TechAPI record");
+      if (record.slug !== slug || typeof record.name !== "string" || !record.name.trim()) {
+        throw new TypeError("TechAPI detail response does not match the requested record slug");
+      }
+      const value = pickTechApiValue(record, valueField);
+      if (value === undefined || value === null || value === "") return [];
+
+      const refs = Array.isArray(record.source_urls)
+        ? record.source_urls.filter(url => typeof url === "string" && /^https?:\/\//u.test(url)).slice(0, 10)
+        : [];
+      const source = {
+        name: "TechAPI",
+        url: recordUrl,
+        type: SOURCE_TYPES.DATABASE,
+        references: refs,
+        license: "CC-BY-SA-4.0",
+        attribution: "Data from TechAPI",
+      };
+      return [{
+        id: `${resource}:${slug}`,
+        value,
+        confidence: 0.8,
+        source,
+        observedAt: isoNow(clock),
+        note: `TechAPI record metadata verified=${String(record.verified === true)}; this is the upstream dataset's label, not JBAE verification. Source URLs are retained for review. JBAE status remains unconfirmed. CC-BY-SA 4.0 attribution/share-alike obligations apply to reused data.`,
+      }];
+    },
+  });
+}
+
 export function createDefaultResearchProviders(options = {}) {
   return Object.freeze([
     createScentoResearchProvider(options.scento),

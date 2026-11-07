@@ -81,3 +81,32 @@ test("rejects non-JSON values in evidence records", () => {
   assert.throws(() => createEvidenceRecord({ ...valid, value: circular }), /circular references/);
   assert.throws(() => createEvidenceRecord({ ...valid, value: Number.POSITIVE_INFINITY }), /non-finite numbers/);
 });
+
+test("preserves dataset attribution, license and canonical source references", () => {
+  const record = createEvidenceRecord({
+    ...valid,
+    source: {
+      name: "TechAPI",
+      url: "https://gettechapi.github.io/TechAPI/v1/smartphones/galaxy-s26-ultra/index.json",
+      type: SOURCE_TYPES.DATABASE,
+      references: ["https://www.samsung.com/global/galaxy/galaxy-s26-ultra/specs/"],
+      license: "CC-BY-SA-4.0",
+      attribution: "Data from TechAPI",
+    },
+  });
+  assert.equal(record.source.license, "CC-BY-SA-4.0");
+  assert.equal(record.source.attribution, "Data from TechAPI");
+  assert.deepEqual(record.source.references, ["https://www.samsung.com/global/galaxy/galaxy-s26-ultra/specs/"]);
+  assert.ok(Object.isFrozen(record.source.references));
+});
+
+test("rejects unsafe or excessive source references", () => {
+  assert.throws(() => createEvidenceRecord({
+    ...valid,
+    source: { ...valid.source, references: ["javascript:alert(1)"] },
+  }), /public HTTP or HTTPS/);
+  assert.throws(() => createEvidenceRecord({
+    ...valid,
+    source: { ...valid.source, references: Array.from({ length: 21 }, (_, i) => `https://example.com/${i}`) },
+  }), /at most 20/);
+});
