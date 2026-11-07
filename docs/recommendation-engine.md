@@ -25,3 +25,9 @@ Each candidate includes position, score, data and evidence coverage, evidence co
 ## Limitations
 
 The engine does not infer camera quality from megapixels, runtime from battery capacity, or fragrance longevity/projection from concentration or notes. Domain-specific scores and empirical measurements must be researched, sourced and normalized upstream. Scores are relative to the supplied candidates, not universal ratings.
+
+## Category safety and result ordering
+
+When product type metadata is provided, the comparison layer requires all candidates to share the same device type (smartphone/tablet/laptop) or fragrance product type (perfume/body mist/body spray/attar-oil/body lotion). This prevents unlike product categories from being ranked against one another.
+
+The displayed recommendation ranking puts candidates meeting the scored-coverage threshold first, then sorts by relative score. Products below the threshold remain visible with an explicit ineligible status; they cannot displace a sufficiently documented recommendation.

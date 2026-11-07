@@ -17,3 +17,5 @@ Longevity intervals are preserved as `longevityMinHours` and `longevityMaxHours`
 ## Shared policy
 
 Both adapters preserve product IDs and evidence IDs, validate supported domain boundaries, normalize only explicit units, and avoid filling missing values. They are deterministic and usable offline.
+
+Both adapters validate evidence-ID containers before preserving them. When category metadata is available, downstream comparison uses it to prevent cross-type comparisons.

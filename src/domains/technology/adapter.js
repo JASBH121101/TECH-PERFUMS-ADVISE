@@ -101,6 +101,10 @@ export function normalizeTechnologyProduct(input) {
   if (!input.attributes || typeof input.attributes !== "object" || Array.isArray(input.attributes)) {
     throw new TypeError("Technology product attributes must be an object");
   }
+  if (input.evidenceIds !== undefined &&
+      (!input.evidenceIds || typeof input.evidenceIds !== "object" || Array.isArray(input.evidenceIds))) {
+    throw new TypeError("Technology evidenceIds must be an object keyed by attribute field");
+  }
 
   const attributes = normalizeUnits(input.attributes);
   for (const field of POSITIVE_FIELDS) {

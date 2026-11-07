@@ -79,3 +79,24 @@ test("fragrance adapter validates measured values and scent scoring fields", () 
     attributes: { versatilityScore: 120 },
   }), /between 0 and 100/);
 });
+
+test("both domain adapters reject malformed evidence ID containers", () => {
+  assert.throws(() => normalizeTechnologyProduct({
+    id: "phone-x", name: "Phone X", deviceType: "smartphone",
+    attributes: {}, evidenceIds: ["not", "an", "object"],
+  }), /evidenceIds must be an object/);
+  assert.throws(() => normalizeFragranceProduct({
+    id: "perfume-x", name: "Perfume X", productType: "perfume",
+    attributes: {}, evidenceIds: "bad",
+  }), /evidenceIds must be an object/);
+});
+
+test("fragrance adapter keeps body products separate from perfume product types", () => {
+  const perfume = normalizeFragranceProduct({
+    id: "p", name: "Perfume", productType: "perfume", attributes: { concentration: "edp" },
+  });
+  const mist = normalizeFragranceProduct({
+    id: "m", name: "Mist", productType: "body_mist", attributes: {},
+  });
+  assert.notEqual(perfume.productType, mist.productType);
+});

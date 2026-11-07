@@ -63,6 +63,10 @@ export function normalizeFragranceProduct(input) {
   if (!input.attributes || typeof input.attributes !== "object" || Array.isArray(input.attributes)) {
     throw new TypeError("Fragrance product attributes must be an object");
   }
+  if (input.evidenceIds !== undefined &&
+      (!input.evidenceIds || typeof input.evidenceIds !== "object" || Array.isArray(input.evidenceIds))) {
+    throw new TypeError("Fragrance evidenceIds must be an object keyed by attribute field");
+  }
 
   const attributes = { ...input.attributes };
   if (attributes.volume !== undefined && attributes.volumeMl !== undefined) {

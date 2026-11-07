@@ -104,3 +104,35 @@ test("evidence-aware recommendations do not count unverified data", () => {
   assert.equal(result.ranking[0].verifiedCoverage, 100);
   assert.equal(result.evidenceMode, "strict");
 });
+
+test("ranks coverage-eligible recommendations before low-coverage results", () => {
+  const result = recommendProducts({
+    products: [
+      { id: "a", name: "High partial", domain: "technology", attributes: { cameraScore: 100 } },
+      { id: "b", name: "Complete", domain: "technology", attributes: { cameraScore: 80, batteryLifeHours: 10 } },
+    ],
+    priorities: [{ field: "cameraScore", weight: 1 }, { field: "batteryLifeHours", weight: 1 }],
+    minimumScoredCoverage: 100,
+  });
+  assert.equal(result.winnerId, "b");
+  assert.equal(result.ranking[0].id, "b");
+  assert.equal(result.ranking[0].position, 1);
+  assert.equal(result.ranking[1].eligibility, "insufficient_coverage");
+});
+
+test("rejects comparisons across technology device types and fragrance product types", () => {
+  assert.throws(() => recommendProducts({
+    products: [
+      { id: "phone", name: "Phone", domain: "technology", deviceType: "smartphone", attributes: { performanceScore: 90 } },
+      { id: "laptop", name: "Laptop", domain: "technology", deviceType: "laptop", attributes: { performanceScore: 80 } },
+    ],
+    priorities: [{ field: "performanceScore", weight: 1 }],
+  }), /different device types/);
+  assert.throws(() => recommendProducts({
+    products: [
+      { id: "edp", name: "EDP", domain: "fragrance", productType: "perfume", attributes: { longevityHours: 8 } },
+      { id: "mist", name: "Mist", domain: "fragrance", productType: "body_mist", attributes: { longevityHours: 2 } },
+    ],
+    priorities: [{ field: "longevityHours", weight: 1 }],
+  }), /different fragrance product types/);
+});

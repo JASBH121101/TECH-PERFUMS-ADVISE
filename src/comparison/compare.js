@@ -32,12 +32,19 @@ function normalizeProduct(input) {
       (!input.evidenceIds || typeof input.evidenceIds !== "object" || Array.isArray(input.evidenceIds))) {
     throw new TypeError("product.evidenceIds must be an object keyed by attribute field");
   }
+  const evidenceIds = input.evidenceIds ?? {};
+  if (!evidenceIds || typeof evidenceIds !== "object" || Array.isArray(evidenceIds)) {
+    throw new TypeError("product.evidenceIds must be an object keyed by attribute field");
+  }
+  const categoryField = domain === "technology" ? "deviceType" : "productType";
+  const category = input[categoryField] == null ? null : text(input[categoryField], `product.${categoryField}`);
   return Object.freeze({
     id,
     name,
     domain,
+    category,
     attributes: Object.freeze({ ...input.attributes }),
-    evidenceIds: Object.freeze({ ...(input.evidenceIds ?? {}) }),
+    evidenceIds: Object.freeze({ ...evidenceIds }),
   });
 }
 
@@ -217,6 +224,12 @@ export function compareProducts({ products, criteria, evidenceStore = null, evid
   if (new Set(normalized.map(product => product.domain)).size !== 1) {
     throw new TypeError("Products from different domains cannot be compared");
   }
+  const categories = normalized.map(product => product.category);
+  if (categories.some(Boolean) &&
+      (categories.some(category => !category) || new Set(categories).size !== 1)) {
+    const categoryName = normalized[0].domain === "technology" ? "device types" : "fragrance product types";
+    throw new TypeError(`Cannot compare different ${categoryName}`);
+  }
 
   const options = normalizeEvidenceOptions(evidenceStore, evidencePolicy);
   const normalizedCriteria = normalizeCriteria(criteria);
@@ -283,6 +296,7 @@ export function compareProducts({ products, criteria, evidenceStore = null, evid
     return Object.freeze({
       id: product.id,
       name: product.name,
+      category: product.category,
       score: scoredWeight ? Number((weightedScore / scoredWeight).toFixed(2)) : null,
       coverage: Number(((dataWeight / totalWeight) * 100).toFixed(2)),
       scoredCoverage: Number(((scoredWeight / totalWeight) * 100).toFixed(2)),

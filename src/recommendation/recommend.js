@@ -1,6 +1,14 @@
 import { DOMAINS } from "../core/domains.js";
 import { compareProducts } from "../comparison/compare.js";
 
+function deepFreeze(value) {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    Object.values(value).forEach(deepFreeze);
+  }
+  return value;
+}
+
 const FIELD_RULES = Object.freeze({
   [DOMAINS.TECHNOLOGY]: Object.freeze({
     performanceScore: "higher",
@@ -36,7 +44,7 @@ const FIELD_RULES = Object.freeze({
   }),
 });
 
-const PROFILES = Object.freeze({
+const PROFILES = deepFreeze({
   [DOMAINS.TECHNOLOGY]: Object.freeze({
     photography_video: Object.freeze([
       { field: "cameraScore", weight: 5 },
@@ -187,7 +195,7 @@ export function recommendProducts({
   const criteria = buildRecommendationCriteria({ domain, priorities, profile });
   const comparison = compareProducts({ products, criteria, evidenceStore, evidencePolicy });
 
-  const ranking = comparison.ranking.map((item, index) => {
+  const annotated = comparison.ranking.map(item => {
     const strengths = item.breakdown
       .filter(field => field.score !== null && field.score >= 70)
       .sort((a, b) => b.score - a.score)
@@ -199,7 +207,6 @@ export function recommendProducts({
     const eligible = item.score !== null && item.scoredCoverage >= minimumScoredCoverage;
     return Object.freeze({
       ...item,
-      position: index + 1,
       eligibility: eligible ? "eligible" : item.score === null ? "insufficient_data" : "insufficient_coverage",
       strengths: Object.freeze(strengths),
       compromises: Object.freeze(compromises),
@@ -214,6 +221,18 @@ export function recommendProducts({
       }),
     });
   });
+
+  const ranking = annotated
+    .sort((a, b) => {
+      const aEligible = a.eligibility === "eligible";
+      const bEligible = b.eligibility === "eligible";
+      if (aEligible !== bEligible) return aEligible ? -1 : 1;
+      if (a.score === null && b.score === null) return 0;
+      if (a.score === null) return 1;
+      if (b.score === null) return -1;
+      return b.score - a.score;
+    })
+    .map((item, index) => Object.freeze({ ...item, position: index + 1 }));
 
   const eligibleRanking = ranking
     .filter(item => item.eligibility === "eligible")
