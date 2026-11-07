@@ -37,3 +37,4 @@ export { EvidenceStore } from "./core/evidence-store.js";
 
 export { getSourcePolicy, assessSource } from "./research/source-policy.js";
 export { createResearchCandidate } from "./research/research-candidate.js";
+\nexport { compareProducts } from "./comparison/compare.js";\n
