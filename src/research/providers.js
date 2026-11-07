@@ -668,16 +668,32 @@ function coreInfoPrice(record, flattened) {
 }
 
 function parseCoreInfoPriceText(text, currencyHint) {
-  const match = text.match(/([₹$€£])\s*([\d,]+(?:\.\d+)?)/u) ??
-    text.match(/([\d,]+(?:\.\d+)?)\s*(INR|USD|EUR|GBP)/iu);
-  if (!match) return undefined;
-  const symbol = match[1];
-  const amountText = /[₹$€£]/u.test(symbol) ? match[2] : match[1];
-  const currency = ({ "₹": "INR", "$": "USD", "€": "EUR", "£": "GBP" })[symbol] ??
-    (/[A-Za-z]/u.test(match[2] ?? "") ? match[2].toUpperCase() : currencyHint);
-  const amount = Number(String(amountText).replace(/,/gu, ""));
-  if (!Number.isFinite(amount) || typeof currency !== "string") return undefined;
-  return { amount, currency: currency.toUpperCase(), indicative: true, basis: "published_reference" };
+  const input = text.trim();
+  const symbols = { "₹": "INR", "$": "USD", "€": "EUR", "£": "GBP" };
+  const symbolMatch = input.match(/([₹$€£])\\s*([\\d,]+(?:\\.\\d+)?)/u);
+  let amountText;
+  let currency;
+  if (symbolMatch) {
+    amountText = symbolMatch[2];
+    currency = symbols[symbolMatch[1]];
+  } else {
+    const codeMatch = input.match(/\\b(INR|USD|EUR|GBP)\\s*([\\d,]+(?:\\.\\d+)?)\\b/iu) ??
+      input.match(/([\\d,]+(?:\\.\\d+)?)\\s*(INR|USD|EUR|GBP)\\b/iu);
+    if (codeMatch) {
+      const codeFirst = /^[A-Za-z]{3}/u.test(codeMatch[0]);
+      amountText = codeFirst ? codeMatch[2] : codeMatch[1];
+      currency = (codeFirst ? codeMatch[1] : codeMatch[2]).toUpperCase();
+    } else if (/^[\\d,]+(?:\\.\\d+)?$/u.test(input) &&
+        typeof currencyHint === "string" && /^[A-Z]{3}$/iu.test(currencyHint.trim())) {
+      amountText = input;
+      currency = currencyHint.trim().toUpperCase();
+    } else {
+      return undefined;
+    }
+  }
+  const amount = Number(amountText.replace(/,/gu, ""));
+  if (!Number.isFinite(amount) || amount < 0 || !currency) return undefined;
+  return { amount, currency, indicative: true, basis: "published_reference" };
 }
 
 function coreInfoValue(record, field) {

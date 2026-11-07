@@ -80,6 +80,35 @@ async function run() {
   assert.equal(coreInfoLaptop[0].source.attribution, "Data from CoreInfo");
   console.log(`CoreInfo laptop: PASS — ${coreInfoLaptop[0].value}`);
 
+  const extendedCoreInfoSamples = [
+    ["xiaomi-pad-8", "tablet"],
+    ["infinix-xpad-30-pro", "tablet"],
+    ["redmi-watch-5", "smartwatch"],
+  ];
+  for (const [slug, category] of extendedCoreInfoSamples) {
+    const result = await coreInfo.search({
+      domain: DOMAINS.TECHNOLOGY,
+      subjectId: `smoke-${slug}`,
+      field: "name",
+      query: slug,
+      limit: 1,
+    });
+    assert.ok(result.length > 0, `CoreInfo must return the exact-slug ${category} record: ${slug}`);
+    assert.equal(result[0].id, slug);
+    console.log(`CoreInfo ${category}: PASS — ${result[0].value}`);
+  }
+  const tabletFields = ["brand", "ram", "storage", "display_size", "display_resolution", "chipset", "gpu", "price"];
+  for (const field of tabletFields) {
+    const results = await coreInfo.search({
+      domain: DOMAINS.TECHNOLOGY,
+      subjectId: "smoke-xiaomi-pad-8",
+      field,
+      query: "xiaomi-pad-8",
+      limit: 1,
+    });
+    console.log(`CoreInfo Xiaomi Pad 8 ${field}: ${results.length ? "PRESENT" : "not published"}`);
+  }
+
   console.log("External provider smoke tests passed. Research results remain unconfirmed candidates.");
 }
 

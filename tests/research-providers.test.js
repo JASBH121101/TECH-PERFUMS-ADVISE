@@ -434,3 +434,56 @@ test("CoreInfo exact-slug provider rejects broad search phrases and mismatched r
     /does not match the requested device slug/u,
   );
 });
+
+
+test("CoreInfo parses currency-prefixed prices and numeric strings only with an explicit currency", async () => {
+  const records = [
+    { slug: "price-prefix", name: "Price Prefix", price: "INR 39,990" },
+    { slug: "price-numeric", name: "Price Numeric", price: "39990", currency: "INR" },
+    { slug: "price-ambiguous", name: "Price Ambiguous", price: "39990" },
+  ];
+  const provider = createCoreInfoResearchProvider({
+    fetchImpl: async url => response(records.find(item => url.endsWith(`/${item.slug}.json`))),
+    minRequestIntervalMs: 0,
+  });
+  const getPrice = async slug => (await provider.search({
+    query: slug, field: "price",
+  }))[0]?.value;
+  assert.deepEqual(await getPrice("price-prefix"), {
+    amount: 39990, currency: "INR", indicative: true, basis: "published_reference",
+  });
+  assert.deepEqual(await getPrice("price-numeric"), {
+    amount: 39990, currency: "INR", indicative: true, basis: "published_reference",
+  });
+  assert.equal(await getPrice("price-ambiguous"), undefined);
+});
+
+test("CoreInfo resolves tablet and smartwatch category-specific records without inventing absent fields", async () => {
+  const records = {
+    "xiaomi-pad-8": {
+      slug: "xiaomi-pad-8", name: "Xiaomi Pad 8", brand: { name: "Xiaomi" },
+      category: "tablets", specifications: [
+        { category: "Display", items: [{ name: "Screen Size", value: "11.2 inches" }] },
+        { category: "Memory", items: [{ name: "RAM", value: "8 GB" }, { name: "Storage", value: "128 GB" }] },
+      ],
+    },
+    "redmi-watch-5": {
+      slug: "redmi-watch-5", name: "Redmi Watch 5", brand: "Xiaomi",
+      category: "smartwatches", specifications: [
+        { category: "Display", items: [{ name: "Display Size", value: "2.07 inches" }] },
+      ],
+    },
+  };
+  const provider = createCoreInfoResearchProvider({
+    fetchImpl: async url => response(records[url.split("/").at(-1).replace(".json", "")]),
+    minRequestIntervalMs: 0,
+  });
+  const tablet = await provider.search({ query: "xiaomi-pad-8", field: "name" });
+  const tabletRam = await provider.search({ query: "xiaomi-pad-8", field: "ram" });
+  const watch = await provider.search({ query: "redmi-watch-5", field: "name" });
+  const absent = await provider.search({ query: "redmi-watch-5", field: "battery_capacity" });
+  assert.equal(tablet[0].value, "Xiaomi Pad 8");
+  assert.equal(tabletRam[0].value, "8 GB");
+  assert.equal(watch[0].value, "Redmi Watch 5");
+  assert.deepEqual(absent, []);
+});
