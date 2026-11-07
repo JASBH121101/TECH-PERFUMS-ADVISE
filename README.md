@@ -2,27 +2,38 @@
 
 **Independent product-advisory intelligence for fragrance and technology.**
 
-JB Advisor Engine is the intelligence layer behind the TECH-PERFUMS-ADVISE Android application. It combines deterministic domain rules, evidence-backed research, product comparison, and preference-aware recommendations.
+JB Advisor Engine (JBAE) is the deterministic intelligence core planned for the TECH-PERFUMS-ADVISE Android application. It combines domain-specific normalization, provenance-aware evidence, explainable product comparison, preference-based recommendations, and controlled research intake.
 
 ## Product identity
 
 - **Engine:** JB Advisor Engine (JBAE)
 - **Tagline:** Understand. Compare. Recommend.
 - **Domains:** Fragrance and personal technology
-- **Application modules:** Fragrance Advisor and Tech Advisor
+- **Planned app modules:** Fragrance Advisor and Tech Advisor
 
 ## Architecture principles
 
-1. Evidence before assertion: every sourced fact keeps provenance and retrieval date.
-2. Deterministic decisions: scoring and validation rules are explicit, testable, and explainable.
-3. Hybrid autonomy: routine unverified knowledge can be refreshed automatically; verified facts, policy changes, destructive actions, and cost-bearing integrations require approval.
-4. Offline-first: local knowledge and core rules remain usable without a network connection.
-5. Domain separation: fragrance and technology use separate domain models and scoring criteria.
-6. Privacy and cost control: no secrets in source code; external paid services are opt-in.
+1. Evidence before assertion: sourced facts retain provenance, status, confidence and observation time.
+2. Deterministic decisions: validation, comparison and scoring are explicit, testable and explainable.
+3. Human approval: research candidates remain unconfirmed; adding them to local knowledge requires explicit approval.
+4. Offline-first: deterministic rules and local knowledge do not require a network connection.
+5. Domain separation: fragrance and technology use separate product models, units and comparison criteria.
+6. Privacy and cost control: no credentials in source code; external paid services remain opt-in.
 
-## Repository layout
+## Implemented engine layers
 
-The `main` branch contains the public application foundation. Active engine development takes place in `feature/jb-advisor-engine`.
+- **Domain adapters:** normalized fragrance types (perfume, body mist, body spray, attar/oil and body lotion) and technology device types (smartphone, tablet and laptop).
+- **Evidence Engine:** append-only claims, provenance, evidence statuses, deep immutable values and conflict detection.
+- **Comparison Engine:** domain- and category-safe comparison for 2–4 candidates, with missing-data and evidence coverage accounting.
+- **Recommendation Engine:** configurable priorities, domain profiles, minimum coverage gates, tie handling and explainable strengths/compromises.
+- **Knowledge Engine:** versioned snapshots, schema migration, validated JSON backup and non-destructive merge restore.
+- **SQLite adapter:** transactional persistence adapter for an already opened Capacitor SQLite connection, with schema version checks and SQLite quick integrity check.
+- **Advisor Core:** deterministic orchestration of normalization, evidence integration and recommendation.
+- **Research Engine:** provider-agnostic research intake; results are always unconfirmed candidates and require explicit approval before being staged in local knowledge.
+
+## Repository workflow
+
+Active engine development takes place in `feature/jb-advisor-engine`. The `main` branch remains unchanged until integration is explicitly approved. The Android application shell and APK are not yet part of this repository's implemented deliverables.
 
 ## Development
 
@@ -37,10 +48,27 @@ npm run check
 npm test
 ```
 
+The GitHub Actions validation workflow checks JavaScript syntax and runs the full test suite. A separate private JB Expert QA workflow audits the public project without copying private QA source into this repository.
+
+## Current validation
+
+The latest completed validation for the research pipeline commit reported:
+
+- **Automated tests:** 99 passed, 0 failed.
+- **JB Expert QA:** 100/100, 19 rules executed, 0 rule execution errors, 0 findings.
+
+These checks validate engine code and adapter contracts. They do not certify native Android behavior or guarantee defect-free software.
+
+## Not yet implemented / device validation pending
+
+- Capacitor Android application shell and UI.
+- Installation of the native `@capacitor-community/sqlite` plugin in the Android project.
+- Native SQLite testing on emulator/physical Android device, including process-kill/restart recovery.
+- Built-in live web/API providers. ResearchEngine currently accepts injected provider implementations.
+- OCR intake, APK packaging and distribution.
+
+The SQLite adapter requires an already opened `SQLiteDBConnection`; the repository does not yet include the Android shell that creates and manages that connection.
+
 ## Security
 
-Never commit API keys, access tokens, private customer data, or local environment files. Use GitHub Actions secrets for CI credentials.
-
-## Status
-
-Foundation initialized. Engine implementation and domain modules are developed incrementally and validated before integration into the Android application.
+Never commit API keys, access tokens, private customer data or local environment files. Keep API secrets out of the APK and use platform secure storage or a server-side integration where required.
