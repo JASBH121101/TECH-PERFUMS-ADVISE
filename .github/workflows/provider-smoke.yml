@@ -6,7 +6,7 @@ on:
       - feature/jb-advisor-engine
     paths:
       - "src/research/providers.js"
-      - "scripts/provider-smoke-test.js"
+      - "scripts/provider-smoke.js"
       - "package.json"
       - ".github/workflows/provider-smoke.yml"
   workflow_dispatch:

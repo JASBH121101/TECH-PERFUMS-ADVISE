@@ -12,7 +12,7 @@ async function run() {
   if (typeof fetch !== "function") throw new Error("This smoke test requires a runtime with fetch()");
   console.log("JBAE live provider smoke tests (read-only, bounded requests)");
 
-  const scento = createScentoResearchProvider({ timeoutMs, maxProfiles: 1, cacheTtlMs: 0 });
+  const scento = createScentoResearchProvider({ timeoutMs, maxProfiles: 1, cacheTtlMs: 5 * 60_000 });
   const fragrance = await scento.search({
     domain: DOMAINS.FRAGRANCE,
     subjectId: "smoke-layton",

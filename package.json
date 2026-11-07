@@ -10,6 +10,6 @@
   "scripts": {
     "test": "node --test",
     "check": "node --check src/index.js && node --test",
-    "smoke:providers": "node scripts/provider-smoke-test.js"
+    "smoke:providers": "node scripts/provider-smoke.js"
   }
 }
