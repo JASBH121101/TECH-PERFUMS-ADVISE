@@ -2,17 +2,24 @@
 
 ## Responsibility
 
-The Knowledge Store provides a versioned persistence boundary for local knowledge. It currently stores the append-only evidence ledger and reserves metadata for future catalog/cache modules. It is independent of Supabase, Neon and paid infrastructure.
+The Knowledge Store provides a versioned persistence boundary for the local product catalog and the append-only evidence ledger. It is independent of Supabase, Neon and paid infrastructure.
 
 ## Snapshot schema
 
-Current JSON schema version: `1`.
+Current JSON snapshot schema: `2`.
 
 - `schemaVersion`: KnowledgeStore snapshot version.
 - `metadata.createdAt` / `metadata.updatedAt`: canonical ISO 8601 timestamps.
-- `evidence`: the versioned EvidenceStore export.
+- `evidence`: versioned EvidenceStore export.
+- `catalog`: catalog schema version 1 and normalized fragrance/technology products.
 
-Migrations run in ascending version order and the migrated snapshot is validated before it is written. Unknown future versions, missing migration steps, malformed records and duplicate evidence IDs fail closed. Migration and initialization writes happen only after validation.
+Migrations run in ascending version order and validate before writing. v0 migrates to v1 and then v2; v1 gains an empty catalog. Unknown future versions, missing migration steps, malformed products, duplicate product/evidence IDs and dangling product evidence references fail closed.
+
+## Product records
+
+Products are normalized by their dedicated domain adapter and persisted in the same snapshot as evidence. Product IDs are unique across both domains. Each product may reference evidence IDs already present in the evidence ledger; missing references are rejected. The initial store is append-only: duplicate product IDs cannot silently replace records. Possible identity duplicates are surfaced by the local catalog index for human review.
+
+`KnowledgeStore.searchProducts()` rebuilds a deterministic in-memory index from the persisted catalog. The index is derived, local and disposable; the catalog records remain the source of truth. It supports exact and token search, case/diacritic normalization, brand/domain/type filters and bounded result sizes.
 
 ## Storage adapter contract
 
@@ -27,7 +34,7 @@ An adapter implements:
 
 Exports use the `jbae-knowledge-backup` format and include a backup version, export timestamp and complete knowledge snapshot. Import defaults to a non-destructive merge:
 
-- New evidence IDs are appended.
+- New evidence and product IDs are appended.
 - Identical existing IDs are treated as idempotent duplicates.
 - An existing ID with different content is a collision and blocks the entire import.
 - Existing records are never silently overwritten or deleted.

@@ -26,10 +26,11 @@ JB Advisor Engine (JBAE) is the deterministic intelligence core planned for the 
 - **Evidence Engine:** append-only claims, provenance, evidence statuses, deep immutable values and conflict detection.
 - **Comparison Engine:** domain- and category-safe comparison for 2–4 candidates, with missing-data and evidence coverage accounting.
 - **Recommendation Engine:** configurable priorities, domain profiles, minimum coverage gates, tie handling and explainable strengths/compromises.
-- **Knowledge Engine:** versioned snapshots, schema migration, validated JSON backup and non-destructive merge restore.
+- **Knowledge Engine:** schema v2 snapshot, persisted domain-separated product catalog, evidence-linked products, version migrations, validated JSON backup and non-destructive merge restore.
+- **Local Catalog Index:** offline search by exact ID/model/name, aliases, brand and selected attributes; case/diacritic insensitive, bounded, deterministic and domain-filtered. Potential duplicates are flagged for review, never auto-merged.
 - **SQLite adapter:** transactional persistence adapter for an already opened Capacitor SQLite connection, with schema version checks and SQLite quick integrity check.
 - **Advisor Core:** deterministic orchestration of normalization, evidence integration and recommendation.
-- **Research Engine:** provider-agnostic research intake; results are always unconfirmed candidates and require explicit approval before being staged in local knowledge.
+- **Research Engine:** provider-agnostic research intake; Scento (fragrance) and Wikidata (selected technology fields) providers return unconfirmed candidates that require explicit approval before staging.
 
 ## Repository workflow
 
@@ -64,7 +65,7 @@ These checks validate engine code and adapter contracts. They do not certify nat
 - Capacitor Android application shell and UI.
 - Installation of the native `@capacitor-community/sqlite` plugin in the Android project.
 - Native SQLite testing on emulator/physical Android device, including process-kill/restart recovery.
-- Built-in live web/API providers. ResearchEngine currently accepts injected provider implementations.
+- Broader live-source coverage for technical specifications, prices, availability and warranty; current Wikidata mappings intentionally cover only a small set of stable fields.
 - OCR intake, APK packaging and distribution.
 
 The SQLite adapter requires an already opened `SQLiteDBConnection`; the repository does not yet include the Android shell that creates and manages that connection.

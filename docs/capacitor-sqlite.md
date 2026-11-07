@@ -21,7 +21,7 @@ The plugin documentation assigns DDL to `execute`, parameterized writes to `run`
 
 ## Durable schema
 
-SQLite `PRAGMA user_version` is independent of the JSON KnowledgeStore schema version. Physical schema version 1 creates a singleton table:
+SQLite `PRAGMA user_version` is independent of the JSON KnowledgeStore schema version. Physical SQLite schema version 1 creates a singleton table. This physical SQLite schema version is independent of the JSON KnowledgeStore snapshot schema, currently version 2:
 
 - `singleton`: primary key constrained to 1.
 - `snapshot_json`: complete validated KnowledgeStore snapshot.

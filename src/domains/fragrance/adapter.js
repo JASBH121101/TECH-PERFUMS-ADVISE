@@ -1,4 +1,5 @@
 import { DOMAINS } from "../../core/domains.js";
+import { normalizeCatalogIdentity } from "../../core/catalog-identity.js";
 import { cloneAndFreeze, normalizeEvidenceIds } from "../../core/immutable.js";
 
 const PRODUCT_TYPES = new Set(["perfume", "body_mist", "body_spray", "attar_oil", "body_lotion"]);
@@ -93,6 +94,7 @@ export function normalizeFragranceProduct(input) {
 
   return Object.freeze({
     id, name, domain: DOMAINS.FRAGRANCE, productType,
+    ...normalizeCatalogIdentity(input),
     attributes: cloneAndFreeze(attributes),
     evidenceIds: normalizeEvidenceIds(input.evidenceIds, "Fragrance evidenceIds"),
   });

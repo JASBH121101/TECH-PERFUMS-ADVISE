@@ -28,12 +28,16 @@ export function getEngineInfo() {
       "versioned-local-knowledge",
       "deterministic-advisor-orchestration",
       "provider-agnostic-research",
+      "offline-searchable-catalog",
+      "multi-provider-live-research",
     ],
   });
 }
 
 export { AdvisorCore, createAdvisorCore } from "./advisor/advisor-core.js";
 export { ResearchEngine } from "./research/research-engine.js";
+export { CatalogIndex, searchCatalog } from "./knowledge/catalog-index.js";
+export { createScentoResearchProvider, createWikidataResearchProvider, createDefaultResearchProviders } from "./research/providers.js";
 export {
   createEvidenceRecord,
   EVIDENCE_STATUSES,
@@ -54,6 +58,7 @@ export {
   createEmptyKnowledgeSnapshot,
   migrateKnowledgeSnapshot,
   validateKnowledgeSnapshot,
+  normalizeCatalogProduct,
 } from "./knowledge/migrations.js";
 export { getSourcePolicy, assessSource } from "./research/source-policy.js";
 export { createResearchCandidate } from "./research/research-candidate.js";

@@ -1,4 +1,5 @@
 import { DOMAINS } from "../../core/domains.js";
+import { normalizeCatalogIdentity } from "../../core/catalog-identity.js";
 import { cloneAndFreeze, normalizeEvidenceIds } from "../../core/immutable.js";
 
 const DEVICE_TYPES = new Set(["smartphone", "tablet", "laptop"]);
@@ -98,6 +99,7 @@ export function normalizeTechnologyProduct(input) {
 
   return Object.freeze({
     id, name, domain: DOMAINS.TECHNOLOGY, deviceType,
+    ...normalizeCatalogIdentity(input),
     attributes: cloneAndFreeze(attributes),
     evidenceIds: normalizeEvidenceIds(input.evidenceIds, "Technology evidenceIds"),
   });

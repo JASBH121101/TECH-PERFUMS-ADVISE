@@ -115,12 +115,12 @@ test("rejects corrupt, unknown and future backup formats without changing state"
   assert.deepEqual(store.getSnapshot(), before);
 });
 
-test("migrates version zero flat evidence snapshots to version one", () => {
+test("migrates version zero flat evidence snapshots through to version two", () => {
   const migrated = migrateKnowledgeSnapshot({
     schemaVersion: 0,
     records: [evidence("legacy-001")],
   }, { clock: fixedClock });
-  assert.equal(migrated.schemaVersion, 1);
+  assert.equal(migrated.schemaVersion, 2);
   assert.equal(migrated.evidence.records.length, 1);
   assert.equal(migrated.metadata.createdAt, "2026-11-07T18:00:00.000Z");
 });
@@ -158,7 +158,7 @@ test("persists a valid legacy migration and rejects corrupt stored snapshots", a
   };
   const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
   assert.equal(store.queryEvidence()[0].id, "legacy-persisted");
-  assert.equal(persisted.schemaVersion, 1);
+  assert.equal(persisted.schemaVersion, 2);
 
   let writes = 0;
   const corruptAdapter = {
@@ -182,4 +182,70 @@ test("backup merge never removes records already present in the destination", as
 
   const ids = destination.queryEvidence().map(record => record.id).sort();
   assert.deepEqual(ids, ["destination-record", "incoming-record"]);
+});
+
+test("persists normalized catalog products and rebuilds local search after reopening", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  const product = await store.addProduct({
+    id: "phone-local-001",
+    domain: "technology",
+    name: "Galaxy S24 Ultra",
+    brand: "Samsung",
+    model: "SM-S928B",
+    aliases: ["S24 Ultra"],
+    deviceType: "smartphone",
+    attributes: { ramGB: 12, storageGB: 256, chipset: "Snapdragon 8 Gen 3" },
+    evidenceIds: [],
+  });
+  assert.equal(product.model, "SM-S928B");
+  const reopened = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  assert.equal(reopened.getProducts({ domain: "technology" }).length, 1);
+  assert.equal(reopened.searchProducts({ query: "s24 ultra" })[0].product.id, "phone-local-001");
+  assert.equal(reopened.getSnapshot().catalog.schemaVersion, 1);
+});
+
+test("catalog rejects duplicate IDs and missing evidence references", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  const product = {
+    id: "phone-duplicate", domain: "technology", name: "Phone",
+    deviceType: "smartphone", attributes: {}, evidenceIds: [],
+  };
+  await store.addProduct(product);
+  await assert.rejects(() => store.addProduct(product), /already exists/);
+  await assert.rejects(() => store.addProduct({
+    ...product, id: "phone-bad-evidence", evidenceIds: ["missing-evidence"],
+  }), /missing evidence/);
+  assert.equal(store.getProducts().length, 1);
+});
+
+test("backup merge includes new catalog records but never overwrites an existing product ID", async () => {
+  const sourceAdapter = new MemoryKnowledgeAdapter();
+  const sourceStore = await KnowledgeStore.open({ adapter: sourceAdapter, clock: fixedClock });
+  await sourceStore.addProduct({
+    id: "product-new", domain: "fragrance", name: "Layton",
+    brand: "Parfums de Marly", productType: "perfume", attributes: {}, evidenceIds: [],
+  });
+  const backup = sourceStore.exportBackup();
+  const targetAdapter = new MemoryKnowledgeAdapter();
+  const target = await KnowledgeStore.open({ adapter: targetAdapter, clock: fixedClock });
+  const preview = await target.previewImport(backup);
+  assert.equal(preview.newProductCount, 1);
+  await target.importBackup(backup);
+  assert.equal(target.getProducts().length, 1);
+  assert.equal((await target.importBackup(backup)).newProductCount, 0);
+});
+
+test("migrates version one evidence snapshots to version two with an empty catalog", () => {
+  const migrated = migrateKnowledgeSnapshot({
+    schemaVersion: 1,
+    metadata: {
+      createdAt: "2026-11-07T18:00:00.000Z",
+      updatedAt: "2026-11-07T18:00:00.000Z",
+    },
+    evidence: { schemaVersion: 1, records: [] },
+  }, { clock: fixedClock });
+  assert.equal(migrated.schemaVersion, 2);
+  assert.deepEqual(migrated.catalog.products, []);
 });
