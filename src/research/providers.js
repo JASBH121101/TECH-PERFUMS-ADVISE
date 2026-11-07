@@ -86,6 +86,15 @@ function createJsonReader(fetchImpl, {
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       throw new TypeError(`${label} returned an invalid JSON object`);
     }
+    if (body.error && typeof body.error === "object") {
+      const code = String(body.error.code ?? "api_error");
+      const info = String(body.error.info ?? "The upstream API rejected the request");
+      const retryAfter = Number(body.error.lag);
+      if (code === "maxlag" && Number.isFinite(retryAfter)) {
+        throw new Error(`${label} deferred by upstream maxlag (${retryAfter}s): ${info}`);
+      }
+      throw new Error(`${label} returned upstream API error ${code}: ${info}`);
+    }
     if (cacheTtlMs > 0) {
       cache.set(key, { body: cloneJson(body), expiresAt: Date.now() + cacheTtlMs });
       while (cache.size > maxCacheEntries) cache.delete(cache.keys().next().value);

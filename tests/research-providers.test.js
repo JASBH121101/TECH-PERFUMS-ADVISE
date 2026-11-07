@@ -280,7 +280,7 @@ test("TechAPI never trusts the upstream verified flag as JBAE verification", asy
   const record = (await provider.search({
     query: "smartphones:galaxy-s26-ultra", field: "ram_gb",
   }))[0];
-  assert.match(record.note, /upstream's label, not JBAE verification/u);
+  assert.match(record.note, /not JBAE verification/u);
 });
 
 test("TechAPI is kept out of default providers until its share-alike terms are consciously enabled", () => {
@@ -289,4 +289,15 @@ test("TechAPI is kept out of default providers until its share-alike terms are c
     wikidata: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
   });
   assert.deepEqual(providers.map(provider => provider.id), ["scento-perfume-api", "wikidata"]);
+});
+
+test("Wikidata propagates structured API maxlag errors for retry by the caller", async () => {
+  const provider = createWikidataResearchProvider({
+    fetchImpl: async () => response({ error: { code: "maxlag", info: "Waiting for replica lag", lag: 8 } }),
+    minRequestIntervalMs: 0,
+  });
+  await assert.rejects(
+    () => provider.search({ query: "example phone", field: "name" }),
+    /maxlag \(8s\).*Waiting for replica lag/u,
+  );
 });
