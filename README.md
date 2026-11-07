@@ -31,7 +31,7 @@ JB Advisor Engine (JBAE) is the deterministic intelligence core planned for the 
 - **Local Catalog Index:** offline search by exact ID/model/name, aliases, brand and selected attributes; case/diacritic insensitive, bounded, deterministic and domain-filtered. Supports identity-aware match lookup; potential duplicates are flagged for review, never auto-merged.
 - **SQLite adapter:** transactional persistence adapter for an already opened Capacitor SQLite connection, with schema version checks and SQLite quick integrity check.
 - **Advisor Core:** deterministic orchestration of normalization, evidence integration and recommendation.
-- **Research Engine:** provider-agnostic research intake; Scento (fragrance), Wikidata, TechAPI (opt-in) and CoreInfo (technology) return unconfirmed candidates that require explicit approval before staging.
+- **Research Engine:** provider-agnostic research intake; Scento (fragrance), Wikidata, TechAPI (opt-in), CoreInfo (technology) and SICSA Nicaragua (local retail) return unconfirmed candidates that require explicit approval before staging.
 
 ## Repository workflow
 

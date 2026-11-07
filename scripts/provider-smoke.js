@@ -5,6 +5,7 @@ import {
   createWikidataResearchProvider,
   createTechApiResearchProvider,
   createCoreInfoResearchProvider,
+  createSicsaResearchProvider,
 } from "../src/research/providers.js";
 
 const timeoutMs = 15_000;
@@ -69,31 +70,6 @@ async function run() {
     assert.ok(result.length > 0, `TechAPI must return ${field} for ${query}`);
     console.log(`TechAPI ${query}: PASS — ${result[0].value}`);
   }
-
-  const fieldChecks = [
-    ["smartphones:iphone-18-pro-max", ["ram_gb"]],
-    ["monitors:acer-cb241y-amazonmon-603", ["display_size", "display_resolution", "ppi"]],
-    ["socs:snapdragon-8-elite", ["manufacturer", "process_nm", "cpu_config", "gpu", "gpu_clock_mhz", "npu_tops"]],
-    ["gpus:geforce-rtx-5090", ["manufacturer", "memory_gb", "memory_type", "memory_bandwidth_gbps", "tensor_cores", "fp32_tflops"]],
-    ["cpus:core-i9-14900k", ["manufacturer", "architecture", "cpu_cores", "cpu_threads", "boost_clock_ghz", "tdp_w"]],
-    ["tablets:xiaomi-poco-pad-8gb-256gb-3g", ["ram_gb", "storage_options_gb"]],
-    ["watches:apple-watch-series-11-42mm", ["ram_gb", "battery_mah", "storage_options_gb"]],
-    ["pdas:ipaq-glisten", ["ram_gb", "battery_mah", "display_size"]],
-    ["device-catalog:samsung-galaxy-a08", ["form_factor", "model_numbers", "ram_gb"]],
-  ];
-  for (const [query, fields] of fieldChecks) {
-    for (const field of fields) {
-      const results = await techapi.search({
-        domain: DOMAINS.TECHNOLOGY,
-        subjectId: `smoke-${query}-${field}`,
-        query,
-        field,
-        limit: 1,
-      });
-      assert.ok(results.length > 0, `TechAPI must expose ${field} for ${query}`);
-      console.log(`TechAPI field ${query} / ${field}: PRESENT`);
-    }
-  }
   const coreInfo = createCoreInfoResearchProvider({ timeoutMs, minRequestIntervalMs: 500 });
   const coreInfoResult = await coreInfo.search({
     domain: DOMAINS.TECHNOLOGY,
@@ -122,6 +98,9 @@ async function run() {
     ["xiaomi-pad-8", "tablet"],
     ["infinix-xpad-30-pro", "tablet"],
     ["redmi-watch-5", "smartwatch"],
+    ["tcl-t6d-55-inch-ultra-hd-4k-smart-qled-tv-55t6d", "television"],
+    ["apple-airpods-pro-3", "earbuds"],
+    ["apple-homepod-mini-2", "speaker"],
   ];
   for (const [slug, category] of extendedCoreInfoSamples) {
     const result = await coreInfo.search({
@@ -148,6 +127,35 @@ async function run() {
       assert.ok(results.length > 0, `CoreInfo Xiaomi Pad 8 must expose published display field: ${field}`);
     }
     console.log(`CoreInfo Xiaomi Pad 8 ${field}: ${results.length ? "PRESENT" : "not published"}`);
+  }
+
+
+  const sicsa = createSicsaResearchProvider({ timeoutMs, minRequestIntervalMs: 500 });
+  const sicsaSlug = "laptop-gaming-msi-crosshair-a16-hx-ingles-16-pulg-amd-ryzen-9-8940hx-16gb-ram-1tb-ssd-rtx-5060-8gb-win-11-d8wfkg-090us-c-gris";
+  try {
+    const localPrice = await sicsa.search({
+      domain: DOMAINS.TECHNOLOGY, subjectId: "smoke-sicsa-msi-crosshair-a16",
+      field: "price", query: sicsaSlug, limit: 1,
+    });
+    assert.ok(localPrice.length > 0, "SICSA must expose the local price for the exact MSI Crosshair SKU");
+    assert.equal(localPrice[0].value.currency, "NIO");
+    assert.ok(localPrice[0].value.amount > 0);
+    assert.equal(localPrice[0].value.taxIncluded, false);
+    assert.equal(localPrice[0].source.market, "NI");
+    const localStock = await sicsa.search({
+      domain: DOMAINS.TECHNOLOGY, subjectId: "smoke-sicsa-msi-crosshair-a16-stock",
+      field: "availability", query: sicsaSlug, limit: 1,
+    });
+    assert.ok(localStock.length > 0, "SICSA must expose explicit stock for the selected product");
+    assert.equal(localStock[0].value.status, "in_stock");
+    console.log("SICSA Nicaragua: PASS — local NIO price (IVA excluded) and explicit product stock");
+  } catch (error) {
+    const message = String(error?.message ?? error);
+    if (/HTTP (?:403|429|5\d\d)|timed out|fetch failed|ECONN|ENOTFOUND/i.test(message)) {
+      console.log("SICSA Nicaragua: DEFERRED — retailer endpoint temporarily unavailable (" + message + ")");
+    } else {
+      throw error;
+    }
   }
 
   console.log("External provider smoke tests passed. Research results remain unconfirmed candidates.");

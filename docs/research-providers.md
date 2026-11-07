@@ -8,6 +8,7 @@ JBAE's provider adapters are read-only candidate collectors. Every returned clai
 |---|---|---|---|
 | Fragrance | Scento | Identity, house, perfumer, year, concentration, family, subfamily, character, notes, accords, signature materials, seasons and wear hours | Live provider; bounded smoke test |
 | Technology categories | CoreInfo | Smartphones, laptops, tablets, smartwatches, headphones, earbuds, speakers, TVs, monitors and consoles/handhelds (record-dependent) | Live exact-slug JSON provider; bounded smoke test |
+| Nicaragua technology retail | SICSA Nicaragua | Exact product identity, SKU, NIO price, explicit stock quantity/status and sitewide delivery notice | Live exact-product page provider; tax and shipping caveats retained |
 | Smartphones / tablets | Wikidata | Identity, manufacturer, OS, device type, release date, display diagonal, RAM, storage, CPU and GPU | Partial and uneven |
 | Laptops / desktops / workstations | Wikidata | Identity, manufacturer, OS, device type, release date, display diagonal, RAM, storage, CPU and GPU | Partial and uneven |
 | Consoles / handhelds | Wikidata | Identity, manufacturer, OS where present, device type, release date, RAM, storage, CPU and GPU | Partial and uneven |
@@ -41,6 +42,20 @@ Terms: https://www.scento.com/terms-of-service#perfume-api
 - The site states that reuse is allowed with attribution and that listed prices can be indicative; every claim still remains unconfirmed in JBAE until independently reviewed.
 
 CoreInfo publishes device records across multiple consumer-electronics categories. Its catalogue is not a Nicaragua retailer feed, and its prices are not live local availability or checkout prices. See https://www.coreinfos.in/ and https://www.coreinfos.in/methodology.
+
+
+## SICSA Nicaragua local retailer page
+
+- Provider ID: sicsa-nicaragua-retail; enabled in the default technology provider registry.
+- Read-only exact-product lookup: GET https://sicsa.com.ni/producto/{slug}/. Queries must be a validated product slug; the adapter does not crawl the catalogue or perform broad keyword search.
+- Extracted fields: product name, SKU, listed price, explicit availability/stock, and a sitewide delivery notice when present.
+- Local prices are preserved as NIO. If the product price is explicitly labelled + IVA, the value is marked taxIncluded: false; otherwise tax inclusion remains unknown. JBAE does not calculate taxes or a landed price.
+- Stock is retained only when an explicit quantity/status or structured availability value is present. It is a timestamped observation, not a reservation or guarantee.
+- The delivery banner is kept as a sitewide policy notice, not a product-specific shipping price or promise. The product page itself says delivery cost and applicable taxes are confirmed at checkout.
+- Warranty terms are not yet mapped. Do not infer a warranty period from the store name or product category.
+- The provider caches an exact page briefly, paces requests, uses bounded GET requests/timeouts, and keeps every result unconfirmed pending review of exact SKU/configuration.
+
+Initial local market reconnaissance and other stores that remain manual-review sources are listed in [Nicaragua technology market coverage](./nicaragua-technology-market.md).
 
 ## Wikidata
 

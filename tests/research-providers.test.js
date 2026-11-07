@@ -176,11 +176,12 @@ test("default research provider registry contains isolated fragrance and technol
     wikidata: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
   });
   assert.deepEqual(providers.map(provider => provider.id), [
-    "scento-perfume-api", "wikidata", "coreinfo-device-catalog",
+    "scento-perfume-api", "wikidata", "coreinfo-device-catalog", "sicsa-nicaragua-retail",
   ]);
   assert.deepEqual(providers[0].domains, [DOMAINS.FRAGRANCE]);
   assert.deepEqual(providers[1].domains, [DOMAINS.TECHNOLOGY]);
   assert.deepEqual(providers[2].domains, [DOMAINS.TECHNOLOGY]);
+  assert.deepEqual(providers[3].domains, [DOMAINS.TECHNOLOGY]);
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("ram_capacity"));
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("storage_capacity"));
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("cpu"));

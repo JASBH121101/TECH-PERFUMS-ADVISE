@@ -1,3 +1,4 @@
+import { createSicsaResearchProvider } from "./nicaragua-retailers.js";
 import { DOMAINS } from "../core/domains.js";
 import { SOURCE_TYPES } from "../core/evidence.js";
 import { assertFetch, assertPositiveInteger, createJsonReader, isoNow, readLimit, requireText } from "./provider-utils.js";
@@ -292,8 +293,11 @@ export function createDefaultResearchProviders(options = {}) {
     createScentoResearchProvider(options.scento),
     createWikidataResearchProvider(options.wikidata),
     createCoreInfoResearchProvider(options.coreInfo),
+    createSicsaResearchProvider(options.sicsa),
   ]);
 }
+
+export { createSicsaResearchProvider };
 
 export const WIKIDATA_RESEARCH_FIELDS = Object.freeze(Object.keys(WIKIDATA_FIELDS));
 

@@ -28,3 +28,12 @@ The adapter validates field types and positive numeric metrics, freezes copied a
 ## Coverage is not verification
 
 A supported field means the local model can represent it; it does not mean a provider supplies it. Each imported value must carry its own source, timestamp, status and evidence ID. Provider coverage must be measured per category and field. Missing data must remain missing rather than being inferred. The current Wikidata provider is intentionally limited and does not provide a complete spec sheet.
+
+
+## Nicaragua market data
+
+SICSA's exact-product provider can represent locally listed NIO prices and explicit product stock, and preserves the + IVA tax label instead of silently adding or removing tax. It retains a sitewide delivery banner as policy context only; shipping cost and final taxes remain checkout-dependent. Product-level warranty extraction is not implemented.
+
+Other identified Nicaragua retailers (Celulares Lainez Solution, EXTEL, JSLab and Nica Tech) are currently manual-review sources. Their catalogues cover additional mobile, audio, TV, console, laptop and accessory categories, but no stable public API/feed has yet been validated for automated ingestion. See [Nicaragua technology market coverage](./nicaragua-technology-market.md).
+
+Local prices must not be ranked as all-in prices until tax treatment, product configuration, stock freshness, delivery and financing terms are normalized. A store's marketing statement about availability or warranty is not a product-specific claim unless the exact listing states it.
