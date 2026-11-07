@@ -124,12 +124,19 @@ function parseSicsaPage(html) {
   )?.[0] ?? "";
   const effectivePriceText = priceText || visibleProductPrice;
   const metaAmount = readMeta(html, "product:price:amount") ?? readMeta(html, "og:price:amount");
-  const rawAmount = offer.price ?? metaAmount ??
-    effectivePriceText.match(/(?:C\$|NIO\s*)\s*([\d,]+(?:\.\d{1,2})?)/iu)?.[1];
-  const amount = typeof rawAmount === "number" ? rawAmount :
-    typeof rawAmount === "string" ? Number(rawAmount.replace(/,/gu, "")) : NaN;
-  const rawCurrency = offer.priceCurrency ?? readMeta(html, "product:price:currency") ??
-    (/C\$/iu.test(effectivePriceText) ? "NIO" : /NIO/iu.test(effectivePriceText) ? "NIO" : null);
+  const visibleAmount = effectivePriceText.match(
+    /(?:C\$|NIO\s*)\s*([\d,]+(?:\.\d{1,2})?)/iu,
+  )?.[1] ?? null;
+  const amountCandidates = [offer.price, metaAmount, visibleAmount];
+  const amount = amountCandidates.map(candidate => {
+    if (typeof candidate === "number") return candidate;
+    if (typeof candidate !== "string" || !candidate.trim()) return NaN;
+    return Number(candidate.replace(/(?:C\$|NIO)/giu, "").replace(/,/gu, "").trim());
+  }).find(candidate => Number.isFinite(candidate) && candidate >= 0) ?? NaN;
+  const explicitLocalCurrency = /C\$/iu.test(effectivePriceText) || /\bNIO\b/iu.test(effectivePriceText);
+  const rawCurrency = explicitLocalCurrency
+    ? "NIO"
+    : offer.priceCurrency ?? readMeta(html, "product:price:currency");
   const currency = typeof rawCurrency === "string" && rawCurrency.trim()
     ? (rawCurrency.toUpperCase() === "C$" ? "NIO" : rawCurrency.toUpperCase()) : null;
   const displayPrice = effectivePriceText || (Number.isFinite(amount) ? currency + " " + String(amount) : "");

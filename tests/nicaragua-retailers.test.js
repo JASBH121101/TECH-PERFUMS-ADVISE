@@ -145,3 +145,26 @@ test("SICSA fallback extracts a visible NIO price from the primary product secti
   });
   assert.deepEqual(stock[0].value, { status: "in_stock", quantity: 2 });
 });
+
+
+test("SICSA falls back to the visible local price when structured price text is malformed", async () => {
+  const html = [
+    "<html><head>",
+    "<script type='application/ld+json'>",
+    '{"@type":"Product","name":"Example laptop","sku":"LAPT0185","offers":{"price":"C$72,666.89","priceCurrency":"NIO"}}',
+    "</script></head><body>",
+    "<h1>Example laptop</h1>",
+    "<p>C$72,666.89 + IVA</p>",
+    "</body></html>",
+  ].join("");
+  const provider = createSicsaResearchProvider({
+    fetchImpl: async () => htmlResponse(html),
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  const result = await provider.search({ query: slug, field: "price" });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].value.amount, 72666.89);
+  assert.equal(result[0].value.currency, "NIO");
+  assert.equal(result[0].value.taxIncluded, false);
+});
