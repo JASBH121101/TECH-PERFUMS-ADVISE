@@ -1,26 +1,30 @@
-# Research Engine — first milestone
+# Research Engine
 
-## Scope
+## Responsibility
 
-This milestone defines deterministic source policy and stages research candidates. It does not yet crawl websites, call search APIs, or perform live web retrieval.
+ResearchEngine coordinates external research providers without owning their network implementation. A provider implements `search({ domain, subjectId, field, query, limit })` and returns source-backed candidate objects. Providers may later connect to official sources, distributor catalogs, independent tests, curated databases or offline indexes.
 
-## Source preference
+## Candidate trust boundary
 
-Policies vary by domain and field. For example, independent tests and community reports are useful for fragrance performance, while official sources are preferred for manufacturer specifications and distributors for local price and availability. A source preference is not proof that an individual claim is true.
+Provider results never control the Evidence status. Every result is converted into an `unconfirmed` evidence candidate, even when a provider includes a claimed status such as `verified`. The engine validates:
+- provider identity and domain support;
+- subject and field scope from the request (providers cannot override them);
+- provider-scoped unique result IDs and non-null values;
+- HTTP(S) source URL, source name and source type;
+- confidence range, evidence timestamp and record integrity through `createResearchCandidate()`.
 
-## Reliability assessment
+Every candidate retains the source policy assessment, retrieval timestamp and provider ID. The source reliability assessment is a heuristic, not a calibrated probability or automatic verification decision.
 
-The current transparent heuristic combines:
-- source-type weight;
-- whether the source type is preferred for the field;
-- age-based freshness decay.
+## Human approval
 
-The output is a prioritization aid, not a calibrated probability of truth. Confidence must not be inferred from this score.
+Research results stay in the engine's pending queue. They are not written to the KnowledgeStore automatically. `stageCandidate(candidateId, { knowledgeStore, approved: true })` requires explicit approval and writes the evidence only as `unconfirmed`. Verification or cross-checking requires a separate review process and supporting evidence; retrieval alone cannot elevate status.
 
-## Candidate lifecycle
+The pending queue has a configurable capacity. Duplicate evidence IDs are rejected across both pending and already staged results, rather than silently replaced.
 
-Research candidates are staged as `pending_review`. They preserve their evidence record and assessment, and explicitly declare that verified data has not been changed. Future approval workflows will decide whether a candidate can be promoted into the knowledge base.
+## Request limits and errors
 
-## Freshness defaults
+Each request selects a registered provider and supplies a domain, subject ID, field, query and result limit (1–20). Optional provider domain allowlists are enforced. Malformed provider responses, unsupported domains, unsafe links, invalid evidence records and storage errors fail closed.
 
-Price and availability expire quickly; stable identity fields have long review windows. These are initial policy defaults and must be calibrated with real domain data before production use.
+## Scope and limitations
+
+This is a provider adapter contract and candidate orchestration layer, not a built-in web crawler. No third-party APIs are called until the app injects a provider implementation. Credentials must be held by the platform secure store or server-side integration, never embedded in the APK. External provider costs remain opt-in.

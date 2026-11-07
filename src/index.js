@@ -27,11 +27,13 @@ export function getEngineInfo() {
       "coverage-aware-recommendations",
       "versioned-local-knowledge",
       "deterministic-advisor-orchestration",
+      "provider-agnostic-research",
     ],
   });
 }
 
 export { AdvisorCore, createAdvisorCore } from "./advisor/advisor-core.js";
+export { ResearchEngine } from "./research/research-engine.js";
 export {
   createEvidenceRecord,
   EVIDENCE_STATUSES,
