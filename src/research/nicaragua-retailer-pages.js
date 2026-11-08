@@ -413,7 +413,7 @@ export const NICARAGUA_RETAILER_INTEGRATION_STATUS = Object.freeze([
     mode: "exact-product-page",
     status: "page-adapter-implemented",
     officialApi: false,
-    note: "Uses VTEX documented public exact product Search API; no private credentials or private Catalog endpoints.",
+    note: "Uses VTEX public exact-product Search API plus the documented public product-variations endpoint for SKU-level dimensions; no private credentials or private Catalog endpoints.",
   }),
   Object.freeze({
     id: "el-verdugo",
