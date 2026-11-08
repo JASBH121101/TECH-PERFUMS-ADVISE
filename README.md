@@ -80,7 +80,7 @@ A dated Scento dataset snapshot is included under `data/fragrance/sources/scento
 
 - Complete the mobile TECH comparison flow for 2–4 devices, including variant normalization, source cross-checking and explicit approval before local persistence. The current mobile screen performs exact-model lookups and labels source results as review-required candidates; it does not yet expose the engine's full comparison workflow.
 - Validate native SQLite seed import, reopen, process-kill/restart recovery and backup/restore on an Android emulator and physical device. SQLCipher encryption is not enabled in this phase.
-- Complete PWA installability: provide app icons, add a service worker and decide whether browser preview data should persist beyond the current session-memory adapter.
+- Pages PWA shell implemented with app icons, manifest and same-origin service-worker caching. Browser preview data still uses session memory and does not persist across reloads; durable browser storage remains pending.
 - Expand the fragrance seed beyond its current perfume-only snapshot before claiming broad body-mist, body-spray, oil or lotion coverage.
 - Resolve SIMAN's selected-variant GTIN/MPN for the Galaxy A17 page before including it in the exact-identity price subset.
 - El Gallo Más Gallo remains deferred pending diagnosis of runner transport behavior; wider Nicaragua retailer coverage and exact-SKU matching across additional stores remain pending.

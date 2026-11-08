@@ -506,7 +506,15 @@ app.addEventListener("submit", async event => {
   }
 });
 
+function registerPagesServiceWorker() {
+  const baseUrl = import.meta.env.BASE_URL;
+  if (baseUrl === "/" || !("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.register(`${baseUrl}sw.js`, { scope: baseUrl })
+    .catch(error => console.warn("No se pudo registrar el service worker de Pages.", error));
+}
+
 async function boot() {
+  registerPagesServiceWorker();
   try {
     state.runtime = await initializeStorage();
     state.products = state.runtime.knowledgeStore.getProducts({ domain: DOMAINS.FRAGRANCE });

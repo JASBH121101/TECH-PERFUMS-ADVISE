@@ -1,12 +1,25 @@
 {
   "name": "JBAE · Advisor System",
   "short_name": "JBAE",
-  "description": "Asesor independiente de fragancias y tecnología.",
+  "description": "Asesor independiente de fragancias y tecnología, con biblioteca local.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#090d13",
   "theme_color": "#090d13",
   "lang": "es",
-  "icons": []
+  "icons": [
+    {
+      "src": "./icons/jbae-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/jbae-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }
