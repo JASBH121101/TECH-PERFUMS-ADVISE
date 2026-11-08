@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#090d13" />
     <meta name="description" content="Asesor independiente de tecnología y fragancias, con biblioteca local." />
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     <title>JBAE · Advisor</title>
   </head>
   <body>
@@ -14,7 +15,7 @@
           <span class="brand-mark">J</span>
           <span class="brand-copy"><strong>JBAE</strong><small>ADVISOR SYSTEM</small></span>
         </a>
-        <span class="runtime-pill"><i></i><span id="runtime-label">INICIANDO</span></span>
+        <div class="topbar-actions"><button id="update-button" class="update-button" type="button" aria-label="Buscar actualizaciones" title="Buscar actualizaciones">↻</button><span class="runtime-pill"><i></i><span id="runtime-label">INICIANDO</span></span></div>
       </header>
       <main id="app" class="main-content" aria-live="polite">
         <section class="loading-state"><div class="loading-orbit"><span></span></div><p>Preparando tu espacio de asesoría</p></section>
