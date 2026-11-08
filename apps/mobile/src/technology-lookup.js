@@ -92,6 +92,7 @@ export async function lookupTechnology({
   resource = "smartphones",
   coreInfoProvider = createCoreInfoResearchProvider(),
   techApiProvider = createTechApiResearchProvider(),
+  fields,
 } = {}) {
   if (typeof model !== "string" || !model.trim()) {
     throw new TypeError("Escribe un modelo de tecnología antes de buscar.");
@@ -102,12 +103,18 @@ export async function lookupTechnology({
   const slug = slugifyTechnologyModel(model);
   if (!slug) throw new TypeError("No se pudo crear un identificador para ese modelo.");
 
-  const coreFields = FIELD_DEFINITIONS
-    .filter(field => field.core)
-    .map(field => ({ ...field, providerField: field.core }));
-  const techFields = FIELD_DEFINITIONS
-    .filter(field => field.tech)
-    .map(field => ({ ...field, providerField: field.tech }));
+  let selectedFields = FIELD_DEFINITIONS;
+  if (fields !== undefined) {
+    if (!Array.isArray(fields) || fields.length === 0 ||
+        fields.some(field => typeof field !== "string" || !FIELD_DEFINITIONS.some(item => item.key === field)) ||
+        new Set(fields).size !== fields.length) {
+      throw new TypeError("Los campos solicitados para la consulta no son válidos.");
+    }
+    const requested = new Set(fields);
+    selectedFields = FIELD_DEFINITIONS.filter(field => requested.has(field.key));
+  }
+  const coreFields = selectedFields.filter(field => field.core).map(field => ({ ...field, providerField: field.core }));
+  const techFields = selectedFields.filter(field => field.tech).map(field => ({ ...field, providerField: field.tech }));
 
   const [coreInfo, techApi] = await Promise.all([
     collectSource(coreInfoProvider, "coreinfo", slug, coreFields),

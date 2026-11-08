@@ -78,7 +78,7 @@ A dated Scento dataset snapshot is included under `data/fragrance/sources/scento
 
 ## Remaining implementation and device-validation work
 
-- Complete the mobile TECH comparison flow for 2–4 devices, including variant normalization, source cross-checking and explicit approval before local persistence. The current mobile screen performs exact-model lookups and labels source results as review-required candidates; it does not yet expose the engine's full comparison workflow.
+- Mobile TECH now exposes a 2–4 device comparison table, unit-normalized variant matching, source-conflict visibility and an optional relative score for a selected metric when all devices have comparable values. Results remain unverified candidates; explicit approval and field-level evidence persistence are still pending.
 - Validate native SQLite seed import, reopen, process-kill/restart recovery and backup/restore on an Android emulator and physical device. SQLCipher encryption is not enabled in this phase.
 - Pages PWA shell implemented with app icons, manifest and same-origin service-worker caching. Browser preview data still uses session memory and does not persist across reloads; durable browser storage remains pending.
 - Expand the fragrance seed beyond its current perfume-only snapshot before claiming broad body-mist, body-spray, oil or lotion coverage.

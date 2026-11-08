@@ -9,6 +9,11 @@ import {
   lookupTechnology,
   slugifyTechnologyModel,
 } from "./technology-lookup.js";
+import {
+  buildTechnologyComparison,
+  TECHNOLOGY_COMPARISON_LOOKUP_FIELDS,
+  TECHNOLOGY_COMPARISON_METRICS,
+} from "./technology-comparison.js";
 
 const app = document.querySelector("#app");
 const nav = document.querySelector("#bottom-nav");
@@ -28,6 +33,11 @@ const state = {
   techResource: "smartphones",
   techLookupStatus: "idle",
   techLookupResult: null,
+  techMode: "lookup",
+  techCompareModels: ["", "", "", ""],
+  techCompareMetric: "ramGB",
+  techComparisonStatus: "idle",
+  techComparisonResult: null,
 };
 
 function escapeHtml(value) {
@@ -276,37 +286,46 @@ function renderTechResults() {
     </section>`;
 }
 
-function renderTech() {
-  const resultHtml = state.techLookupStatus === "loading"
-    ? `<div class="loading-inline">Consultando fuentes públicas...</div>`
-    : renderTechResults();
-  return `
-    <section class="page-intro tech-intro"><span class="kicker">MÓDULO 02 / TECH</span>
-      <h1>Decide con<br><span>criterio técnico.</span></h1>
-      <p>Consulta fichas públicas de dispositivos por modelo y revisa los campos disponibles antes de comparar.</p>
-      <div class="catalog-chip"><i></i> Consulta online · no requiere cuenta</div>
-    </section>
-    <form id="tech-lookup-form" class="tech-lookup-form">
-      <div class="form-heading"><strong>Buscar una ficha técnica</strong><p>Escribe el nombre del dispositivo. JBAE consulta registros exactos en CoreInfo y TechAPI; la disponibilidad depende de cada fuente.</p></div>
-      <div class="field-group"><label for="tech-model">MODELO O NOMBRE DEL DISPOSITIVO</label>
-        <input id="tech-model" name="model" autocomplete="off" placeholder="Ej.: Samsung Galaxy S24 Ultra" value="${escapeHtml(state.techModel)}">
-        <span class="slug-preview">Identificador de búsqueda: ${escapeHtml(slugifyTechnologyModel(state.techModel) || "—")}</span>
-      </div>
-      <div class="field-group"><label for="tech-resource">CATEGORÍA</label>
-        <select id="tech-resource" name="resource">
-          <option value="smartphones" ${state.techResource === "smartphones" ? "selected" : ""}>Celular / smartphone</option>
-          <option value="tablets" ${state.techResource === "tablets" ? "selected" : ""}>Tablet</option>
-          <option value="laptops" ${state.techResource === "laptops" ? "selected" : ""}>Laptop</option>
-          <option value="watches" ${state.techResource === "watches" ? "selected" : ""}>Smartwatch</option>
-          <option value="monitors" ${state.techResource === "monitors" ? "selected" : ""}>Monitor</option>
-        </select>
-      </div>
-      <button class="primary-action tech-action" type="submit" ${state.techLookupStatus === "loading" ? "disabled" : ""}>Consultar especificaciones <span>↗</span></button>
-    </form>
-    ${resultHtml}
-    <div class="result-disclaimer">Esta pantalla inicia la consulta por fuentes; todavía falta completar el comparador de dos a cuatro equipos, la normalización de variantes, la validación cruzada y el guardado aprobado de productos. Los valores desconocidos nunca se rellenan por suposición.</div>`;
+function renderTechComparisonForm() {
+  const metricOptions=TECHNOLOGY_COMPARISON_METRICS.map(m=>`<option value="${m.value}" ${state.techCompareMetric===m.value?"selected":""}>${escapeHtml(m.label)}</option>`).join("");
+  const inputs=state.techCompareModels.map((model,i)=>`<div class="field-group"><label for="tech-compare-model-${i+1}">DISPOSITIVO ${i+1} ${i<2?"· OBLIGATORIO":"· OPCIONAL"}</label><input id="tech-compare-model-${i+1}" autocomplete="off" maxlength="120" placeholder="${i===0?"Ej.: Samsung Galaxy S24 Ultra":i===1?"Ej.: Xiaomi 14T Pro":"Añadir otro modelo"}" value="${escapeHtml(model)}" ${i<2?"required":""}></div>`).join("");
+  return `<form id="tech-compare-form" class="tech-compare-form">
+    <div class="form-heading"><strong>Comparar de 2 a 4 dispositivos</strong><p>Consulta las mismas especificaciones en CoreInfo y TechAPI. Los conflictos entre fuentes se mostrarán, no se corregirán por suposición.</p></div>
+    <div class="field-group"><label for="tech-resource">CATEGORÍA</label><select id="tech-resource">
+      <option value="smartphones" ${state.techResource==="smartphones"?"selected":""}>Celulares</option><option value="tablets" ${state.techResource==="tablets"?"selected":""}>Tablets</option><option value="laptops" ${state.techResource==="laptops"?"selected":""}>Laptops</option><option value="watches" ${state.techResource==="watches"?"selected":""}>Smartwatches</option><option value="monitors" ${state.techResource==="monitors"?"selected":""}>Monitores</option>
+    </select></div>
+    <div class="tech-compare-inputs">${inputs}</div>
+    <div class="field-group"><label for="tech-compare-metric">CRITERIO DE PUNTUACIÓN RELATIVA</label><select id="tech-compare-metric">${metricOptions}</select><span class="field-hint">Solo se puntúa si todos los equipos tienen ese dato y no existe conflicto. No es una calificación universal.</span></div>
+    <button class="primary-action tech-action" type="submit" ${state.techComparisonStatus==="loading"?"disabled":""}>${state.techComparisonStatus==="loading"?"Consultando dispositivos...":"Comparar dispositivos"} <span>↗</span></button>
+  </form>
+  ${state.techComparisonStatus==="loading"?'<div class="loading-inline">Consultando fuentes para cada dispositivo...</div>':renderTechComparisonResults()}`;
 }
-
+function renderTechComparisonResults() {
+  const result=state.techComparisonResult;
+  if(!result)return "";
+  if(result.error)return `<div class="warning-panel"><strong>No se pudo completar la comparación.</strong>${escapeHtml(result.error)}</div>`;
+  const header=result.products.map(p=>`<th><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.brand)}</small></th>`).join("");
+  const rows=result.rows.map(row=>`<tr><th scope="row">${escapeHtml(row.label)}</th>${row.values.map(v=>`<td class="${v.conflict?"comparison-conflict":""}">${escapeHtml(v.display)}${v.conflict?'<small class="conflict-label">Conflicto entre fuentes</small>':""}</td>`).join("")}</tr>`).join("");
+  const ranking=result.ranking?`<section class="comparison-rank"><strong>Puntuación relativa · ${escapeHtml(result.metric.label)}</strong><ol>${result.ranking.ranking.map(x=>`<li><span>${escapeHtml(x.name)}</span><b>${x.score===null?"Sin datos":x.score+"/100"}</b></li>`).join("")}</ol><small>El puntaje compara únicamente el criterio elegido.</small></section>`:
+  `<div class="warning-panel"><strong>No hay datos comparables para puntuar ${escapeHtml(result.metric.label.toLowerCase())}.</strong>La tabla conserva los valores disponibles, pero no calcula un ganador cuando falta información o hay discrepancias.</div>`;
+  const identity=result.identityPairs.map(x=>`<li><span>${escapeHtml(x.left)} ↔ ${escapeHtml(x.right)}</span><b>${escapeHtml(x.matchType.replaceAll("_"," "))}</b>${x.variantConflicts?.length?`<small>Variantes distintas: ${escapeHtml(x.variantConflicts.join(", "))}</small>`:""}</li>`).join("");
+  const sources=result.products.map(p=>`<div class="comparison-source-card"><strong>${escapeHtml(p.name)}</strong>${p.sources.map(s=>{const url=safeExternalUrl(s.url);return `<span>${escapeHtml(s.name)} · ${escapeHtml(s.status)}</span>${url?`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Fuente ↗</a>`:""}`;}).join("")}</div>`).join("");
+  return `<section class="tech-comparison-results"><div class="result-section-title"><strong>Comparación técnica</strong><small>${result.products.length} equipos</small></div>
+    <div class="comparison-table-wrap"><table class="tech-comparison-table"><thead><tr><th>Especificación</th>${header}</tr></thead><tbody>${rows}</tbody></table></div>
+    ${ranking}<section class="comparison-rank"><strong>Identidad y variantes</strong><ul>${identity}</ul></section>
+    <section class="comparison-sources"><strong>Procedencia de los datos</strong>${sources}</section>
+    <div class="result-disclaimer">${escapeHtml(result.disclaimer)} Ningún dispositivo fue guardado en la biblioteca.</div></section>`;
+}
+function renderTech() {
+  const tabs=`<div class="mode-tabs" role="tablist" aria-label="Herramientas TECH"><button type="button" class="mode-tab ${state.techMode==="lookup"?"active":""}" data-action="tech-mode" data-mode="lookup" role="tab" aria-selected="${state.techMode==="lookup"}">Buscar ficha</button><button type="button" class="mode-tab ${state.techMode==="compare"?"active":""}" data-action="tech-mode" data-mode="compare" role="tab" aria-selected="${state.techMode==="compare"}">Comparar equipos</button></div>`;
+  const lookupForm=`<form id="tech-lookup-form" class="tech-lookup-form"><div class="form-heading"><strong>Buscar una ficha técnica</strong><p>Consulta registros exactos de CoreInfo y TechAPI; la disponibilidad depende de cada fuente.</p></div>
+    <div class="field-group"><label for="tech-model">MODELO O NOMBRE DEL DISPOSITIVO</label><input id="tech-model" name="model" autocomplete="off" placeholder="Ej.: Samsung Galaxy S24 Ultra" value="${escapeHtml(state.techModel)}"><span class="slug-preview">Identificador de búsqueda: ${escapeHtml(slugifyTechnologyModel(state.techModel)||"—")}</span></div>
+    <div class="field-group"><label for="tech-resource">CATEGORÍA</label><select id="tech-resource"><option value="smartphones" ${state.techResource==="smartphones"?"selected":""}>Celular / smartphone</option><option value="tablets" ${state.techResource==="tablets"?"selected":""}>Tablet</option><option value="laptops" ${state.techResource==="laptops"?"selected":""}>Laptop</option><option value="watches" ${state.techResource==="watches"?"selected":""}>Smartwatch</option><option value="monitors" ${state.techResource==="monitors"?"selected":""}>Monitor</option></select></div>
+    <button class="primary-action tech-action" type="submit" ${state.techLookupStatus==="loading"?"disabled":""}>Consultar especificaciones <span>↗</span></button></form>
+    ${state.techLookupStatus==="loading"?'<div class="loading-inline">Consultando fuentes públicas...</div>':renderTechResults()}
+    <div class="result-disclaimer">Los resultados son candidatos pendientes de revisión. No se guardan automáticamente.</div>`;
+  return `<section class="page-intro tech-intro"><span class="kicker">MÓDULO 02 / TECH</span><h1>Decide con<br><span>criterio técnico.</span></h1><p>Consulta fichas públicas y compara especificaciones con trazabilidad.</p><div class="catalog-chip"><i></i> Consulta online · no requiere cuenta</div></section>${tabs}${state.techMode==="compare"?renderTechComparisonForm():lookupForm}`;
+}
 function renderLibrary() {
   const { dataset, fragranceCount, technologyCount, evidenceCount, storageLabel } = state.runtime;
   const coverage = dataset.perfumeCount
@@ -403,7 +422,9 @@ app.addEventListener("click", event => {
   const actionButton = event.target.closest("[data-action]");
   if (!actionButton) return;
 
-  if (actionButton.dataset.action === "fragrance-mode") {
+  if (actionButton.dataset.action === "tech-mode") {
+    state.techMode=actionButton.dataset.mode; state.techComparisonStatus="idle"; state.techComparisonResult=null; render();
+  } else if (actionButton.dataset.action === "fragrance-mode") {
     state.fragranceMode = actionButton.dataset.mode;
     state.searchQuery = "";
     state.adviceResult = null;
@@ -433,6 +454,8 @@ app.addEventListener("input", event => {
     state.techModel = event.target.value;
     const preview = document.querySelector(".slug-preview");
     if (preview) preview.textContent = "Identificador de búsqueda: " + (slugifyTechnologyModel(state.techModel) || "—");
+  } else if (event.target.id.startsWith("tech-compare-model-")) {
+    const index=Number(event.target.id.split("-").at(-1))-1; if(index>=0&&index<4) state.techCompareModels[index]=event.target.value;
   }
 });
 
@@ -449,6 +472,7 @@ app.addEventListener("change", event => {
     return;
   }
   if (event.target.id === "tech-resource") state.techResource = event.target.value;
+  if (event.target.id === "tech-compare-metric") state.techCompareMetric = event.target.value;
 });
 
 app.addEventListener("submit", async event => {
@@ -466,6 +490,18 @@ app.addEventListener("submit", async event => {
     }
     render();
     return;
+  }
+
+  if (event.target.id === "tech-compare-form") {
+    state.techCompareModels=[1,2,3,4].map(i=>document.querySelector("#tech-compare-model-"+i)?.value.trim()??"");
+    const models=state.techCompareModels.filter(Boolean);
+    if(models.length<2||new Set(models.map(slugifyTechnologyModel)).size!==models.length){state.techComparisonStatus="complete";state.techComparisonResult={error:"Escribe entre dos y cuatro modelos distintos."};render();return;}
+    state.techResource=document.querySelector("#tech-resource")?.value??state.techResource;
+    state.techCompareMetric=document.querySelector("#tech-compare-metric")?.value??state.techCompareMetric;
+    state.techComparisonStatus="loading";state.techComparisonResult=null;render();
+    try {const lookups=await Promise.all(models.map(model=>lookupTechnology({model,resource:state.techResource,fields:TECHNOLOGY_COMPARISON_LOOKUP_FIELDS})));state.techComparisonResult=buildTechnologyComparison({lookups,resource:state.techResource,metric:state.techCompareMetric});}
+    catch(error){state.techComparisonResult={error:error instanceof Error?error.message:"No se pudo completar la comparación."};}
+    state.techComparisonStatus="complete";render();return;
   }
 
   if (event.target.id === "tech-lookup-form") {
