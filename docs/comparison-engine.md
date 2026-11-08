@@ -2,7 +2,7 @@
 
 ## Contract
 
-Compare 2–4 products from exactly one domain. Each product supplies a stable ID, display name, domain, and normalized attributes. Criteria explicitly declare field, positive weight, and direction: higher, lower, target, or match.
+Compare 2–4 products from exactly one domain. Each product supplies a stable ID, display name, domain, and normalized attributes. Criteria explicitly declare field, positive weight, and direction: higher, lower, target, or match. If category metadata is provided, all candidates must share the same technology device type or fragrance product type.
 
 ## Evidence-linked mode
 
@@ -41,6 +41,6 @@ Coverage values are percentages. Evidence confidence is in the 0–1 range.
 - Numeric attributes must already use common units and comparable measurement methods.
 - Evidence links are validated for identity and value consistency. The engine does not independently authenticate the source or prove that a source's claim is true.
 
-## Domain adapters
+## Implemented domain adapters
 
-Fragrance and Technology cores will later map domain-specific concepts into normalized attributes and criteria. Their scales, units, and interpretation must remain separate.
+The Technology and Fragrance adapters are implemented and exported through the public engine entry point. They normalize their own product types, explicit units and evidence-ID containers. They remain separate: technology metrics cannot be ranked with fragrance metrics, and category guards prevent unlike device/product types from being compared when category metadata is supplied. Domain profiles are defined in the Recommendation Engine; callers remain responsible for selecting criteria appropriate to the product use case.
