@@ -278,3 +278,13 @@ button { color: inherit; }
 .comparison-source-card span{color:var(--muted);font-size:8px}
 .comparison-source-card a{color:var(--cyan);font-size:8px;text-decoration:none}
 @media(max-width:370px){.tech-compare-form{padding:12px}.tech-compare-inputs{grid-template-columns:1fr}}
+
+/* General-use comparison profile. */
+.profile-device{padding:10px 0;border-top:1px solid var(--line)}
+.profile-device>strong{display:block;margin-bottom:8px;font-size:10px}
+.profile-dimensions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.profile-dimensions>div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-radius:9px;background:rgba(117,225,209,.045)}
+.profile-dimensions span{color:var(--muted);font-size:8px}
+.profile-dimensions span small{color:var(--dim)}
+.profile-dimensions b{flex:0 0 auto;color:var(--cyan);font-size:9px}
+@media(max-width:370px){.profile-dimensions{grid-template-columns:1fr}}
