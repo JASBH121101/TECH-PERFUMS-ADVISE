@@ -21,4 +21,6 @@ The ledger detects differing values for the same domain, subject, and field. It 
 
 ## Storage boundary
 
-The current EvidenceStore is an in-memory reference implementation with versioned JSON export/import. It is not yet persistent SQLite storage. The application integration will provide durable local persistence in a later Knowledge Engine milestone.
+`EvidenceStore` is the in-memory reference ledger and provides versioned JSON export/import. Persistent application state is managed by `KnowledgeStore`, which stores both the evidence ledger and domain-separated product catalog in a validated, versioned snapshot. The current SQLite adapter persists that snapshot transactionally through an already opened Capacitor `SQLiteDBConnection`.
+
+The repository does not yet install the native Capacitor SQLite plugin or provide the Android shell that opens and manages the connection. Node tests use a fake SQLite connection; native persistence and process-restart recovery still require emulator/physical-device validation.
