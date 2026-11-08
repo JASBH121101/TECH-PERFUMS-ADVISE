@@ -274,7 +274,11 @@ async function run() {
       if (item.fields.includes("warranty")) parts.push("warranty " + (retrieved.warranty?.length ? "PRESENT" : "not published"));
       console.log(item.id + ": PASS — " + parts.join("; "));
     } catch (error) {
-      const message = String(error?.message ?? error);
+      const message = [
+        error?.message,
+        error?.cause?.code,
+        error?.cause?.message,
+      ].filter(Boolean).join(" | ") || String(error);
       if (/HTTP (?:403|404|429|5\d\d)|timed out|fetch failed|ECONN|ENOTFOUND|redirected outside/i.test(message)) {
         console.log(item.id + ": DEFERRED — live storefront unavailable (" + message + ")");
       } else {
