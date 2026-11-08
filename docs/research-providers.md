@@ -30,6 +30,21 @@ A mapped field means the provider understands its Wikidata property. It does not
 Documentation: https://www.scento.com/developers/perfume-api  
 Terms: https://www.scento.com/terms-of-service#perfume-api
 
+## 10ML Fragrance Index
+
+- Provider ID: `10ml-fragrance-index`; free, read-only JSON REST API with no API key or account.
+- Search endpoint: `GET https://mcp.10ml.com/api/v1/perfumes?q={query}&limit={limit}&format=detailed&locale=en`.
+- Search results preserve the 10ML record ID, product name, house, profile fields and canonical profile URL. The adapter does not crawl the 10ML house index or mirror the full catalogue.
+- The provider has a bounded in-memory response cache with a five-minute TTL and a one-second minimum request interval in the live smoke workflow. The TTL follows the API's published five-minute cache window.
+- The live discovery smoke checks at most two profiles for each of 12 selected Middle Eastern / Arabic-fragrance houses. A match is counted only when the returned house exactly matches the queried house after case/diacritic normalization. Mismatches remain review-only; no candidates are imported automatically.
+- Every candidate includes the visible credit `Data: 10ML Fragrance Index` and a link to the API page. The service's terms, updated 2026-11-07, allow free commercial use and caching with that visible credit. They ask clients to keep a polite pace and contact 10ML before heavy-volume use.
+- 10ML is an editorial perfume-knowledge source, not an independently measured wear-test provider. Do not treat its longevity/projection fields or editorial alternatives as independent laboratory/user performance tests.
+- It does not establish body-mist, body-spray, attar/oil or lotion coverage. Product types remain separated.
+
+API: https://mcp.10ml.com/api  
+Terms: https://mcp.10ml.com/terms  
+Credit: https://10ml.com/perfume-api
+
 ## CoreInfo device JSON
 
 - Provider ID: `coreinfo-device-catalog`; enabled in the default technology provider registry.
