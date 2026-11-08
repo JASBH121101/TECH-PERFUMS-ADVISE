@@ -285,6 +285,9 @@ test("parses a Spanish customer request into explicit fragrance preferences", ()
   assert.equal(result.preferenceMatch.decision, "matched");
   assert.equal(result.preferenceMatch.ranking[0].id, "soft-citrus");
   assert.equal(result.recommendation.profile, "long_lasting");
+  assert.equal(result.customerExplanation.decision, "recommended");
+  assert.match(result.customerExplanation.text, /Soft Citrus/u);
+  assert.match(result.customerExplanation.text, /no tengo un rango de rendimiento respaldado/u);
 });
 
 test("explicit structured preferences override inferred customer-message preferences", () => {
@@ -316,4 +319,5 @@ test("reports clarification when a customer message contains no recognized fragr
   });
   assert.equal(result.customerIntent.needsClarification, true);
   assert.equal(result.preferenceMatch, null);
+  assert.equal(result.customerExplanation.decision, "needs_clarification");
 });
