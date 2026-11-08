@@ -115,19 +115,25 @@ function aggregateEvidence(claims) {
   const evidenceStatus = allStrict
     ? (claims.some(claim => claim.status === "cross_checked") ? "cross_checked" : "verified")
     : allReported ? "reported" : "mixed";
-  const sourceCount = sourceMap.size;
+  // References are supporting links, not independent evidence sources. Count only
+  // the primary source URLs attached to evidence records when grading strength.
+  const primarySourceCount = new Set(records.map(record => record.source?.url).filter(Boolean)).size;
+  const referenceCount = new Set(records.flatMap(record => record.source?.references ?? [])).size;
   const evidenceStrength = allReported
     ? "limited"
-    : evidenceStatus === "cross_checked" && sourceCount >= 2 && averageConfidence >= 0.8
+    : evidenceStatus === "cross_checked" && primarySourceCount >= 2 && averageConfidence >= 0.8
       ? "strong"
-      : "good";
+      : primarySourceCount >= 1 && averageConfidence >= 0.8
+        ? "good"
+        : "limited";
 
   return Object.freeze({
     evidenceStatus,
     basis: allStrict ? "independent_test" : allReported ? "reported_observation" : "mixed",
     evidenceStrength,
     evidenceCount: evidenceIds.length,
-    sourceCount,
+    sourceCount: primarySourceCount,
+    referenceCount,
     averageSourceConfidence: averageConfidence,
     evidenceIds: Object.freeze(evidenceIds),
     sources: Object.freeze([...sourceMap.values()].map(item => Object.freeze(item))),
