@@ -68,23 +68,35 @@ function summarizeVtexVariantOffers(item, variation) {
     basis: "vtex_public_sku_offer",
   } : null;
 
-  const quantities = offers.map(offer => Number(offer.AvailableQuantity))
+  const quantities = offers
+    .map(offer => offer.AvailableQuantity)
+    .filter(value => value !== null && value !== undefined && value !== "")
+    .map(Number)
     .filter(value => Number.isFinite(value) && value >= 0);
   const flags = offers.map(offer => offer.IsAvailable)
     .filter(value => typeof value === "boolean");
-  const publishedQuantity = Number(variation?.availablequantity);
-  const hasPublishedQuantity = Number.isFinite(publishedQuantity) && publishedQuantity >= 0;
+  const quantityValue = variation?.availablequantity;
+  const publishedQuantity = quantityValue === null || quantityValue === undefined || quantityValue === ""
+    ? null : Number(quantityValue);
+  const hasPublishedQuantity = publishedQuantity !== null &&
+    Number.isFinite(publishedQuantity) && publishedQuantity >= 0;
+
+  const sellerStatus = quantities.some(value => value > 0) || flags.some(value => value === true)
+    ? true
+    : offers.length > 0 &&
+        ((quantities.length === offers.length && quantities.every(value => value === 0)) ||
+         (flags.length === offers.length && flags.every(value => value === false))
+        ? false : null;
+  const variationStatus = typeof variation?.available === "boolean"
+    ? variation.available
+    : hasPublishedQuantity ? publishedQuantity > 0 : null;
+  const statusConflict = sellerStatus !== null && variationStatus !== null &&
+    sellerStatus !== variationStatus;
   let availability = null;
-  if (quantities.some(value => value > 0) ||
-      (hasPublishedQuantity && publishedQuantity > 0) ||
-      flags.some(value => value === true) ||
-      variation?.available === true) {
-    availability = { status: "in_stock" };
-  } else if (offers.length > 0 &&
-      ((quantities.length === offers.length && quantities.every(value => value === 0)) ||
-       (flags.length === offers.length && flags.every(value => value === false)) ||
-       (hasPublishedQuantity && publishedQuantity === 0 && variation?.available === false))) {
-    availability = { status: "out_of_stock" };
+  if (!statusConflict) {
+    const resolvedStatus = variationStatus ?? sellerStatus;
+    if (resolvedStatus === true) availability = { status: "in_stock" };
+    if (resolvedStatus === false) availability = { status: "out_of_stock" };
   }
 
   const quantityCandidates = [
