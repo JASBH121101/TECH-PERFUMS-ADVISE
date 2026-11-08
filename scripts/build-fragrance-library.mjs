@@ -49,5 +49,5 @@ process.stdout.write(
   bundle.library.metadata.materialCount + " materials and " +
   bundle.evidenceCount + " reported evidence records; " +
   coverageReport.notePyramid.complete + " complete note pyramids (" +
-  coverageReport.notePyramid.coveragePercent + "% coverage).\\n",
+  coverageReport.notePyramid.coveragePercent + "% coverage).\n",
 );
