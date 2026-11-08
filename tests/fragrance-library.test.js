@@ -7,6 +7,7 @@ import {
   createScentoFragranceLibrary,
   importScentoFragranceLibrary,
   parseCsvRecords,
+  renderScentoCoverageMarkdown,
 } from "../src/domains/fragrance/library.js";
 import {
   KnowledgeStore,
@@ -215,4 +216,84 @@ test("imports all 1,479 source perfumes and 20,280 evidence records into Knowled
   assert.equal(second.importResult.newRecordCount, 0);
   assert.equal(second.importResult.duplicateProductCount, 1479);
   assert.equal(second.importResult.duplicateRecordCount, 20280);
+});
+
+
+test("reports field coverage without converting missing source data into inferred values", () => {
+  const library = createScentoFragranceLibrary({
+    perfumesCsv: sampleCsv({
+      id: "coverage-sample",
+      name: "Coverage Sample",
+      concentration: "elixir",
+      top: "Bergamot",
+      heart: "",
+      base: "Vanilla",
+      notes: "Bergamot; Vanilla",
+    }),
+    housesCsv: sampleHouses,
+    materialsCsv: sampleMaterials,
+  });
+  const report = library.coverageReport;
+  assert.equal(report.schemaVersion, 1);
+  assert.deepEqual(report.totals, { perfumes: 1, houses: 1, materials: 1 });
+  assert.deepEqual(report.notePyramid, {
+    complete: 0,
+    incompleteOrMissing: 1,
+    coveragePercent: 0,
+  });
+  const coverage = Object.fromEntries(report.fieldCoverage.map((item) => [item.field, item]));
+  assert.deepEqual(
+    { present: coverage.topNotes.present, missing: coverage.topNotes.missing },
+    { present: 1, missing: 0 },
+  );
+  assert.deepEqual(
+    { present: coverage.middleNotes.present, missing: coverage.middleNotes.missing },
+    { present: 0, missing: 1 },
+  );
+  assert.deepEqual(
+    { present: coverage.concentrationLabel.present, missing: coverage.concentrationLabel.missing },
+    { present: 1, missing: 0 },
+  );
+  assert.equal(report.distributions.concentrations[0].value, "elixir");
+  assert.equal(report.distributions.primaryFamilies[0].value, "White Bloom");
+  assert.match(report.interpretation, /does not measure factual accuracy/u);
+  const markdown = renderScentoCoverageMarkdown(report);
+  assert.match(markdown, /Field coverage/u);
+  assert.match(markdown, /Heart notes \| 0 \| 1 \| 0%/u);
+  assert.throws(() => renderScentoCoverageMarkdown({}), /schema-v1/u);
+});
+
+test("full snapshot coverage report reconciles with the source catalog totals", async () => {
+  const [perfumesCsv, housesCsv, materialsCsv] = await Promise.all([
+    readSource("perfumes.csv"),
+    readSource("houses.csv"),
+    readSource("materials.csv"),
+  ]);
+  const library = createScentoFragranceLibrary({
+    perfumesCsv,
+    housesCsv,
+    materialsCsv,
+  });
+  const report = library.coverageReport;
+  assert.deepEqual(report.totals, {
+    perfumes: 1479,
+    houses: 160,
+    materials: 420,
+  });
+  assert.equal(report.notePyramid.complete, 1388);
+  assert.equal(report.notePyramid.incompleteOrMissing, 91);
+  assert.equal(report.notePyramid.coveragePercent, 93.8);
+  const concentration = report.fieldCoverage.find((item) => item.field === "concentrationLabel");
+  assert.equal(concentration.present, 1228);
+  assert.equal(concentration.missing, 251);
+  assert.equal(report.distributions.primaryFamilies.length > 0, true);
+  assert.equal(report.distributions.houses.length, 30);
+  assert.equal(
+    JSON.stringify(report),
+    JSON.stringify(createScentoFragranceLibrary({
+      perfumesCsv,
+      housesCsv,
+      materialsCsv,
+    }).coverageReport),
+  );
 });
