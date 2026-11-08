@@ -123,6 +123,8 @@ export class AdvisorCore {
           products,
           preferences,
           minimumMatchCoverage: request.minimumMatchCoverage ?? 60,
+          evidenceStore,
+          evidencePolicy,
         })
       : null;
 
