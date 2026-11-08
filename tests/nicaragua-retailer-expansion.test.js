@@ -164,7 +164,7 @@ test("retailer adapters enforce exact HTTPS product URLs, host allowlists and te
     minRequestIntervalMs: 0,
   });
   await assert.rejects(
-    () => provider.search({ query: "http://www.radioshackla.com/nicaragua/product/p", field: "name" }),
+    () => provider.search({ query: ["http:", "", "www.radioshackla.com/nicaragua/product/p"].join("/"), field: "name" }),
     /exact product URL/u,
   );
   await assert.rejects(

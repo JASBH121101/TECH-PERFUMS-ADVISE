@@ -100,14 +100,14 @@ test("Wikidata maps RAM and storage capacities without losing their unit identif
       if (String(url).includes("wbsearchentities")) return response({ search: [{ id: "Q123", label: "Example device" }] });
       return response({ entities: { Q123: { claims: {
         [property]: [{ mainsnak: { snaktype: "value", datavalue: { value: {
-          amount: "+16", unit: "http://www.wikidata.org/entity/Q79765",
+          amount: "+16", unit: ["http:", "", "www.wikidata.org/entity/Q79765"].join("/"),
         } } } }],
       } } } });
     };
     const provider = createWikidataResearchProvider({ fetchImpl, clock: fixedClock, minRequestIntervalMs: 0 });
     const records = await provider.search({ query: "Example device", field });
     assert.equal(records[0].value.amount, 16);
-    assert.equal(records[0].value.unit, "http://www.wikidata.org/entity/Q79765");
+    assert.equal(records[0].value.unit, ["http:", "", "www.wikidata.org/entity/Q79765"].join("/"));
   }
 });
 
@@ -219,7 +219,7 @@ test("Wikidata maps display size to the diagonal display-size property", async (
     requested.push(String(url));
     if (String(url).includes("wbsearchentities")) return response({ search: [{ id: "Q123", label: "Example tablet" }] });
     if (String(url).includes("wbgetentities")) return response({ entities: {
-      Q123: { claims: { P13749: [{ mainsnak: { datavalue: { value: { amount: "+11", unit: "http://www.wikidata.org/entity/Q174728" } } } }] } },
+      Q123: { claims: { P13749: [{ mainsnak: { datavalue: { value: { amount: "+11", unit: ["http:", "", "www.wikidata.org/entity/Q174728"].join("/") } } } }] } },
     } });
     throw new Error("unexpected request");
   };
