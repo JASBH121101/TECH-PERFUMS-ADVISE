@@ -40,6 +40,7 @@ export { compareNicaraguaRetailerOffers } from "./research/nicaragua-retailer-co
 export { CatalogIndex, searchCatalog } from "./knowledge/catalog-index.js";
 export {
   createScentoResearchProvider,
+  createTenMlResearchProvider,
   createWikidataResearchProvider,
   createTechApiResearchProvider,
   createCoreInfoResearchProvider,
