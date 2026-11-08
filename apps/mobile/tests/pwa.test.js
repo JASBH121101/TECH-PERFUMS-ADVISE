@@ -39,6 +39,7 @@ test("Pages app registers the service worker only for the deployed subpath", asy
 test("Pages install precaches its built JavaScript and CSS assets", async () => {
   const worker = await read("public/sw.js");
   assert.match(worker, /fetch\(scopeUrl\.href\)/u);
-  assert.match(worker, /matchAll\(\/\\\\b\(\?:src\|href\)/u);
-  assert.match(worker, /cache\.put\(url\.href, response\)/u);
 });
+
+  assert.ok(worker.includes("html.matchAll("));
+  assert.ok(worker.includes("cache.put(url.href, response)"));

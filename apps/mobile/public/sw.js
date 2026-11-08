@@ -17,7 +17,7 @@ self.addEventListener("install", event => {
     await cache.put(scopeUrl.href, shellResponse.clone());
 
     const html = await shellResponse.text();
-    const assets = [...html.matchAll(/\\b(?:src|href)=["']([^"']+\\.(?:js|css))(?:\\?[^"']*)?["']/giu)]
+    const assets = [...html.matchAll(/\b(?:src|href)=["']([^"']+\.(?:js|css))(?:\?[^"']*)?["']/giu)]
       .map(match => new URL(match[1], scopeUrl))
       .filter(url => url.origin === scopeUrl.origin && url.href.startsWith(scopeUrl.href));
     await Promise.all(assets.map(async url => {
