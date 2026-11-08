@@ -18,7 +18,7 @@ JB Advisor Engine (JBAE) is the deterministic intelligence core planned for the 
 3. Human approval: research candidates remain unconfirmed; adding them to local knowledge requires explicit approval.
 4. Offline-first: deterministic rules and local knowledge do not require a network connection.
 5. Domain separation: fragrance and technology use separate product models, units and comparison criteria.
-6. Privacy and cost control: no credentials in source code; external paid services remain opt-in.
+6. Privacy and cost control: no credentials in source code; fragrance research uses no-cost sources only. Paid APIs, paid trials and subscription fallbacks are excluded unless the owner explicitly changes this policy.
 
 ## Implemented engine layers
 
@@ -33,7 +33,7 @@ JB Advisor Engine (JBAE) is the deterministic intelligence core planned for the 
 - **Local Catalog Index:** offline search by exact ID/model/name, aliases, brand and selected attributes; case/diacritic insensitive, bounded, deterministic and domain-filtered. Supports identity-aware match lookup; potential duplicates are flagged for review, never auto-merged.
 - **SQLite adapter:** transactional persistence adapter for an already opened Capacitor SQLite connection, with schema version checks and SQLite quick integrity check.
 - **Advisor Core:** deterministic orchestration of normalization, evidence integration and recommendation.
-- **Research Engine:** provider-agnostic research intake; Scento and 10ML Fragrance Index (fragrance), Open Beauty Facts exact-barcode cosmetics lookup, Wikidata, TechAPI (opt-in), CoreInfo (technology), SICSA Nicaragua and five additional Nicaragua retailer page adapters return unconfirmed candidates that require explicit approval before staging. The 10ML provider is free/no-key, uses bounded cached GET queries, and carries the mandatory visible attribution metadata. Open Beauty Facts lookup is GTIN-only, preserves ODbL attribution and excludes product images. Retailer adapters use allowlisted exact product URLs, not claimed official APIs.
+- **Research Engine:** provider-agnostic research intake; Scento and 10ML Fragrance Index (fragrance), Open Beauty Facts exact-barcode cosmetics lookup, Wikidata, TechAPI (opt-in), CoreInfo (technology), SICSA Nicaragua and five additional Nicaragua retailer page adapters return unconfirmed candidates that require explicit approval before staging. The 10ML provider is free/no-key, uses bounded cached GET queries, and carries the mandatory visible attribution metadata. Open Beauty Facts lookup is GTIN-only, preserves ODbL attribution and excludes product images. The fragrance workflow does not use paid catalog APIs, paid trials or subscription fallbacks. Retailer adapters use allowlisted exact product URLs, not claimed official APIs.
 - **Nicaragua Retailer Comparison:** compares exact product URLs across RadioShack, La Curacao and SIMAN. The comparison uses the product identity matcher, requires exact-variant evidence before price ranking, blocks currency/tax mismatches and supports partial results without naming a global winner.
 
 ## Nicaragua retailer coverage
