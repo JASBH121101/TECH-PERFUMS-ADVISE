@@ -42,7 +42,7 @@ test("customer copy never invents missing duration or projection ranges", () => 
       projectionDuration: { status: "unavailable", reason: "incomplete_evidence" },
     }],
   });
-  assert.match(result.text, /no tengo un rango de rendimiento respaldado/u);
+  assert.match(result.text, /no tengo un rango de rendimiento respaldado/iu);
   assert.doesNotMatch(result.text, /[0-9]+–[0-9]+ hours/u);
 });
 
