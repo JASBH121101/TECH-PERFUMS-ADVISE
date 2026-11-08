@@ -22,13 +22,14 @@ function result(value, retailer) {
   }];
 }
 
-function fakeProvider({ name, identifiers = {}, price, availability = { status: "in_stock" } }) {
+function fakeProvider({ name, identifiers = {}, price, availability = { status: "in_stock" }, color = null }) {
   const values = {
     name,
     sku: identifiers.sku ?? "470890800019",
     upc: identifiers.upc ?? null,
     gtin: Object.hasOwn(identifiers, "gtin") ? identifiers.gtin : gtin,
     mpn: Object.hasOwn(identifiers, "mpn") ? identifiers.mpn : mpn,
+    color,
     price: price ?? { amount: 7399, currency: "NIO", taxIncluded: null, display: "C$7,399.00" },
     availability,
     warranty: "12 meses",
@@ -156,6 +157,28 @@ test("returns deferred retailer status and refuses full-set certification", asyn
   assert.deepEqual(resultValue.identity.unresolvedRetailers, ["siman"]);
   assert.equal(resultValue.priceComparison.status, "partial_comparable");
   assert.equal(resultValue.priceComparison.scope, "matching_subset");
+});
+
+
+test("same phone family with different manufacturer model and color is rejected as a variant mismatch", async () => {
+  const grey = fakeProvider({
+    name: "Samsung Galaxy A17 4GB RAM 128GB Gris",
+    identifiers: { gtin: null, mpn: "SMA175FZAFGTO" },
+    color: "Gris",
+  });
+  const blue = fakeProvider({
+    name: "Samsung Galaxy A17 4GB RAM 128GB",
+    identifiers: { gtin: null, mpn: "SM-A175FZKFGTO" },
+    color: "Azul",
+    price: { amount: 7999.13, currency: "NIO", taxIncluded: null },
+  });
+  const resultValue = await compareNicaraguaRetailerOffers({
+    offers: offers.slice(0, 2),
+    providers: { radioshack: grey, laCuracao: blue },
+  });
+  assert.equal(resultValue.identity.status, "mismatch");
+  assert.ok(resultValue.identity.pairwise[0].variantConflicts.includes("color"));
+  assert.equal(resultValue.priceComparison.status, "blocked_identity");
 });
 
 test("validates retailer list, duplicates and supported IDs", async () => {

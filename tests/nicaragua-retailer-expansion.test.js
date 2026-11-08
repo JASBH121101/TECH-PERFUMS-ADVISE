@@ -140,7 +140,11 @@ test("SIMAN uses the documented public VTEX exact-product search and extracts NI
           }],
         }],
         specificationGroups: [{
-          specifications: [{ name: "Garantía del proveedor", values: ["12 meses"] }],
+          specifications: [
+            { name: "Garantía del proveedor", values: ["12 meses"] },
+            { name: "Modelo", values: ["SM-A175FZKFGTO"] },
+            { name: "Color", values: ["Azul"] },
+          ],
         }],
       }], String(requestUrl));
     },
@@ -153,8 +157,12 @@ test("SIMAN uses the documented public VTEX exact-product search and extracts NI
   const price = await provider.search({ ...base, field: "price" });
   const stock = await provider.search({ ...base, field: "availability" });
   const warranty = await provider.search({ ...base, field: "warranty" });
+  const mpn = await provider.search({ ...base, field: "mpn" });
+  const color = await provider.search({ ...base, field: "color" });
   assert.equal(name[0].value, "Celular Samsung Galaxy A17 128GB 4GB RAM");
   assert.equal(sku[0].value, "105067545");
+  assert.equal(mpn[0].value, "SM-A175FZKFGTO");
+  assert.equal(color[0].value, "Azul");
   assert.deepEqual(price[0].value, {
     amount: 7999,
     currency: "NIO",
@@ -170,6 +178,41 @@ test("SIMAN uses the documented public VTEX exact-product search and extracts NI
   assert.match(calls[0].url, /\/api\/catalog_system\/pub\/products\/search\//u);
   assert.match(calls[0].url, /\/p$/u);
   assert.equal(calls[0].init.method, "GET");
+});
+
+
+test("El Gallo extracts model, SKU, price and availability even when stock label precedes the title", async () => {
+  const url = "https://www.elgallomasgallo.com.ni/laptop-dell-core-i5-1334u-dc15250-x5nh3-201116";
+  const html = [
+    "<html><body>",
+    "<div>18% DESCUENTO Disponible SKU 201116</div>",
+    "<h1>Laptop Dell Core i5-1334U DC15250 X5NH3</h1>",
+    "<div>Precio especial C$26,999 Precio habitual C$32,999</div>",
+    "<div>Marca | DELL Modelo | X5NH3 Memoria RAM | 16GB Capacidad de almacenamiento | 512GB</div>",
+    "</body></html>",
+  ].join("");
+  const provider = createElGalloMasGalloResearchProvider({
+    fetchImpl: async requestUrl => htmlResponse(html, String(requestUrl)),
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  const base = { query: url, domain: DOMAINS.TECHNOLOGY, limit: 1 };
+  const [name] = await provider.search({ ...base, field: "name" });
+  const [sku] = await provider.search({ ...base, field: "sku" });
+  const [mpn] = await provider.search({ ...base, field: "mpn" });
+  const [price] = await provider.search({ ...base, field: "price" });
+  const [stock] = await provider.search({ ...base, field: "availability" });
+  assert.equal(name.value, "Laptop Dell Core i5-1334U DC15250 X5NH3");
+  assert.equal(sku.value, "201116");
+  assert.equal(mpn.value, "X5NH3");
+  assert.deepEqual(price.value, {
+    amount: 26999,
+    currency: "NIO",
+    taxIncluded: null,
+    display: "C$26,999",
+    basis: "retailer_product_page",
+  });
+  assert.deepEqual(stock.value, { status: "in_stock" });
 });
 
 test("SIMAN with multiple differently priced variants does not publish an aggregate price", async () => {
@@ -189,6 +232,44 @@ test("SIMAN with multiple differently priced variants does not publish an aggreg
   assert.deepEqual(await provider.search({ query: url, field: "price" }), []);
   const [availability] = await provider.search({ query: url, field: "availability" });
   assert.deepEqual(availability.value, { status: "in_stock" });
+});
+
+test("SIMAN with ambiguous model/color and references across variants withholds variant-level identity", async () => {
+  const url = "https://ni.siman.com/example-phone/p";
+  const provider = createSimanResearchProvider({
+    fetchImpl: async requestUrl => jsonResponse([{
+      productId: "300",
+      productName: "Example Phone 128GB 8GB RAM",
+      linkText: "example-phone",
+      items: [
+        {
+          itemId: "sku-blue",
+          ean: "1111111111111",
+          referenceId: [{ Key: "RefId", Value: "sku-blue" }],
+          specificationGroups: [{ specifications: [
+            { name: "Modelo", values: ["SM-X100BLUE"] },
+            { name: "Color", values: ["Azul"] },
+          ] }],
+          sellers: [{ commertialOffer: { Price: 7999, AvailableQuantity: 2, IsAvailable: true } }],
+        },
+        {
+          itemId: "sku-gray",
+          ean: "2222222222222",
+          referenceId: [{ Key: "RefId", Value: "sku-gray" }],
+          specificationGroups: [{ specifications: [
+            { name: "Modelo", values: ["SM-X100GRAY"] },
+            { name: "Color", values: ["Gris"] },
+          ] }],
+          sellers: [{ commertialOffer: { Price: 7999, AvailableQuantity: 2, IsAvailable: true } }],
+        },
+      ],
+    }], String(requestUrl)),
+    minRequestIntervalMs: 0,
+  });
+  assert.deepEqual(await provider.search({ query: url, field: "sku" }), []);
+  assert.deepEqual(await provider.search({ query: url, field: "gtin" }), []);
+  assert.deepEqual(await provider.search({ query: url, field: "mpn" }), []);
+  assert.deepEqual(await provider.search({ query: url, field: "color" }), []);
 });
 
 test("SIMAN does not accept mismatched VTEX product records or an external API redirect", async () => {

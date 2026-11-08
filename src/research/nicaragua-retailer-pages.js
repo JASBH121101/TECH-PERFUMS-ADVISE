@@ -16,7 +16,7 @@ const RETAILER_CONFIGS = Object.freeze({
     hostname: "www.radioshackla.com",
     pathPattern: /^\/nicaragua\/[a-z0-9-]+\/p\/?$/u,
     fields: Object.freeze([
-      "name", "identity", "sku", "upc", "gtin", "mpn",
+      "name", "identity", "sku", "upc", "gtin", "mpn", "color",
       "price", "local_price", "retail_price", "availability", "stock", "warranty",
     ]),
   }),
@@ -27,7 +27,7 @@ const RETAILER_CONFIGS = Object.freeze({
     hostname: "www.lacuracaonline.com",
     pathPattern: /^\/nicaragua\/[a-z0-9-]+\/p\/?$/u,
     fields: Object.freeze([
-      "name", "identity", "sku", "upc", "gtin", "mpn",
+      "name", "identity", "sku", "upc", "gtin", "mpn", "color",
       "price", "local_price", "retail_price", "availability", "stock", "warranty",
     ]),
   }),
@@ -38,7 +38,7 @@ const RETAILER_CONFIGS = Object.freeze({
     hostname: "www.elgallomasgallo.com.ni",
     pathPattern: /^\/[a-z0-9-]+-\d+\/?$/u,
     fields: Object.freeze([
-      "name", "identity", "sku", "upc", "gtin", "mpn",
+      "name", "identity", "sku", "upc", "gtin", "mpn", "color",
       "price", "local_price", "retail_price", "availability", "stock", "warranty",
     ]),
   }),
@@ -49,7 +49,7 @@ const RETAILER_CONFIGS = Object.freeze({
     hostname: "ni.siman.com",
     pathPattern: /^\/[a-z0-9-]+\/p\/?$/u,
     fields: Object.freeze([
-      "name", "identity", "sku", "upc", "gtin", "mpn",
+      "name", "identity", "sku", "upc", "gtin", "mpn", "color",
       "price", "local_price", "retail_price", "availability", "stock", "warranty",
     ]),
   }),
@@ -83,6 +83,11 @@ function parseRetailerCurrency(text, offer, product) {
     ? currency.toUpperCase() : null;
 }
 
+function detectRetailerColor(value) {
+  const match = String(value ?? "").match(/\b(negro|negra|black|gris|gray|grey|azul|blue|celeste|blanco|blanca|white|rojo|roja|red|verde|green|rosa|rosado|pink|morado|purpura|púrpura|violeta|silver|plata|dorado|gold)\b/iu);
+  return match?.[1] ?? null;
+}
+
 function parseRetailerAmount(value) {
   if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : null;
   if (typeof value !== "string") return null;
@@ -111,13 +116,14 @@ function parseRetailerProductPage(html) {
   const productText = start >= 0 ? pageText.slice(start, start + 20_000) : pageText.slice(0, 5_000);
 
   const identifier = label => productText.match(
-    new RegExp("\\b" + label + "\\b\\s*:?\\s*([A-Z0-9_-]+)", "iu"),
+    new RegExp("\\b" + label + "\\b\\s*(?::|\\|)?\\s*([A-Z0-9_-]+)", "iu"),
   )?.[1] ?? null;
   const sku = product.sku ?? product.productID ?? identifier("SKU");
   const upc = product.gtin12 ?? identifier("UPC");
   const gtin = product.gtin13 ?? product.gtin14 ?? product.gtin12 ??
     identifier("GTIN") ?? identifier("EAN");
-  const mpn = product.mpn ?? identifier("MPN");
+  const mpn = product.mpn ?? identifier("MPN") ?? identifier("Modelo") ?? identifier("Model");
+  const color = product.color ?? identifier("Color") ?? detectRetailerColor(nameText);
 
   const saleMatch = productText.match(
     /precio\s+(?:especial|promocional|de\s+oferta)\s*:?\s*((?:C\$|NIO|US\$|USD)\s*[\d,.]+)/iu,
@@ -151,14 +157,20 @@ function parseRetailerProductPage(html) {
   let availability = null;
   if (quantityMatch) {
     availability = { status: "in_stock", quantity: Number(quantityMatch[1]) };
-  } else if (/schema\.org\/(?:outofstock|soldout|discontinued)|\b(?:agotado|sin existencias|out of stock)\b/iu.test(
-    availabilityValue + " " + productText.slice(0, 1_200),
-  )) {
-    availability = { status: "out_of_stock" };
-  } else if (/schema\.org\/(?:instock|limitedavailability)|\b(?:en stock|disponible|hay existencias|in stock)\b/iu.test(
-    availabilityValue + " " + productText.slice(0, 1_200),
-  )) {
-    availability = { status: "in_stock" };
+  } else {
+    const productContext = pageText.slice(
+      Math.max(0, start >= 0 ? start - 500 : 0),
+      Math.min(pageText.length, (start >= 0 ? start : 0) + 1_500),
+    );
+    if (/schema\.org\/(?:outofstock|soldout|discontinued)|\b(?:agotado|sin existencias|out of stock)\b/iu.test(
+      availabilityValue + " " + productContext,
+    )) {
+      availability = { status: "out_of_stock" };
+    } else if (/schema\.org\/(?:instock|limitedavailability)|\b(?:en stock|disponible|hay existencias|in stock)\b/iu.test(
+      availabilityValue + " " + productContext,
+    )) {
+      availability = { status: "in_stock" };
+    }
   }
 
   const warrantyMatch = productText.match(
@@ -171,6 +183,7 @@ function parseRetailerProductPage(html) {
     upc: typeof upc === "string" ? upc : null,
     gtin: typeof gtin === "string" ? gtin : null,
     mpn: typeof mpn === "string" ? mpn : null,
+    color: typeof color === "string" ? color.trim() : null,
     price,
     availability,
     warranty: warrantyMatch?.[1]?.trim() ?? null,
@@ -213,14 +226,30 @@ function createRetailerPageReader(fetchImpl, {
     }, timeoutMs);
 
     try {
-      const response = await Promise.race([fetchImpl(key, {
+      const requestOptions = {
         method: "GET",
         headers: {
           Accept: "text/html,application/xhtml+xml",
           "User-Agent": "JB Advisor Engine/0.1 (+https://github.com/JASBH121101/TECH-PERFUMS-ADVISE)",
         },
         ...(controller ? { signal: controller.signal } : {}),
-      }), timeoutPromise]);
+      };
+      let response;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          response = await Promise.race([fetchImpl(key, requestOptions), timeoutPromise]);
+          break;
+        } catch (error) {
+          const diagnostic = [
+            error?.message,
+            error?.cause?.code,
+            error?.cause?.message,
+          ].filter(Boolean).join(" ");
+          const transientNetworkFailure = /fetch failed|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT/iu.test(diagnostic);
+          if (attempt !== 0 || !transientNetworkFailure || controller?.signal.aborted) throw error;
+          await new Promise(resolve => setTimeout(resolve, 350));
+        }
+      }
       lastRequestAt = Date.now();
       if (!response || response.ok !== true) {
         throw new Error("Retailer product page request failed with HTTP " + (response?.status ?? "unknown"));
@@ -290,6 +319,7 @@ function createNicaraguaRetailerProductProvider(config, {
         upc: product.upc,
         gtin: product.gtin,
         mpn: product.mpn,
+        color: product.color,
         price: product.price,
         local_price: product.price,
         retail_price: product.price,

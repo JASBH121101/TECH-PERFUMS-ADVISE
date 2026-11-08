@@ -7,7 +7,7 @@ import {
 import { createSimanResearchProvider } from "./siman-vtex.js";
 
 const FIELDS = Object.freeze([
-  "name", "sku", "upc", "gtin", "mpn", "price", "availability", "warranty",
+  "name", "sku", "upc", "gtin", "mpn", "color", "price", "availability", "warranty",
 ]);
 
 const FACTORIES = Object.freeze({
@@ -51,6 +51,8 @@ function extractVariant(name) {
   if (storageMatch) {
     variant.storageGB = Number(storageMatch[1] ?? storageMatch[2]);
   }
+  const colorMatch = text.match(/\b(negro|negra|black|gris|gray|grey|azul|blue|celeste|blanco|blanca|white|rojo|roja|red|verde|green|rosa|rosado|pink|morado|purpura|púrpura|violeta|silver|plata|dorado|gold)\b/iu);
+  if (colorMatch) variant.color = colorMatch[1];
   return variant;
 }
 
@@ -67,12 +69,17 @@ function buildMatchProduct(offer) {
   }
   if (data.mpn) identifiers.mpn = String(data.mpn).trim();
 
+  const variant = extractVariant(data.name);
+  if (typeof data.color === "string" && data.color.trim()) {
+    variant.color = data.color.trim();
+  }
+
   return {
     id: offer.retailer,
     domain: DOMAINS.TECHNOLOGY,
     name: data.name,
     identifiers,
-    variant: extractVariant(data.name),
+    variant,
     market: "NI",
   };
 }

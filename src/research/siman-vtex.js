@@ -9,6 +9,37 @@ const SIMAN_CONFIG = Object.freeze({
   pathPattern: /^\/[a-z0-9-]+\/p\/?$/u,
 });
 
+function uniqueVtexSpecification(product, labelPattern) {
+  const values = [];
+  const owners = [product, ...(Array.isArray(product?.items) ? product.items : [])];
+  for (const owner of owners) {
+    const specifications = [
+      ...(Array.isArray(owner?.productSpecifications) ? owner.productSpecifications : []),
+      ...(Array.isArray(owner?.specifications) ? owner.specifications : []),
+      ...(Array.isArray(owner?.variations) ? owner.variations : []),
+      ...(Array.isArray(owner?.specificationGroups)
+        ? owner.specificationGroups.flatMap(group =>
+            Array.isArray(group?.specifications) ? group.specifications : [])
+        : []),
+    ];
+    for (const specification of specifications) {
+      const names = [specification?.name, specification?.originalName,
+        specification?.Key, specification?.Name].filter(value => typeof value === "string");
+      if (!names.some(name => labelPattern.test(name.trim()))) continue;
+      const raw = specification?.values ?? specification?.value ??
+        specification?.Value ?? specification?.ValueName;
+      for (const candidate of (Array.isArray(raw) ? raw : [raw])) {
+        if (typeof candidate === "string" || typeof candidate === "number") {
+          const value = String(candidate).trim();
+          if (value) values.push(value);
+        }
+      }
+    }
+  }
+  const unique = [...new Set(values)];
+  return unique.length === 1 ? unique[0] : null;
+}
+
 /**
  * SIMAN uses a VTEX storefront. The public Legacy Search API documents
  * exact product-text-link lookup at /api/catalog_system/pub/products/search/{linkText}/p.
@@ -76,7 +107,7 @@ export function createSimanResearchProvider({
 
       const field = requireText(request?.field, "field").toLowerCase();
       const supportedFields = new Set([
-        "name", "identity", "sku", "upc", "gtin", "mpn",
+        "name", "identity", "sku", "upc", "gtin", "mpn", "color",
         "price", "local_price", "retail_price", "availability", "stock", "warranty",
       ]);
       if (!supportedFields.has(field)) throw new Error("SIMAN provider does not support field: " + field);
@@ -125,17 +156,30 @@ export function createSimanResearchProvider({
       }
 
       const singleItem = items.length === 1 ? items[0] : null;
-      const references = Array.isArray(singleItem?.referenceId) ? singleItem.referenceId : [];
-      const reference = references.find(entry =>
-        /^(?:refid|sku|c[oó]digo)$/iu.test(String(entry?.Key ?? entry?.Name ?? ""))
-      )?.Value ?? null;
-      const sku = typeof reference === "string" && reference.trim()
-        ? reference.trim()
-        : typeof singleItem?.itemId === "string" ? singleItem.itemId : null;
+      const references = items.flatMap(item =>
+        Array.isArray(item?.referenceId) ? item.referenceId : []);
+      const productReferences = [...new Set(references
+        .filter(entry => /^(?:refid|sku|c[oó]digo)$/iu.test(String(entry?.Key ?? entry?.Name ?? "")))
+        .map(entry => entry?.Value)
+        .filter(value => typeof value === "string" && value.trim())
+        .map(value => value.trim()))];
+      const reference = productReferences.length === 1 ? productReferences[0] : null;
+      const sku = reference ?? (typeof singleItem?.itemId === "string" ? singleItem.itemId : null);
       const upc = typeof singleItem?.ean === "string" && singleItem.ean.trim()
         ? singleItem.ean.trim() : null;
       const gtin = upc;
-      const mpn = references.find(entry => /^(?:mpn|modelo)$/iu.test(String(entry?.Key ?? entry?.Name ?? "")))?.Value ?? null;
+      const modelReferences = references
+        .filter(entry => /^(?:mpn|modelo|model)$/iu.test(String(entry?.Key ?? entry?.Name ?? "")))
+        .map(entry => entry?.Value)
+        .filter(value => typeof value === "string" && value.trim())
+        .map(value => value.trim());
+      const modelSpecification = uniqueVtexSpecification(
+        product, /^(?:modelo|model|n[uú]mero de modelo|model number)$/iu,
+      );
+      if (modelSpecification) modelReferences.push(modelSpecification);
+      const uniqueModels = [...new Set(modelReferences)];
+      const mpn = uniqueModels.length === 1 ? uniqueModels[0] : null;
+      const color = uniqueVtexSpecification(product, /^(?:color|colour)$/iu);
 
       let warranty = null;
       for (const group of product.specificationGroups ?? []) {
@@ -155,6 +199,7 @@ export function createSimanResearchProvider({
         upc,
         gtin,
         mpn: typeof mpn === "string" ? mpn : null,
+        color,
         price,
         local_price: price,
         retail_price: price,
@@ -187,7 +232,11 @@ export function createSimanResearchProvider({
             ? "Availability is reported only when VTEX publishes SKU offer quantity or availability. When a product has differently priced variants, aggregate price is withheld rather than guessed."
             : field === "warranty"
               ? "Warranty duration is included only when explicitly published in the VTEX product specification groups."
-              : "Product identity and identifiers are read from the exact SIMAN product text-link through the documented public VTEX Search API. Research output remains unconfirmed.",
+              : field === "mpn"
+                ? "Manufacturer model number is included only when SIMAN explicitly publishes one unique Modelo/Model specification across the exact product record."
+                : field === "color"
+                  ? "Color is included only when the exact VTEX product record exposes one unambiguous color value across its SKU variants."
+                  : "Product identity and identifiers are read from the exact SIMAN product text-link through the documented public VTEX Search API. Research output remains unconfirmed.",
       }];
     },
   });
