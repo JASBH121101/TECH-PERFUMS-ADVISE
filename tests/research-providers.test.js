@@ -845,6 +845,7 @@ test("Open Beauty Facts looks up one cosmetics GTIN and preserves ODbL attributi
   assert.match(result[0].note, /not an approved JBAE productType/u);
   assert.match(requestedUrl, /api\/v3\/product\/3560070791460\.json/u);
   assert.match(requestedUrl, /fields=/u);
+  assert.match(requestedUrl, /product_type=beauty/u);
   assert.match(requestedHeaders["User-Agent"] ?? requestedHeaders["Api-User-Agent"], /^JB Advisor Engine/u);
   assert.equal(Object.hasOwn(result[0], "image_url"), false);
 });
