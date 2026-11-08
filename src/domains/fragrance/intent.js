@@ -1,5 +1,5 @@
 const FAMILY_TERMS = Object.freeze([
-  { terms: ["citrico", "citrica", "citrus"], value: "citrus" },
+  { terms: ["citrico", "citrica", "citricos", "citricas", "citrus"], value: "citrus" },
   { terms: ["floral", "flores", "florales"], value: "floral" },
   { terms: ["amaderado", "amaderada", "madera", "woodsy", "woody"], value: "woody" },
   { terms: ["dulce", "gourmand"], value: "gourmand" },
@@ -71,13 +71,13 @@ export function parseFragranceCustomerMessage(message) {
   if (evening) {
     preferences.occasion = "evening";
     signals.push("occasion:evening");
-  } else if (office) {
-    // Work/office is more specific than a generic daytime mention.
-    preferences.occasion = "office";
-    signals.push("occasion:office");
   } else if (daily) {
+    // An explicit daily-use request remains the primary occasion when work is also mentioned.
     preferences.occasion = "day";
     signals.push("occasion:day");
+  } else if (office) {
+    preferences.occasion = "office";
+    signals.push("occasion:office");
   }
 
   if (includesAny(text, ["calor", "caluroso", "calurosa", "humedo", "humeda", "tropical", "clima caliente", "hot weather"])) {
