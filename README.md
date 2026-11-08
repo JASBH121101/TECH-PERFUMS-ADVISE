@@ -61,9 +61,9 @@ The GitHub Actions validation workflow checks JavaScript syntax and runs the ful
 
 ## Current validation
 
-On 2026-11-08, the latest CI run on commit `06c8ced7706b55b2ce89d9e87ca0c38347c81ddd` passed **206/206 tests** with 0 failures and completed JavaScript syntax checks. JB Expert QA passed on the same commit with **100/100**, 27 rules executed, 0 rule execution errors and 0 findings.
+On 2026-11-08, CI on commit `f6a6842db1695e2e6ded28e8cc5e5171204b69ac` passed **212/212 tests** with 0 failures, including the full 1,479-perfume fixture, schema-v2 evidence generation, non-destructive/idempotent import checks and JavaScript syntax validation. JB Expert QA passed on the same commit with **100/100**, 27 rules executed, 0 rule execution errors and 0 findings.
 
-The latest successful bounded live-provider smoke ran on commit `a13645f8776d9f407972312fdb09a6d7c03ededd`. It passed Scento's Layton profile lookup, ten TechAPI samples, eight CoreInfo samples, SICSA's exact local laptop SKU, RadioShack, La Curacao, SIMAN and El Verdugo. Wikidata was deferred because its upstream service reported maxlag; El Gallo Más Gallo was deferred because the runner received a transport/header-overflow error. The Galaxy A17 smoke confirmed an exact GTIN/MPN match between RadioShack and La Curacao. SIMAN returned a selected SKU, NIO price and stock, but no manufacturer identifier for exact variant matching; its offer is therefore excluded from the exact-match price subset. CONICO remains manual-quote only.
+The bounded live-provider smoke on that commit passed Scento's Layton profile lookup, ten TechAPI samples, eight CoreInfo samples, SICSA's exact local laptop SKU, RadioShack, La Curacao, SIMAN and El Verdugo. Wikidata was deferred because its upstream service reported maxlag; El Gallo Más Gallo was deferred because the runner received a transport/header-overflow error. The Galaxy A17 smoke confirmed an exact GTIN/MPN match between RadioShack and La Curacao. SIMAN returned a selected SKU, NIO price and stock, but no manufacturer identifier for exact variant matching; its offer is therefore excluded from the exact-match price subset. CONICO remains manual-quote only.
 
 These checks validate deterministic engine logic and bounded provider endpoints. They do not certify native Android behavior, overall source accuracy, or every Nicaragua-local price/availability listing. All retailer claims enter JBAE as unconfirmed research candidates and still require human approval.
 
@@ -73,8 +73,8 @@ A dated Scento dataset snapshot is included under `data/fragrance/sources/scento
 
 ## Not yet implemented / device validation pending
 
-- Android user interface, local SQLite connection and device-level import/restore validation. The Scento fragrance reference seed and import path are now included; imported claims remain reported until independently reviewed.
 - Capacitor Android application shell and user interface.
+- Native SQLite connection, first-run seed import and device-level import/restore validation.
 - Installation of the native `@capacitor-community/sqlite` plugin in the Android project.
 - Native SQLite testing on emulator/physical Android device, including process-kill/restart recovery.
 - Resolve SIMAN's selected-variant GTIN/MPN for the Galaxy A17 page before including it in the exact-identity price subset.

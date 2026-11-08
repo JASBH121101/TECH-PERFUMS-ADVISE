@@ -33,3 +33,6 @@ jobs:
 
       - name: Run automated tests
         run: npm test
+
+      - name: Build complete fragrance knowledge seed
+        run: npm run build:fragrance-library
