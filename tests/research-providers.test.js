@@ -302,7 +302,15 @@ test("TechAPI stays opt-in while the local Nicaragua retailer provider is enable
     wikidata: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
   });
   assert.deepEqual(providers.map(provider => provider.id), [
-    "scento-perfume-api", "wikidata", "coreinfo-device-catalog", "sicsa-nicaragua-retail",
+    "scento-perfume-api",
+    "wikidata",
+    "coreinfo-device-catalog",
+    "sicsa-nicaragua-retail",
+    "radioshack-nicaragua-retail",
+    "la-curacao-nicaragua-retail",
+    "el-gallo-mas-gallo-nicaragua-retail",
+    "siman-nicaragua-retail",
+    "el-verdugo-nicaragua-catalog",
   ]);
   assert.ok(!providers.some(provider => provider.id === "techapi-static-specs"));
 });

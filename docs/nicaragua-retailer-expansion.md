@@ -45,3 +45,15 @@ The reader uses GET only, bounded timeouts, a short in-memory page cache and seq
 The workflow uses one exact public product URL per online retailer and a catalog identity sample for El Verdugo. An endpoint that blocks requests, changes its markup or stops publishing a tested field must be reported as \`DEFERRED\` or \`not published\`, never as a provider pass for that missing field. CONICO remains deferred pending a current vendor quotation, product list or official technical integration.
 
 Current sample pages are selected for smoke coverage only; they are not endorsed purchases and their prices or stock must not be treated as current beyond the observation timestamp recorded by a live run.
+
+## Latest live smoke observation
+
+The live smoke on commit `f4bbf77a1a637beed4578de8762d88a28e97963c` completed successfully as a workflow:
+- RadioShack: identity, local price and explicit stock extracted.
+- La Curacao: identity, local price and stock extracted.
+- El Gallo Más Gallo: deferred because the runner's request failed before page data could be parsed.
+- SIMAN: deferred because the returned page did not yield a product identity through the current parser. This is an extraction gap, not evidence that the product does not exist.
+- El Verdugo: identity and explicit warranty extracted; price and stock remain disabled.
+- CONICO: manual quotation only; no public automated source was verified.
+
+The same run also passed Scento, all ten TechAPI samples, all eight CoreInfo samples and SICSA's exact local product test. Wikidata was deferred by the upstream service's maxlag response. A successful workflow means the smoke harness completed; it does not convert deferred stores into certified live providers.
