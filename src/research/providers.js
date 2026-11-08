@@ -170,9 +170,10 @@ export function createTenMlResearchProvider({
   });
 }
 
-// Public catalog discovery is category-bounded; external results stay unconfirmed.
+// Open Beauty Facts is deliberately restricted to body-mist research.
 const OPEN_BEAUTY_FACTS_BASE = "https://world.openbeautyfacts.org";
 const OPEN_BEAUTY_FACTS_ODBL = "https://opendatacommons.org/licenses/odbl/1-0/";
+const OPEN_BEAUTY_FACTS_ALLOWED_CATEGORIES = new Set(["body-mists"]);
 
 function pickOpenBeautyFactsValue(product, field) {
   const map = {
@@ -192,19 +193,37 @@ function pickOpenBeautyFactsValue(product, field) {
     last_modified: product.last_modified_t,
     product_quantity: product.product_quantity,
     product_quantity_unit: product.product_quantity_unit,
+    product_record: {
+      barcode: product.code,
+      name: product.product_name || product.product_name_en,
+      brand: product.brands,
+      categories: product.categories,
+      categoryTags: product.categories_tags,
+      ingredientsText: product.ingredients_text,
+      quantity: product.product_quantity,
+      quantityUnit: product.product_quantity_unit,
+      lastModifiedAt: product.last_modified_t,
+    },
   };
   return map[field] ?? map[field.replace(/[A-Z]/gu, letter => "_" + letter.toLowerCase())];
 }
 
+function hasBodyMistCategoryTag(product) {
+  return Array.isArray(product?.categories_tags) &&
+    product.categories_tags.some(tag =>
+      typeof tag === "string" && /^(?:[a-z]{2,3}:)?body-mists?$/iu.test(tag.trim())
+    );
+}
+
 /**
- * Open Beauty Facts read-only cosmetics discovery.
+ * Open Beauty Facts read-only body-mist discovery.
  *
- * Supports:
- * - category:<taxonomy-slug> via structured API v2 category filters;
- * - an exact 8-14 digit GTIN/EAN/UPC lookup via API v3.
+ * Supports only the body-mists category via structured API v2 filters and
+ * optional exact 8-14 digit GTIN/EAN/UPC lookup. Barcode results must also
+ * carry an explicit body-mists source category tag.
  *
- * Category results preserve source tags and are never converted automatically
- * into a JBAE product type. Images are deliberately excluded.
+ * Source tags are never converted automatically into a JBAE product type.
+ * Images are deliberately excluded.
  */
 export function createOpenBeautyFactsResearchProvider({
   fetchImpl = globalThis.fetch,
@@ -231,15 +250,18 @@ export function createOpenBeautyFactsResearchProvider({
   function toCandidate(product, field, mode, categoryTag) {
     if (!product || typeof product !== "object" || Array.isArray(product)) return null;
     const barcode = typeof product.code === "string" ? product.code : String(product.code ?? "");
-    if (!/^\d{8,14}$/u.test(barcode)) return null;
+    if (!/^\d{8,14}$/u.test(barcode) || !hasBodyMistCategoryTag(product)) return null;
     const value = pickOpenBeautyFactsValue(product, field);
     if (value === undefined || value === null || value === "" ||
         (Array.isArray(value) && value.length === 0)) return null;
+    if (field === "product_record" && (typeof value.name !== "string" || !value.name.trim())) {
+      return null;
+    }
 
     const sourceUrl = OPEN_BEAUTY_FACTS_BASE + "/product/" + barcode;
     const discoveryNote = mode === "category"
-      ? "Bounded structured category lookup for source tag " + categoryTag + ". Open Beauty Facts category tags are community taxonomy claims, not an approved JBAE productType; confirm the exact item and product form. The API search is category-filtered, not free-text. This record remains unconfirmed."
-      : "Exact cosmetics barcode lookup only. Open Beauty Facts records are community-contributed; verify the package, exact item and category. categories/categories_tags are raw source taxonomy, not an approved JBAE productType. This candidate remains unconfirmed.";
+      ? "Bounded structured lookup for the body-mists source tag. Open Beauty Facts category tags are community taxonomy claims, not an approved JBAE productType; confirm the exact package and identity before import. This is not free-text search. This candidate remains unconfirmed."
+      : "Exact GTIN/EAN/UPC lookup accepted only when Open Beauty Facts supplies a body-mists source category tag. That tag is community taxonomy, not independent identity verification; confirm the exact package and product form. This candidate remains unconfirmed.";
 
     return {
       id: barcode,
@@ -276,6 +298,9 @@ export function createOpenBeautyFactsResearchProvider({
         const categoryTag = query.slice("category:".length).trim().toLowerCase();
         if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(categoryTag) || categoryTag.length > 80) {
           throw new TypeError("category query must use category:<taxonomy-slug>");
+        }
+        if (!OPEN_BEAUTY_FACTS_ALLOWED_CATEGORIES.has(categoryTag)) {
+          throw new TypeError("Only category:body-mists is enabled for Open Beauty Facts in JBAE");
         }
         const limit = readLimit(request.limit, 5, 10);
         const url = new URL(OPEN_BEAUTY_FACTS_BASE + "/api/v2/search");

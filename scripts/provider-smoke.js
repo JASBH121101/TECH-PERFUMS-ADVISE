@@ -119,21 +119,10 @@ async function run() {
   const openBeautyFacts = createOpenBeautyFactsResearchProvider({
     timeoutMs, minRequestIntervalMs: 6_500,
   });
-  // Structured category filters only. This is not free-text search or a bulk crawl.
+  // Only body mists are in the Open Beauty Facts scope; perfumes use fragrance sources.
+  // This bounded category lookup is not free-text search or a catalogue crawl.
   // The 6.5s pacing stays below the documented 10-search-requests/minute ceiling.
-  const beautyCategoryTargets = [
-    "body-mists",
-    "body-sprays",
-    "attars",
-    "attar",
-    "perfume-oils",
-    "body-oils",
-    "body-lotions",
-    "body-creams",
-    "deodorants",
-    "perfumes",
-    "decants",
-  ];
+  const beautyCategoryTargets = ["body-mists"];
   let beautySearchDeferred = false;
   for (const categoryTag of beautyCategoryTargets) {
     if (beautySearchDeferred) break;
@@ -141,21 +130,22 @@ async function run() {
       const candidates = await openBeautyFacts.search({
         domain: DOMAINS.FRAGRANCE,
         subjectId: "smoke-open-beauty-facts-" + categoryTag,
-        field: "name",
+        field: "product_record",
         query: "category:" + categoryTag,
         limit: 2,
       });
-      if (candidates.length) {
-        for (const candidate of candidates) {
+      const uniqueCandidates = [...new Map(candidates.map(candidate => [candidate.id, candidate])).values()];
+      if (uniqueCandidates.length) {
+        for (const candidate of uniqueCandidates) {
           assert.match(candidate.source.attribution, /Open Beauty Facts/u);
           assert.match(candidate.source.license, /ODbL 1\.0/u);
         }
         console.log("Open Beauty Facts " + categoryTag + ": CANDIDATES — " +
-          candidates.map(candidate => candidate.value + " [" + candidate.id + "]").join("; ") +
-          "; review-only, no import.");
+          uniqueCandidates.map(candidate => JSON.stringify(candidate.value)).join("; ") +
+          "; unique GTINs, review-only, no import.");
       } else {
         console.log("Open Beauty Facts " + categoryTag +
-          ": NO ELIGIBLE CANDIDATES in this bounded query; this does not prove global absence.");
+          ": NO ELIGIBLE BODY-MIST CANDIDATES in this bounded query; this does not prove global absence.");
       }
     } catch (error) {
       const message = String(error?.message ?? error);

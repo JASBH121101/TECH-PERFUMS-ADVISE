@@ -895,7 +895,7 @@ test("Open Beauty Facts discovers bounded category candidates without assigning 
   assert.equal(Object.hasOwn(records[0], "image_url"), false);
 });
 
-test("Open Beauty Facts category discovery rejects free text and malformed taxonomy slugs", async () => {
+test("Open Beauty Facts category discovery rejects free text, malformed tags and out-of-scope categories", async () => {
   let calls = 0;
   const provider = createOpenBeautyFactsResearchProvider({
     fetchImpl: async () => {
@@ -912,30 +912,69 @@ test("Open Beauty Facts category discovery rejects free text and malformed taxon
     () => provider.search({ query: "category:body mists", field: "name" }),
     /category:<taxonomy-slug>/u,
   );
+  await assert.rejects(
+    () => provider.search({ query: "category:body-sprays", field: "name" }),
+    /Only category:body-mists/u,
+  );
+  await assert.rejects(
+    () => provider.search({ query: "category:body-creams", field: "name" }),
+    /Only category:body-mists/u,
+  );
   assert.equal(calls, 0);
 });
 
-test("Open Beauty Facts category response maps source size and brand fields without inventing missing values", async () => {
+test("Open Beauty Facts returns a review-ready body-mist record without images or an inferred product type", async () => {
   const provider = createOpenBeautyFactsResearchProvider({
     fetchImpl: async () => response({
       count: 1,
       products: [{
         code: "12345678",
-        product_name: "Example Body Cream",
+        product_name: "Example Body Mist",
         brands: "Example",
-        categories_tags: ["en:body-creams"],
+        categories: "Body mists",
+        categories_tags: ["en:body-mists"],
+        ingredients_text: "Aqua, parfum",
         product_quantity: "250",
         product_quantity_unit: "ml",
+        last_modified_t: 1794163200,
+        image_url: "https://images.example/product.jpg",
       }],
     }),
     minRequestIntervalMs: 0,
   });
-  const amount = await provider.search({ query: "category:body-creams", field: "product_quantity" });
-  const unit = await provider.search({ query: "category:body-creams", field: "product_quantity_unit" });
-  const missing = await provider.search({ query: "category:body-creams", field: "ingredients_text" });
-  assert.equal(amount[0].value, "250");
-  assert.equal(unit[0].value, "ml");
-  assert.deepEqual(missing, []);
+  const records = await provider.search({
+    query: "category:body-mists",
+    field: "product_record",
+  });
+  assert.equal(records.length, 1);
+  assert.deepEqual(records[0].value, {
+    barcode: "12345678",
+    name: "Example Body Mist",
+    brand: "Example",
+    categories: "Body mists",
+    categoryTags: ["en:body-mists"],
+    ingredientsText: "Aqua, parfum",
+    quantity: "250",
+    quantityUnit: "ml",
+    lastModifiedAt: 1794163200,
+  });
+  assert.match(records[0].note, /not an approved JBAE productType/u);
+  assert.equal(Object.hasOwn(records[0], "image_url"), false);
+});
+
+test("Open Beauty Facts rejects exact barcode records that are not tagged as body mists", async () => {
+  const provider = createOpenBeautyFactsResearchProvider({
+    fetchImpl: async () => response({
+      status: 1,
+      product: {
+        code: "12345678",
+        product_name: "Example Deodorant",
+        categories_tags: ["en:deodorants"],
+      },
+    }),
+    minRequestIntervalMs: 0,
+  });
+  assert.deepEqual(await provider.search({ query: "12345678", field: "name" }), []);
 });
 
 test("Open Beauty Facts validates barcode lookups and treats absent products or fields as empty", async () => {
@@ -963,7 +1002,11 @@ test("Open Beauty Facts exact barcode requests use a bounded response cache", as
   const provider = createOpenBeautyFactsResearchProvider({
     fetchImpl: async () => {
       calls += 1;
-      return response({ status: 1, product: { code: "3560070791460", product_name: "Example Body Mist" } });
+      return response({ status: 1, product: {
+        code: "3560070791460",
+        product_name: "Example Body Mist",
+        categories_tags: ["en:body-mists"],
+      } });
     },
     minRequestIntervalMs: 0,
   });
