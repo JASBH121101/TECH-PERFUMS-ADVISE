@@ -1,4 +1,4 @@
-name: JBAE Android App
+name: JBAE Android Release
 
 on:
   push:
@@ -12,71 +12,187 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: jbae-android-app-${{ github.ref }}
-  cancel-in-progress: true
+  group: jbae-android-release
+  cancel-in-progress: false
 
 jobs:
-  build-android:
-    name: Build and test standalone Android app
+  build-release:
+    name: Test, sign and publish JBAE APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
+    env:
+      APP_VERSION: "0.4.0"
+      VERSION_CODE: \${{ 1000 + github.run_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Install mobile dependencies
         working-directory: apps/mobile
         run: npm install --no-audit --no-fund
-
-      - name: Test mobile search and app utilities
+      - name: Test mobile application
         working-directory: apps/mobile
         run: npm test
-
-      - name: Build mobile web bundle and offline seed
+      - name: Test advisor engine
+        run: npm test
+      - name: Build web bundle and offline seed
         working-directory: apps/mobile
+        env:
+          VITE_APP_VERSION: "0.4.0"
         run: npm run build
-
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
           cache: gradle
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
-
       - name: Install Android SDK platform
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
-
       - name: Generate Android project
         working-directory: apps/mobile
         run: npx cap add android
-
-      - name: Sync Capacitor plugins and web assets
+      - name: Sync Capacitor plugins and assets
         working-directory: apps/mobile
         run: npx cap sync android
-
-      - name: Assemble debug APK
+      - name: Install native updater plugin
+        working-directory: apps/mobile
+        run: node scripts/install-android-updater.mjs
+      - name: Restore persistent JBAE signing key
+        id: signing-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: jbae-android-signing-v1-\${{ runner.os }}
+      - name: Ensure stable signing identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.android"
+          if [ -f "$HOME/.android/debug.keystore" ]; then
+            echo "Restored persistent JBAE signing key."
+          elif [ -f .github/jbae-android-signing-key-persisted ]; then
+            echo "ERROR: JBAE signing key cache is missing. Refusing to rotate the app signing identity." >&2
+            exit 1
+          else
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -keypass android \
+              -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=JBAE Android, OU=JBAE, O=JBAE, L=Granada, ST=Granada, C=NI"
+            echo "Generated the initial persistent JBAE signing key."
+          fi
+      - name: Set Android version and persistent signing configuration
+        env:
+          APP_VERSION: \${{ env.APP_VERSION }}
+          VERSION_CODE: \${{ env.VERSION_CODE }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          path = Path("apps/mobile/android/app/build.gradle")
+          source = path.read_text(encoding="utf-8")
+          source, count_code = re.subn(r'versionCode\s+1\b', "versionCode " + os.environ["VERSION_CODE"], source, count=1)
+          source, count_name = re.subn(r'versionName\s+"[^"]+"', 'versionName "' + os.environ["APP_VERSION"] + '"', source, count=1)
+          if count_code != 1 or count_name != 1:
+              raise SystemExit("Could not set Android versionCode/versionName exactly once.")
+          if "signingConfigs {" not in source:
+              block = '''
+              signingConfigs {
+                  release {
+                      storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")
+                      storePassword "android"
+                      keyAlias "androiddebugkey"
+                      keyPassword "android"
+                  }
+              }
+              '''
+              source = source.replace("android {", "android {\n" + block, 1)
+          release = re.search(r'release\s*\{', source)
+          if not release:
+              raise SystemExit("Gradle release build type was not found.")
+          start = release.end()
+          depth, end = 1, start
+          while end < len(source) and depth:
+              if source[end] == "{": depth += 1
+              elif source[end] == "}": depth -= 1
+              end += 1
+          block = source[release.start():end]
+          if "signingConfig" not in block:
+              block = block[:-1] + "\n            signingConfig signingConfigs.release\n        }"
+              source = source[:release.start()] + block + source[end:]
+          path.write_text(source, encoding="utf-8")
+          PY
+      - name: Assemble signed release APK
         working-directory: apps/mobile/android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon
-
-      - name: Upload debug APK
+          ./gradlew assembleRelease --no-daemon
+      - name: Verify APK signature and package
+        env:
+          VERSION_CODE: \${{ env.VERSION_CODE }}
+        run: |
+          set -euo pipefail
+          APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.jb.advisor.mobile' versionCode='$VERSION_CODE' versionName='0.4.0'"
+          sha256sum "$APK"
+      - name: Save persistent JBAE signing key cache
+        if: steps.signing-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: jbae-android-signing-v1-\${{ runner.os }}
+      - name: Mark signing identity as established
+        if: success() && steps.signing-cache.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "JBAE Android signing identity is stored in the protected GitHub Actions cache. Builds must fail closed if the cache is missing." > .github/jbae-android-signing-key-persisted
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/jbae-android-signing-key-persisted
+          git commit -m "chore(android): mark JBAE signing key as persisted"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+      - name: Publish installable APK release
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk JBAE.apk
+          TAG="jbae-v$APP_VERSION"
+          NOTES="JBAE Android update. versionCode=$VERSION_CODE. Signed with the persistent JBAE update key. Android will request confirmation before installation."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" JBAE.apk --clobber
+            gh release edit "$TAG" --title "JBAE v$APP_VERSION" --notes "$NOTES"
+          else
+            gh release create "$TAG" JBAE.apk --title "JBAE v$APP_VERSION" --notes "$NOTES"
+          fi
+      - name: Verify published APK asset
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          set -euo pipefail
+          URL="https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/download/jbae-v$APP_VERSION/JBAE.apk"
+          curl --fail --silent --show-error --location --retry 4 --retry-all-errors "$URL" -o "$RUNNER_TEMP/JBAE-published.apk"
+          cmp JBAE.apk "$RUNNER_TEMP/JBAE-published.apk"
+          echo "Published APK matches the signed release artifact byte-for-byte."
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: jbae-android-debug-apk
-          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          name: JBAE-Android-v0.4.0
+          path: JBAE.apk
           retention-days: 14
