@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { DOMAINS } from "../src/core/domains.js";
 import {
   createScentoResearchProvider,
+  createTenMlResearchProvider,
   createWikidataResearchProvider,
   createTechApiResearchProvider,
   createCoreInfoResearchProvider,
@@ -62,6 +63,22 @@ async function run() {
   assert.ok(fragrance[0].value && typeof fragrance[0].value === "object");
   assert.match(fragrance[0].source.url, /^https:\/\/www\.scento\.com\//u);
   console.log(`Scento: PASS — ${fragrance.length} Layton profile`);
+
+  const tenMl = createTenMlResearchProvider({
+    timeoutMs, maxProfiles: 2, minRequestIntervalMs: 1_000,
+  });
+  const tenMlFragrance = await tenMl.search({
+    domain: DOMAINS.FRAGRANCE,
+    subjectId: "smoke-lattafa",
+    field: "name",
+    query: "Lattafa",
+    limit: 2,
+  });
+  assert.ok(tenMlFragrance.length > 0, "10ML must return at least one Lattafa record");
+  assert.equal(tenMlFragrance[0].source.attribution, "Data: 10ML Fragrance Index");
+  assert.ok(tenMlFragrance[0].value && typeof tenMlFragrance[0].value === "string");
+  console.log("10ML Fragrance Index: PASS — " + tenMlFragrance.length +
+    " Lattafa records; visible attribution required");
 
   const wikidata = createWikidataResearchProvider({
     timeoutMs, maxResults: 5, cacheTtlMs: 5 * 60_000, minRequestIntervalMs: 1_000,
