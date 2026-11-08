@@ -99,7 +99,7 @@ test("retailer internal SKU mislabeled as UPC is not treated as a universal barc
   });
   const withGtin = fakeProvider({
     name: "Samsung A17 4GB + 128GB Gris",
-    identifiers: { gtin: null, upc: "470890800019" },
+    identifiers: { gtin: null, upc: "470890800019", mpn: null },
   });
   const resultValue = await compareNicaraguaRetailerOffers({
     offers: offers.slice(0, 2),
@@ -107,6 +107,20 @@ test("retailer internal SKU mislabeled as UPC is not treated as a universal barc
   });
   assert.equal(resultValue.offers[0].status, "identity_incomplete");
   assert.equal(resultValue.identity.status, "incomplete");
+  assert.equal(resultValue.priceComparison.status, "blocked_identity");
+});
+
+test("does not hide a conflicting second universal barcode when GTIN is present", async () => {
+  const conflicting = fakeProvider({
+    name: "Samsung A17 4GB + 128GB Gris",
+    identifiers: { gtin, upc: "8806097668046" },
+  });
+  const clean = fakeProvider({ name: "Samsung A17 4GB + 128GB Gris" });
+  const resultValue = await compareNicaraguaRetailerOffers({
+    offers: offers.slice(0, 2),
+    providers: { radioshack: conflicting, laCuracao: clean },
+  });
+  assert.equal(resultValue.identity.status, "mismatch");
   assert.equal(resultValue.priceComparison.status, "blocked_identity");
 });
 

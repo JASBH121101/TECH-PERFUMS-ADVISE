@@ -275,6 +275,13 @@ async function run() {
     });
     console.log("Nicaragua Samsung A17 comparison: identity=" + comparison.identity.status +
       "; price=" + comparison.priceComparison.status);
+    if (comparison.priceComparison.lowestPrice) {
+      console.log("Nicaragua exact-match subset lowest price: " +
+        comparison.priceComparison.lowestPrice.retailerName + " C$" +
+        comparison.priceComparison.lowestPrice.amount +
+        "; scope=" + comparison.priceComparison.scope +
+        "; unresolved=" + (comparison.priceComparison.unresolvedRetailers?.join(",") || "none"));
+    }
     for (const offer of comparison.offers) {
       console.log(offer.retailerName + ": " + offer.status +
         "; SKU=" + (offer.data.sku ?? "not published") +

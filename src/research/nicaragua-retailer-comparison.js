@@ -62,7 +62,7 @@ function buildMatchProduct(offer) {
   if (data.gtin) identifiers.gtin = String(data.gtin).trim();
   // Some Unicomer pages label their internal product SKU as "UPC".
   // Do not misclassify that value as a universal barcode when it duplicates SKU.
-  else if (data.upc && String(data.upc).trim() !== String(data.sku ?? "").trim()) {
+  if (data.upc && String(data.upc).trim() !== String(data.sku ?? "").trim()) {
     identifiers.upc = String(data.upc).trim();
   }
   if (data.mpn) identifiers.mpn = String(data.mpn).trim();
