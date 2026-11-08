@@ -174,9 +174,12 @@ function compareIdentity(offers) {
 
   const allExact = pairwise.length > 0 && pairwise.every(match => match.sameVariant);
   const hasIdentifierConflict = pairwise.some(match =>
-    match.conflicts.includes("universal_identifier") ||
-    match.conflicts.includes("mpn") ||
-    match.conflicts.includes("brand")
+    match.conflicts.some(conflict =>
+      conflict === "universal_identifier" ||
+      conflict.endsWith(".universal_identifier") ||
+      conflict === "mpn" ||
+      conflict === "brand"
+    )
   );
   const status = hasIdentifierConflict ? "mismatch" :
     !allExact ? "review_required" :
