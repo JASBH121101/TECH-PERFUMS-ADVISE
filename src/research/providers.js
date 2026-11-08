@@ -57,6 +57,119 @@ function pickFragranceValue(detail, field) {
   return map[field] ?? map[field.replace(/[A-Z]/gu, letter => `_${letter.toLowerCase()}`)];
 }
 
+const TENML_BASE = "https://mcp.10ml.com/api/v1";
+const TENML_ATTRIBUTION_URL = "https://10ml.com/perfume-api";
+
+function pickTenMlFragranceValue(detail, field) {
+  const pyramid = detail.pyramid ?? {};
+  const map = {
+    name: detail.name,
+    identity: detail.name,
+    perfume_name: detail.name,
+    house: detail.house,
+    brand: detail.house,
+    year: detail.year,
+    release_year: detail.year,
+    gender: detail.gender,
+    audience: detail.gender,
+    concentration: detail.concentration,
+    family: detail.family,
+    scent_family: detail.family,
+    accords: detail.accords,
+    key_notes: detail.key_notes,
+    notes: Object.values(pyramid).some(value => Array.isArray(value) && value.length)
+      ? pyramid
+      : (detail.key_notes?.length ? { keyNotes: detail.key_notes } : undefined),
+    top_notes: pyramid.top,
+    topNotes: pyramid.top,
+    heart_notes: pyramid.heart,
+    middle_notes: pyramid.heart,
+    middleNotes: pyramid.heart,
+    base_notes: pyramid.base,
+    baseNotes: pyramid.base,
+    character: detail.character,
+    seasons: detail.seasons,
+    occasions: detail.occasions,
+    styles: detail.styles,
+    longevity: detail.longevity,
+    projection: detail.projection,
+    perfumers: detail.perfumers,
+  };
+  return map[field] ?? map[field.replace(/[A-Z]/gu, letter => "_" + letter.toLowerCase())];
+}
+
+/**
+ * Free, no-key 10ML Fragrance Index API.
+ * Its terms permit free commercial use and caching of fetched results with visible attribution.
+ * Requests are bounded and cached; this provider does not crawl or mirror the full index.
+ */
+export function createTenMlResearchProvider({
+  fetchImpl = globalThis.fetch,
+  clock = () => new Date(),
+  maxProfiles = 5,
+  timeoutMs = 12_000,
+  cacheTtlMs = 30 * 60_000,
+  minRequestIntervalMs = 1_000,
+} = {}) {
+  assertFetch(fetchImpl);
+  if (typeof clock !== "function") throw new TypeError("clock must be a function");
+  assertPositiveInteger(maxProfiles, "maxProfiles", 10);
+  const readJson = createJsonReader(fetchImpl, {
+    timeoutMs,
+    cacheTtlMs,
+    maxCacheEntries: 40,
+    minRequestIntervalMs,
+  });
+
+  return Object.freeze({
+    id: "10ml-fragrance-index",
+    domains: Object.freeze([DOMAINS.FRAGRANCE]),
+    async search(request) {
+      const query = requireText(request.query, "query");
+      if (query.length > 200) throw new TypeError("query must be 200 characters or fewer");
+      const field = requireText(request.field, "field");
+      const limit = Math.min(readLimit(request.limit, 5, 20), maxProfiles);
+      const searchUrl = new URL(TENML_BASE + "/perfumes");
+      searchUrl.searchParams.set("q", query);
+      searchUrl.searchParams.set("limit", String(limit));
+      searchUrl.searchParams.set("format", "detailed");
+      searchUrl.searchParams.set("locale", "en");
+      const search = await readJson(searchUrl, "10ML perfume search");
+      if (!Array.isArray(search.results)) {
+        throw new TypeError("10ML perfume search response is missing results");
+      }
+
+      const observedAt = isoNow(clock);
+      const output = [];
+      for (const item of search.results.slice(0, limit)) {
+        if (typeof item?.id !== "string" || !item.id.trim() ||
+            typeof item.name !== "string" || !item.name.trim() ||
+            typeof item.house !== "string" || !item.house.trim()) continue;
+        const value = pickTenMlFragranceValue(item, field);
+        if (value === undefined || value === null || value === "" ||
+            (Array.isArray(value) && value.length === 0)) continue;
+        const profileUrl = TENML_BASE + "/perfumes/" + encodeURIComponent(item.id);
+        output.push({
+          id: item.id,
+          value,
+          confidence: 0.82,
+          source: {
+            name: "10ML Fragrance Index",
+            url: profileUrl,
+            type: SOURCE_TYPES.DATABASE,
+            attribution: "Data: 10ML Fragrance Index",
+            references: [TENML_ATTRIBUTION_URL],
+            license: "10ML API terms: free commercial use and caching with visible attribution",
+          },
+          observedAt,
+          note: "10ML permits free commercial use and caching of fetched API results subject to visible credit: Data: 10ML Fragrance Index. This is a source-reported fragrance claim and remains unconfirmed in JBAE; do not treat API/editorial rankings as independent performance testing.",
+        });
+      }
+      return output;
+    },
+  });
+}
+
 /** Scento's read-only perfume API. Requires no account or API key. */
 export function createScentoResearchProvider({
   fetchImpl = globalThis.fetch,
@@ -299,6 +412,7 @@ export function createWikidataResearchProvider({
 export function createDefaultResearchProviders(options = {}) {
   return Object.freeze([
     createScentoResearchProvider(options.scento),
+    createTenMlResearchProvider(options.tenMl),
     createWikidataResearchProvider(options.wikidata),
     createCoreInfoResearchProvider(options.coreInfo),
     createSicsaResearchProvider(options.sicsa),
@@ -311,6 +425,7 @@ export function createDefaultResearchProviders(options = {}) {
 }
 
 export {
+  createTenMlResearchProvider,
   createSicsaResearchProvider,
   createRadioShackResearchProvider,
   createLaCuracaoResearchProvider,
