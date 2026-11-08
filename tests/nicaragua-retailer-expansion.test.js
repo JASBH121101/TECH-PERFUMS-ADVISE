@@ -452,6 +452,20 @@ test("SIMAN exposes exact public SKU variants without promoting internal SKU IDs
                 Price: 8999.13, AvailableQuantity: 0, IsAvailable: false,
               } }],
             },
+            {
+              itemId: "3003",
+              ean: "",
+              sellers: [{ sellerId: "1", commertialOffer: {
+                Price: 4999.13, AvailableQuantity: 2, IsAvailable: true,
+              } }],
+            },
+            {
+              itemId: "3004",
+              ean: "",
+              sellers: [{ sellerId: "1", commertialOffer: {
+                Price: 5999.13, AvailableQuantity: null, IsAvailable: false,
+              } }],
+            },
           ],
         }], request);
       }
@@ -474,6 +488,21 @@ test("SIMAN exposes exact public SKU variants without promoting internal SKU IDs
               available: false,
               availablequantity: 0,
               bestPrice: 899913,
+            },
+            {
+              sku: 3003,
+              skuname: "Example Phone 4GB 128GB Black",
+              dimensions: { "Capacidad (ROM)": "128GB", Color: "Negro" },
+              available: false,
+              availablequantity: 0,
+              bestPrice: 499913,
+            },
+            {
+              sku: 3004,
+              skuname: "Example Phone 4GB 128GB White",
+              dimensions: { "Capacidad (ROM)": "128GB", Color: "Blanco" },
+              available: false,
+              bestPrice: 599913,
             },
           ],
         }, request);
@@ -510,6 +539,10 @@ test("SIMAN exposes exact public SKU variants without promoting internal SKU IDs
   });
   assert.equal(record.value[1].availability.status, "out_of_stock");
   assert.equal(record.value[1].price.amount, 8999.13);
+  assert.equal(record.value[2].availability, null, "conflicting seller and SKU status is withheld");
+  assert.equal(record.value[3].availability.status, "out_of_stock");
+  assert.equal(Object.hasOwn(record.value[3].availability, "quantity"), false,
+    "a missing quantity must not be converted to zero");
   assert.equal(record.source.market, "NI");
   assert.equal(record.observedAt, fixedClock().toISOString());
   assert.ok(record.source.references.some(reference => reference.endsWith("/search/example-phone/p")));
