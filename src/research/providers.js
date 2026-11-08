@@ -170,6 +170,7 @@ export function createTenMlResearchProvider({
   });
 }
 
+// Public catalog discovery is category-bounded; external results stay unconfirmed.
 const OPEN_BEAUTY_FACTS_BASE = "https://world.openbeautyfacts.org";
 const OPEN_BEAUTY_FACTS_ODBL = "https://opendatacommons.org/licenses/odbl/1-0/";
 
