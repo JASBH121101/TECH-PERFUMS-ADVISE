@@ -38,6 +38,8 @@ The 14 source families are Scento's own taxonomy: Amber & Resin, Green Leaf, Orc
 
 The offline library also exposes a deterministic similarity search based on weighted Jaccard overlap: notes (65%), families (20%), character traits (10%) and seasons (5%). It reports shared attributes and a similarity index. This is a discovery heuristic only; it does not establish a clone, exact equivalence, identical smell or equal longevity/performance.
 
+Supplemental intake decisions and licensing boundaries for future body products, additional perfume sources and wear-test evidence are tracked in [Supplemental source assessment](fragrance-supplemental-sources.md).
+
 ## Evidence policy
 
 Each imported factual attribute is linked to its Scento perfume page and a dated dataset record. JBAE assigns these claims status `reported`, not `verified` or `cross_checked`, because JBAE has not independently revalidated each perfume page. The source's own curation claim is not treated as an independent JBAE verification.
