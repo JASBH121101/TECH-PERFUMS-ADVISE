@@ -87,8 +87,18 @@ export class AdvisorCore {
     const preferences = customerIntent
       ? { ...customerIntent.preferences, ...(request.preferences ?? {}) }
       : request.preferences;
-    const resolvedProfile = request.profile ??
-      (customerIntent?.preferences.performancePriority === "long_lasting" ? "long_lasting" : undefined);
+    const inferredProfile = customerIntent?.preferences.performancePriority === "long_lasting"
+      ? "long_lasting"
+      : customerIntent?.preferences.occasion === "evening"
+        ? "evening"
+        : customerIntent?.preferences.occasion === "office"
+          ? "office"
+          : customerIntent?.preferences.intensity === "soft"
+            ? "soft_daily"
+            : customerIntent?.preferences.preferredCharacters?.includes("fresh")
+              ? "fresh_light"
+              : customerIntent ? "balanced" : undefined;
+    const resolvedProfile = request.profile ?? inferredProfile;
 
     const evidencePolicy = request.evidencePolicy ?? {};
     const recommendation = recommendProducts({
