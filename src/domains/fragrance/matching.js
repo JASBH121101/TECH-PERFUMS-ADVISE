@@ -25,6 +25,42 @@ function asList(value) {
   return Array.isArray(value) ? value : [value];
 }
 
+function explainMatch(product, values, exclusions) {
+  const attributes = product.attributes;
+  const reasons = [];
+  for (const item of values) {
+    if (item.score < 60) continue;
+    if (item.key === "scentFamilies") reasons.push("Coincide con una o más familias olfativas que pidió el cliente.");
+    else if (item.key === "notes") reasons.push("Incluye notas que el cliente indicó que le gustan.");
+    else if (item.key === "characterTraits") reasons.push("Su carácter olfativo coincide con el perfil solicitado.");
+    else if (item.key === "occasion") reasons.push("Su uso documentado coincide con la ocasión indicada.");
+    else if (item.key === "climate") reasons.push("Su etiqueta de clima coincide con las condiciones indicadas.");
+    else if (item.key === "intensity") reasons.push("La intensidad registrada coincide con la intensidad que busca el cliente.");
+    else if (item.key === "projection") reasons.push("La proyección registrada coincide con la discreción o alcance que busca el cliente.");
+  }
+  const tradeoffs = values
+    .filter(item => item.score < 40)
+    .map(item => ({
+      criterion: item.key,
+      note: "Este criterio no coincide bien con la preferencia indicada.",
+      score: item.score,
+    }));
+  return Object.freeze({
+    headline: reasons.length
+      ? "Esta opción coincide con varias preferencias expresadas por el cliente."
+      : "No hay suficientes coincidencias positivas para justificar esta opción.",
+    reasons: Object.freeze(reasons),
+    tradeoffs: Object.freeze(tradeoffs),
+    exclusions: Object.freeze(exclusions),
+    evidenceNote: "La explicación describe coincidencias entre preferencias y datos de catálogo; no certifica la calidad, el rendimiento ni la experiencia personal del perfume.",
+    productFacts: Object.freeze({
+      intensity: attributes.intensityLevel ?? null,
+      projection: attributes.projectionLevel ?? null,
+      scentFamilies: Object.freeze(asList(attributes.scentFamilies).map(String)),
+    }),
+  });
+}
+
 function validateProduct(product) {
   if (!product || typeof product !== "object" || Array.isArray(product) ||
       typeof product.id !== "string" || !product.id.trim() ||
@@ -148,6 +184,7 @@ export function matchFragrances({ products, preferences = {}, minimumMatchCovera
       exclusions: Object.freeze(exclusions),
       matchedCriteria: Object.freeze(values.filter(item => item.score >= 60).map(item => item.key)),
       breakdown: Object.freeze(values),
+      explanation: explainMatch(product, values, exclusions),
       evidenceNote: "Preference fit is calculated from available catalog attributes; it is not an independent verification of those attributes.",
     });
   });
