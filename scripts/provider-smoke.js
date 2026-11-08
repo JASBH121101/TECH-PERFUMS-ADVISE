@@ -21,7 +21,7 @@ const timeoutMs = 15_000;
 // variant-level evidence can be inspected without ranking mixed SKUs.
 async function inspectSimanSkuVariants(productUrl) {
   const url = new URL(productUrl);
-  const slug = url.pathname.replace(/\\/p\\/?$/u, "").split("/").at(-1);
+  const slug = url.pathname.replace(/\/p\/?$/u, "").split("/").at(-1);
   const endpoint = "https://ni.siman.com/api/catalog_system/pub/products/search/" +
     encodeURIComponent(slug) + "/p";
   try {
