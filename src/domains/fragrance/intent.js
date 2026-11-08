@@ -48,7 +48,7 @@ export function parseFragranceCustomerMessage(message) {
     signals.push("climate:cold");
   }
 
-  const asksSoft = includesAny(text, ["suave", "ligero", "ligera", "discreto", "discreta", "no hostigoso", "no empalagoso", "no invasivo", "no muy fuerte", "soft", "subtle"]);
+  const asksSoft = includesAny(text, ["suave", "ligero", "ligera", "discreto", "discreta", "hostigoso", "empalagoso", "invasivo", "invasiva", "no muy fuerte", "soft", "subtle"]);
   const asksStrong = includesAny(text, ["intenso", "intensa", "fuerte", "potente", "marcado", "strong", "powerful"]);
   if (asksSoft && !asksStrong) {
     preferences.intensity = "soft";
@@ -71,7 +71,7 @@ export function parseFragranceCustomerMessage(message) {
     signals.push("families:" + preferences.preferredFamilies.join(","));
   }
 
-  if (includesAny(text, ["que dure", "larga duracion", "bastante tiempo", "long lasting", "long-lasting", "que me dure"])) {
+  if (includesAny(text, ["que dure", "larga duracion", "bastante tiempo", "dure bastante", "long lasting", "long-lasting", "que me dure"])) {
     preferences.performancePriority = "long_lasting";
     signals.push("performance:long_lasting");
   }
