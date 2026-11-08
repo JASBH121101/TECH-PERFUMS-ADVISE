@@ -323,11 +323,15 @@ function buildCoverageReport(perfumes, houses, materials) {
     item.attributes.middleNotes?.length &&
     item.attributes.baseNotes?.length
   ).length;
-  const noteValues = perfumes.flatMap((item) => [
-    ...(item.attributes.topNotes ?? []),
-    ...(item.attributes.middleNotes ?? []),
-    ...(item.attributes.baseNotes ?? []),
-  ]);
+  const noteValues = perfumes.flatMap((item) => {
+    const notes = [
+      ...(item.attributes.topNotes ?? []),
+      ...(item.attributes.middleNotes ?? []),
+      ...(item.attributes.baseNotes ?? []),
+    ];
+    return [...new Map(notes.map((note) => [searchText(note), note])
+      .filter(([key]) => key)).values()];
+  });
   const report = {
     schemaVersion: 1,
     dataset: Object.freeze({
@@ -396,7 +400,7 @@ export function renderScentoCoverageMarkdown(report) {
       ["Primary scent families", report.distributions.primaryFamilies],
       ["Secondary scent families", report.distributions.secondaryFamilies],
       ["Perfume houses (top 30)", report.distributions.houses],
-      ["Most common pyramid notes (top 30)", report.distributions.mostCommonNotes],
+      ["Most common pyramid notes (perfumes containing; top 30)", report.distributions.mostCommonNotes],
     ].flatMap(([heading, items]) => [
       "### " + heading,
       "",
