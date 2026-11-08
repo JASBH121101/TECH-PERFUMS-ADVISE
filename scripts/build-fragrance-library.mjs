@@ -47,5 +47,7 @@ process.stdout.write(
   "Built " + bundle.library.metadata.perfumeCount + " perfume records, " +
   bundle.library.metadata.houseCount + " houses, " +
   bundle.library.metadata.materialCount + " materials and " +
-  bundle.evidenceCount + " reported evidence records; " +\n  coverageReport.notePyramid.complete + " complete note pyramids (" +\n  coverageReport.notePyramid.coveragePercent + "% coverage).\n",
+  bundle.evidenceCount + " reported evidence records; " +
+  coverageReport.notePyramid.complete + " complete note pyramids (" +
+  coverageReport.notePyramid.coveragePercent + "% coverage).\\n",
 );
