@@ -44,5 +44,7 @@ jobs:
           path: |
             dist/fragrance-library/scento-library-coverage.json
             dist/fragrance-library/scento-library-coverage.md
+            dist/fragrance-library/fragrance-quality-audit.json
+            dist/fragrance-library/fragrance-quality-audit.md
           if-no-files-found: error
           retention-days: 30

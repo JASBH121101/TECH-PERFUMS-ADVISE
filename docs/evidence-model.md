@@ -15,6 +15,12 @@ Evidence is append-only. A correction is a new record with a new ID; existing re
 
 A status is not inferred from confidence. The caller must set both explicitly.
 
+## Performance evidence
+
+Customer-facing fragrance duration estimates are intervals, not promises. Longevity and projection-duration intervals require independently tested, field-matched evidence for both the minimum and maximum endpoints. A product-level interval without evidence IDs for both bounds is not eligible for display. Performance claims from community sources remain reported; they require explicit opt-in and must retain a reported-observation disclaimer. Manufacturer marketing statements do not qualify as independent wear-test evidence.
+
+`confidence` remains a source-assessment value, not a probability that a customer will experience the stated result. The performance profile reports evidence strength and provenance separately from the interval itself.
+
 ## Conflict handling
 
 The ledger detects differing values for the same domain, subject, and field. It does not automatically choose a winner. Resolution requires source assessment and, where appropriate, a new evidence record documenting the resolution. Conflicting claims remain available for audit.

@@ -1,6 +1,11 @@
 const domains = new Set(["fragrance", "technology"]);
 const verifiedStatuses = new Set(["verified", "cross_checked"]);
 const usableStatuses = new Set(["verified", "cross_checked", "reported"]);
+const ORDINAL_FIELDS = Object.freeze({
+  intensityLevel: Object.freeze({ soft: 1, moderate: 2, strong: 3, very_strong: 4 }),
+  projectionLevel: Object.freeze({ close: 1, moderate: 2, strong: 3, very_strong: 4 }),
+  sillageLevel: Object.freeze({ low: 1, moderate: 2, strong: 3, very_strong: 4 }),
+});
 
 function text(value, field) {
   if (typeof value !== "string" || !value.trim()) {
@@ -196,19 +201,25 @@ function scoreValue(value, criterion, products, field) {
     const expected = criterion.target.trim().toLocaleLowerCase();
     return normalizedValue === expected ? 100 : 0;
   }
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new TypeError(`Numeric criterion ${field} requires numeric product values`);
+  const ordinalMap = ORDINAL_FIELDS[field];
+  const numericValue = ordinalMap ? ordinalMap[String(value).trim().toLowerCase()] : value;
+  if (ordinalMap && !Number.isFinite(numericValue)) {
+    throw new TypeError("Unsupported ordinal value for " + field + ": " + String(value));
+  }
+  if (typeof numericValue !== "number" || !Number.isFinite(numericValue)) {
+    throw new TypeError("Numeric criterion " + field + " requires numeric product values");
   }
   const values = products
     .map(product => product.attributes[field])
+    .map(item => ordinalMap ? ordinalMap[String(item).trim().toLowerCase()] : item)
     .filter(item => typeof item === "number" && Number.isFinite(item));
   if (values.length === 0) return null;
   const min = Math.min(...values);
   const max = Math.max(...values);
   if (max === min) return 100;
-  if (criterion.direction === "higher") return ((value - min) / (max - min)) * 100;
-  if (criterion.direction === "lower") return ((max - value) / (max - min)) * 100;
-  const distance = Math.abs(value - criterion.target);
+  if (criterion.direction === "higher") return ((numericValue - min) / (max - min)) * 100;
+  if (criterion.direction === "lower") return ((max - numericValue) / (max - min)) * 100;
+  const distance = Math.abs(numericValue - criterion.target);
   const maxDistance = Math.max(...values.map(item => Math.abs(item - criterion.target)), 0);
   return maxDistance === 0 ? 100 : (1 - distance / maxDistance) * 100;
 }

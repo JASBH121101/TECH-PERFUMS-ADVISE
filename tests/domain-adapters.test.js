@@ -72,6 +72,50 @@ test("fragrance adapter preserves performance ranges without inventing a single 
   assert.deepEqual(product.attributes.topNotes, ["Bergamot", "Citrus"]);
 });
 
+test("fragrance adapter normalizes projection-duration intervals and discrete performance levels", () => {
+  const product = normalizeFragranceProduct({
+    id: "perfume-performance", name: "Performance Test", productType: "perfume",
+    attributes: {
+      projectionDurationRange: { min: 1, max: 3 },
+      intensityLevel: "soft",
+      projectionLevel: "close",
+      sillageLevel: "low",
+    },
+  });
+  assert.equal(product.attributes.projectionDurationMinHours, 1);
+  assert.equal(product.attributes.projectionDurationMaxHours, 3);
+  assert.equal(product.attributes.intensityLevel, "soft");
+  assert.equal(product.attributes.projectionLevel, "close");
+  assert.equal(product.attributes.sillageLevel, "low");
+  assert.throws(() => normalizeFragranceProduct({
+    id: "incomplete", name: "Incomplete", productType: "perfume",
+    attributes: { longevityMinHours: 4 },
+  }), /requires both minimum and maximum/);
+  assert.throws(() => normalizeFragranceProduct({
+    id: "invalid-level", name: "Invalid", productType: "perfume",
+    attributes: { intensityLevel: "nuclear" },
+  }), /intensityLevel/);
+});
+
+test("fragrance taxonomy keeps decants and traditional attars distinct", () => {
+  assert.throws(() => normalizeFragranceProduct({
+    id: "decant-missing-parent", name: "Decant", productType: "decant",
+    attributes: { volumeMl: 5 },
+  }), /canonical parentFragranceId/);
+  const decant = normalizeFragranceProduct({
+    id: "decant-5ml", name: "Decant 5 ml", productType: "decant",
+    attributes: { volumeMl: 5, parentFragranceId: "canonical:perfume-1", concentration: "edp" },
+  });
+  const attar = normalizeFragranceProduct({
+    id: "attar-1", name: "Traditional Attar", productType: "traditional_attar",
+    attributes: {},
+  });
+  assert.equal(decant.productType, "decant");
+  assert.equal(decant.attributes.parentFragranceId, "canonical:perfume-1");
+  assert.equal(decant.attributes.concentration, "edp");
+  assert.equal(attar.productType, "traditional_attar");
+});
+
 test("fragrance adapter validates measured values and scent scoring fields", () => {
   assert.throws(() => normalizeFragranceProduct({
     id: "bad", name: "Bad", productType: "perfume",

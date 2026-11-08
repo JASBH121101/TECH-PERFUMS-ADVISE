@@ -117,6 +117,25 @@ test("match criteria require and honor an explicit preference", () => {
   }), /target/);
 });
 
+test("ranks fragrance intensity, projection and sillage as explicit ordinal levels", () => {
+  const result = compareProducts({
+    products: [
+      { id: "soft", name: "Soft", domain: "fragrance", productType: "perfume",
+        attributes: { intensityLevel: "soft" } },
+      { id: "moderate", name: "Moderate", domain: "fragrance", productType: "perfume",
+        attributes: { intensityLevel: "moderate" } },
+      { id: "strong", name: "Strong", domain: "fragrance", productType: "perfume",
+        attributes: { intensityLevel: "strong" } },
+    ],
+    criteria: [{ field: "intensityLevel", weight: 1, direction: "lower" }],
+  });
+  assert.equal(result.ranking[0].id, "soft");
+  assert.equal(result.ranking[1].id, "moderate");
+  assert.equal(result.ranking[2].id, "strong");
+  assert.equal(result.ranking[0].score, 100);
+  assert.equal(result.ranking[2].score, 0);
+});
+
 test("evidence-linked comparison scores only claims supported by verified evidence", () => {
   const store = new EvidenceStore();
   store.add(evidenceInput({ id: "a-performance", subjectId: "a", value: 90, confidence: 0.96 }));

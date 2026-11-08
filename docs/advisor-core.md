@@ -25,7 +25,7 @@ The core does not perform web research, call external AI services, mutate verifi
 
 ## Result
 
-The result includes engine ID, domain, candidate count, normalized candidate identities/categories, evidence mode and ledger size, the full explainable recommendation result, and fixed limitations. The output is immutable.
+The result includes engine ID, domain, candidate count, normalized candidate identities/categories, evidence mode and ledger size, the full explainable recommendation result, and fixed limitations. For fragrance candidates it also includes a performance profile with evidence-backed longevity and projection-duration intervals plus separately evidenced intensity, projection and sillage labels. Missing, conflicting, reported-only (without opt-in), or incomplete evidence returns an explicit unavailable status instead of a fabricated estimate. The output is immutable.
 
 ## Non-goals
 

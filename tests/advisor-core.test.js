@@ -116,6 +116,8 @@ test("orchestrates Fragrance Advisor with product-type separation", () => {
   });
   assert.equal(result.recommendation.winnerId, "mist-a");
   assert.equal(result.products[0].category, "body_mist");
+  assert.equal(result.performance[0].longevity.status, "unavailable");
+  assert.equal(result.performance[0].longevity.reason, "range_not_provided");
 });
 
 test("evidence-linked orchestration uses KnowledgeStore records in strict mode", async () => {

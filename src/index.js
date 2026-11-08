@@ -90,6 +90,11 @@ export {
   FRAGRANCE_PRODUCT_TYPES,
   FRAGRANCE_CONCENTRATIONS,
 } from "./domains/fragrance/adapter.js";
+export { buildFragrancePerformanceProfile } from "./domains/fragrance/performance.js";
+export {
+  auditFragranceLibrary,
+  renderFragranceQualityAuditMarkdown,
+} from "./domains/fragrance/quality-audit.js";
 
 export {
   buildRecommendationCriteria,

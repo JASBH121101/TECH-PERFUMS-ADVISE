@@ -46,6 +46,37 @@ test("supports hot humid fragrance profile without assuming concentration from p
   assert.equal(result.profile, "hot_humid_daily");
 });
 
+test("soft_daily profile prioritizes less intense and closer-to-skin fragrances", () => {
+  const result = recommendProducts({
+    products: [
+      { id: "soft", name: "Soft", domain: "fragrance", productType: "perfume",
+        attributes: { intensityLevel: "soft", projectionLevel: "close", sillageLevel: "low",
+          freshnessScore: 85, versatilityScore: 80, climateSuitabilityScore: 80 } },
+      { id: "strong", name: "Strong", domain: "fragrance", productType: "perfume",
+        attributes: { intensityLevel: "strong", projectionLevel: "strong", sillageLevel: "strong",
+          freshnessScore: 85, versatilityScore: 80, climateSuitabilityScore: 80 } },
+    ],
+    profile: "soft_daily",
+  });
+  assert.equal(result.winnerId, "soft");
+  assert.equal(result.decision, "recommended");
+  assert.equal(result.criteria.some(item => item.field === "longevityHours"), false);
+});
+
+test("long_lasting profile uses the conservative lower endpoint instead of a single-hour value", () => {
+  const result = recommendProducts({
+    products: [
+      { id: "range-a", name: "Range A", domain: "fragrance", productType: "perfume",
+        attributes: { longevityMinHours: 5, longevityMaxHours: 8, sillageScore: 50, projectionBalanceScore: 70 } },
+      { id: "range-b", name: "Range B", domain: "fragrance", productType: "perfume",
+        attributes: { longevityMinHours: 6, longevityMaxHours: 7, sillageScore: 50, projectionBalanceScore: 70 } },
+    ],
+    profile: "long_lasting",
+  });
+  assert.equal(result.winnerId, "range-b");
+  assert.equal(result.criteria.some(item => item.field === "longevityHours"), false);
+});
+
 test("does not recommend a result below the minimum evidence-scored coverage", () => {
   const result = recommendProducts({
     products: [

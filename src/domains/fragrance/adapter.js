@@ -2,7 +2,17 @@ import { DOMAINS } from "../../core/domains.js";
 import { normalizeCatalogIdentity } from "../../core/catalog-identity.js";
 import { cloneAndFreeze, normalizeEvidenceIds } from "../../core/immutable.js";
 
-const PRODUCT_TYPES = new Set(["perfume", "body_mist", "body_spray", "attar_oil", "body_lotion"]);
+const PRODUCT_TYPES = new Set([
+  "perfume", "body_mist", "body_spray", "traditional_attar",
+  "concentrated_perfume_oil", "attar_labelled_perfume_oil", "body_oil",
+  "lotion_cream", "decant", "manufacturer_sample", "travel_spray",
+  // Legacy values remain readable; new catalog entries should use explicit types above.
+  "attar_oil", "body_lotion",
+]);
+const PERFUME_CONCENTRATION_TYPES = new Set(["perfume", "decant", "manufacturer_sample", "travel_spray"]);
+const INTENSITY_LEVELS = new Set(["soft", "moderate", "strong", "very_strong"]);
+const PROJECTION_LEVELS = new Set(["close", "moderate", "strong", "very_strong"]);
+const SILLAGE_LEVELS = new Set(["low", "moderate", "strong", "very_strong"]);
 const CONCENTRATIONS = new Set(["extrait", "parfum", "edp", "edt", "edc", "not_applicable"]);
 const SCORE_FIELDS = new Set([
   "sillageScore", "versatilityScore", "climateSuitabilityScore",
@@ -11,6 +21,7 @@ const SCORE_FIELDS = new Set([
 ]);
 const POSITIVE_FIELDS = new Set([
   "volumeMl", "longevityHours", "longevityMinHours", "longevityMaxHours",
+  "projectionDurationMinHours", "projectionDurationMaxHours",
   "projectionMeters", "priceUSD", "priceNIO",
 ]);
 const LIST_FIELDS = new Set(["scentFamilies", "topNotes", "middleNotes", "baseNotes", "accords"]);
@@ -27,15 +38,23 @@ function normalizeVolume(value) {
   throw new TypeError("volume unit must be mL or L");
 }
 
-function normalizeRange(range) {
+function normalizeHourRange(range, fieldName) {
   if (range === undefined || range === null) return {};
   if (!range || typeof range !== "object" || Array.isArray(range) ||
       typeof range.min !== "number" || typeof range.max !== "number" ||
       !Number.isFinite(range.min) || !Number.isFinite(range.max) ||
-      range.min < 0 || range.max < range.min) {
-    throw new TypeError("longevityRange must contain finite min/max hours with max >= min");
+      range.min <= 0 || range.max <= range.min) {
+    throw new TypeError(fieldName + " must contain positive finite min/max hours with max > min");
   }
-  return { longevityMinHours: range.min, longevityMaxHours: range.max };
+  return { min: range.min, max: range.max };
+}
+
+function normalizeLevel(value, field, allowed) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string" || !allowed.has(value.trim().toLowerCase())) {
+    throw new TypeError(field + " must be one of: " + [...allowed].join(", "));
+  }
+  return value.trim().toLowerCase();
 }
 
 function normalizeList(value, field) {
@@ -60,15 +79,30 @@ export function normalizeFragranceProduct(input) {
   if (attributes.volume !== undefined) attributes.volumeMl = normalizeVolume(attributes.volume);
   delete attributes.volume;
   if (attributes.longevityRange !== undefined) {
-    if (attributes.longevityMinHours !== undefined || attributes.longevityMaxHours !== undefined) throw new TypeError("Provide either longevityRange or longevityMinHours/longevityMaxHours");
-    Object.assign(attributes, normalizeRange(attributes.longevityRange));
+    if (attributes.longevityMinHours !== undefined || attributes.longevityMaxHours !== undefined) {
+      throw new TypeError("Provide either longevityRange or longevityMinHours/longevityMaxHours");
+    }
+    const range = normalizeHourRange(attributes.longevityRange, "longevityRange");
+    attributes.longevityMinHours = range.min;
+    attributes.longevityMaxHours = range.max;
   }
   delete attributes.longevityRange;
+
+  if (attributes.projectionDurationRange !== undefined) {
+    if (attributes.projectionDurationMinHours !== undefined ||
+        attributes.projectionDurationMaxHours !== undefined) {
+      throw new TypeError("Provide either projectionDurationRange or projectionDurationMinHours/projectionDurationMaxHours");
+    }
+    const range = normalizeHourRange(attributes.projectionDurationRange, "projectionDurationRange");
+    attributes.projectionDurationMinHours = range.min;
+    attributes.projectionDurationMaxHours = range.max;
+  }
+  delete attributes.projectionDurationRange;
 
   if (attributes.concentration !== undefined) {
     const concentration = String(attributes.concentration).trim().toLowerCase();
     if (!CONCENTRATIONS.has(concentration)) throw new TypeError("Unsupported fragrance concentration");
-    if (productType !== "perfume" && concentration !== "not_applicable") {
+    if (!PERFUME_CONCENTRATION_TYPES.has(productType) && concentration !== "not_applicable") {
       throw new TypeError("Body mist, body spray, attar/oil and body lotion must not inherit perfume concentration");
     }
     attributes.concentration = concentration;
@@ -81,8 +115,43 @@ export function normalizeFragranceProduct(input) {
       throw new TypeError(`${field} must be a valid non-negative number`);
     }
   }
-  if (attributes.longevityMinHours !== undefined && attributes.longevityMaxHours !== undefined &&
-      attributes.longevityMaxHours < attributes.longevityMinHours) throw new TypeError("longevityMaxHours must be greater than or equal to longevityMinHours");
+  for (const [minField, maxField, label] of [
+    ["longevityMinHours", "longevityMaxHours", "longevityRange"],
+    ["projectionDurationMinHours", "projectionDurationMaxHours", "projectionDurationRange"],
+  ]) {
+    const hasMin = attributes[minField] !== undefined && attributes[minField] !== null;
+    const hasMax = attributes[maxField] !== undefined && attributes[maxField] !== null;
+    if (hasMin !== hasMax) throw new TypeError(label + " requires both minimum and maximum bounds");
+    if (hasMin && attributes[minField] <= 0) {
+      throw new TypeError(label + " minimum must be greater than zero");
+    }
+    if (hasMin && attributes[maxField] <= attributes[minField]) {
+      throw new TypeError(label + " maximum must be greater than its minimum");
+    }
+  }
+  if (attributes.intensityLevel !== undefined) {
+    attributes.intensityLevel = normalizeLevel(attributes.intensityLevel, "intensityLevel", INTENSITY_LEVELS);
+  }
+  if (attributes.projectionLevel !== undefined) {
+    attributes.projectionLevel = normalizeLevel(attributes.projectionLevel, "projectionLevel", PROJECTION_LEVELS);
+  }
+  if (attributes.sillageLevel !== undefined) {
+    attributes.sillageLevel = normalizeLevel(attributes.sillageLevel, "sillageLevel", SILLAGE_LEVELS);
+  }
+  if (attributes.parentFragranceId !== undefined) {
+    if (typeof attributes.parentFragranceId !== "string" || !attributes.parentFragranceId.trim()) {
+      throw new TypeError("parentFragranceId must be a non-empty string");
+    }
+    attributes.parentFragranceId = attributes.parentFragranceId.trim();
+  }
+  if (productType === "decant") {
+    if (!attributes.parentFragranceId) {
+      throw new TypeError("A decant must reference its canonical parentFragranceId");
+    }
+    if (!(attributes.volumeMl > 0)) {
+      throw new TypeError("A decant must specify a positive volumeMl");
+    }
+  }
   for (const field of SCORE_FIELDS) {
     const value = attributes[field];
     if (value === undefined || value === null) continue;

@@ -1,5 +1,6 @@
 import { DOMAINS } from "../core/domains.js";
 import { normalizeFragranceProduct } from "../domains/fragrance/adapter.js";
+import { buildFragrancePerformanceProfile } from "../domains/fragrance/performance.js";
 import { normalizeTechnologyProduct } from "../domains/technology/adapter.js";
 import { recommendProducts } from "../recommendation/recommend.js";
 
@@ -79,14 +80,22 @@ export class AdvisorCore {
       : this.#evidenceStore;
     const minimumScoredCoverage = request.minimumScoredCoverage ?? this.#minimumScoredCoverage;
 
+    const evidencePolicy = request.evidencePolicy ?? {};
     const recommendation = recommendProducts({
       products,
       priorities: request.priorities,
       profile: request.profile,
       evidenceStore,
-      evidencePolicy: request.evidencePolicy ?? {},
+      evidencePolicy,
       minimumScoredCoverage,
     });
+    const performance = request.domain === DOMAINS.FRAGRANCE
+      ? Object.freeze(products.map(product => buildFragrancePerformanceProfile(
+          product,
+          evidenceStore,
+          { allowReported: evidencePolicy.allowReported === true },
+        )))
+      : null;
 
     return Object.freeze({
       engineId: "JBAE",
@@ -99,10 +108,12 @@ export class AdvisorCore {
         reportedClaimsAllowed: request.evidencePolicy?.allowReported === true,
       }),
       recommendation,
+      performance,
       limitations: Object.freeze([
         "Recommendations rank only the supplied candidates; the advisor does not discover or fetch products in this operation.",
         "Scores are relative to the selected criteria and supplied data, not universal quality ratings.",
         "When no EvidenceStore is connected, the supplied attributes are not independently fact-checked.",
+        "Fragrance performance ranges are shown only when both bounds have matching, eligible evidence; reported observations require explicit opt-in.",
       ]),
     });
   }
