@@ -336,6 +336,83 @@ function createSearchableLibrary(perfumes, houses, materials) {
     ).slice(0, max));
   }
 
+  function compareSetOverlap(leftValues, rightValues) {
+    const left = new Map(leftValues.map(value => [searchText(value), value]).filter(([key]) => key));
+    const right = new Set(rightValues.map(searchText).filter(Boolean));
+    const union = new Set([...left.keys(), ...right]);
+    const sharedKeys = [...left.keys()].filter(key => right.has(key));
+    return {
+      score: union.size === 0 ? 0 : sharedKeys.length / union.size,
+      shared: sharedKeys.map(key => left.get(key)),
+    };
+  }
+
+  function findSimilarPerfumes(idOrName, { limit } = {}) {
+    const key = searchText(idOrName);
+    if (!key) return Object.freeze([]);
+    const source = perfumeById.get(idOrName) ??
+      perfumeById.get("scento:" + idOrName) ??
+      perfumes.find(item => searchText(item.name) === key);
+    if (!source) return Object.freeze([]);
+    const max = validateLimit(limit, 10);
+    const sourceAttributes = source.attributes;
+    const sourceNotes = sourceAttributes.allNotes ??
+      [...(sourceAttributes.topNotes ?? []), ...(sourceAttributes.middleNotes ?? []), ...(sourceAttributes.baseNotes ?? [])];
+    const dimensions = [
+      { key: "notes", weight: 0.65, values: sourceNotes },
+      { key: "families", weight: 0.20, values: sourceAttributes.scentFamilies ?? [] },
+      { key: "character", weight: 0.10, values: sourceAttributes.characterTraits ?? [] },
+      { key: "seasons", weight: 0.05, values: sourceAttributes.seasons ?? [] },
+    ];
+
+    const ranked = [];
+    for (const candidate of perfumes) {
+      if (candidate.id === source.id) continue;
+      const candidateAttributes = candidate.attributes;
+      const candidateNotes = candidateAttributes.allNotes ??
+        [...(candidateAttributes.topNotes ?? []), ...(candidateAttributes.middleNotes ?? []), ...(candidateAttributes.baseNotes ?? [])];
+      const candidateValues = {
+        notes: candidateNotes,
+        families: candidateAttributes.scentFamilies ?? [],
+        character: candidateAttributes.characterTraits ?? [],
+        seasons: candidateAttributes.seasons ?? [],
+      };
+      let weightedScore = 0;
+      let availableWeight = 0;
+      const shared = { notes: [], families: [], character: [], seasons: [] };
+      for (const dimension of dimensions) {
+        const otherValues = candidateValues[dimension.key];
+        if (!dimension.values.length || !otherValues.length) continue;
+        const overlap = compareSetOverlap(dimension.values, otherValues);
+        weightedScore += overlap.score * dimension.weight;
+        availableWeight += dimension.weight;
+        shared[dimension.key] = overlap.shared;
+      }
+      const matchReasons = Object.entries(shared)
+        .filter(([, values]) => values.length > 0)
+        .map(([dimension]) => dimension);
+      if (!availableWeight || !matchReasons.length) continue;
+      ranked.push({
+        product: candidate,
+        similarityScore: Math.round((weightedScore / availableWeight) * 100),
+        sharedNotes: Object.freeze(shared.notes),
+        sharedFamilies: Object.freeze(shared.families),
+        sharedCharacterTraits: Object.freeze(shared.character),
+        sharedSeasons: Object.freeze(shared.seasons),
+        matchReasons: Object.freeze(matchReasons),
+        method: "weighted-jaccard-v1",
+        caveat: "Profile overlap is a discovery signal, not proof of smell equivalence, clone identity or equal performance.",
+      });
+    }
+    ranked.sort((left, right) =>
+      right.similarityScore - left.similarityScore ||
+      (left.product.attributes.sourcePopularityRank ?? Number.MAX_SAFE_INTEGER) -
+        (right.product.attributes.sourcePopularityRank ?? Number.MAX_SAFE_INTEGER) ||
+      left.product.name.localeCompare(right.product.name)
+    );
+    return Object.freeze(ranked.slice(0, max).map(item => Object.freeze(item)));
+  }
+
   return Object.freeze({
     metadata: Object.freeze({
       ...SCENTO_DATASET,
@@ -386,6 +463,7 @@ function createSearchableLibrary(perfumes, houses, materials) {
     searchPerfumes,
     searchHouses,
     searchMaterials,
+    findSimilarPerfumes,
   });
 }
 
