@@ -44,6 +44,7 @@ Terms: https://www.scento.com/terms-of-service#perfume-api
 API overview: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/  
 Structured category search: https://openfoodfacts.github.io/documentation/docs/Product-Opener/v2/search/get-search/  
 Open Beauty Facts: https://world.openbeautyfacts.org/
+
 ## 10ML Fragrance Index
 
 - Provider ID: `10ml-fragrance-index`; free, read-only JSON REST API with no API key or account.
