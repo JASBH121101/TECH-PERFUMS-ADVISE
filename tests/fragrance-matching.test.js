@@ -41,6 +41,9 @@ test("matches preferences with an explainable weighted breakdown", () => {
   assert.equal(result.ranking[0].eligibility, "eligible");
   assert.ok(result.ranking[0].breakdown.length >= 6);
   assert.ok(result.ranking[0].matchedCriteria.includes("scentFamilies"));
+  assert.ok(result.ranking[0].explanation.reasons.length >= 4);
+  assert.match(result.ranking[0].explanation.headline, /coincide/u);
+  assert.match(result.ranking[0].explanation.evidenceNote, /no certifica/u);
 });
 
 test("does not penalize customers who specify only one preference dimension", () => {
