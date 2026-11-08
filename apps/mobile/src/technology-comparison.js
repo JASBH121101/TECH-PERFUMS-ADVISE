@@ -1,4 +1,4 @@
-import { compareProducts, matchProducts, normalizeTechnologyProduct } from "../../../src/index.js";
+import { compareProducts, matchProducts, normalizeTechnologyProduct, createEvidenceRecord, EVIDENCE_STATUSES, SOURCE_TYPES } from "../../../src/index.js";
 
 export const TECHNOLOGY_COMPARISON_LOOKUP_FIELDS = Object.freeze([
   "name", "brand", "chipset", "gpu", "ram", "storage", "displaySize",
@@ -57,7 +57,7 @@ function groupFacts(lookup) {
   const grouped = new Map();
   for (const source of lookup.sources ?? []) for (const fact of source.facts ?? []) {
     if (!grouped.has(fact.key)) grouped.set(fact.key, []);
-    grouped.get(fact.key).push({source:fact.source?.name ?? source.name ?? source.id ?? "Fuente",url:fact.source?.url ?? null,value:fact.value});
+    grouped.get(fact.key).push({source:fact.source?.name ?? source.name ?? source.id ?? "Fuente",url:fact.source?.url ?? null,value:fact.value,observedAt:fact.observedAt??source.observedAt??null});
   }
   return grouped;
 }
@@ -85,7 +85,7 @@ function buildDevice(lookup, resource, index) {
   if(Number.isFinite(attributes.storageGB)) variant.storageGB=attributes.storageGB;
   const id="lookup-"+lookup.slug+"-"+index;
   const product=normalizeTechnologyProduct({id,name:lookup.model,...(brand?{brand}:{}),model:lookup.model,deviceType:DEVICE_TYPES[resource],...(Object.keys(variant).length?{variant}:{}),attributes});
-  return Object.freeze({id,name:lookup.model,brand:brand??"Fabricante no confirmado",attributes:product.attributes,product,rows:Object.freeze(rows),sources:Object.freeze((lookup.sources??[]).map(s=>({id:s.id,name:s.name,status:s.status,url:s.source?.url??null})))});
+  return Object.freeze({id,name:lookup.model,brand:brand??"Fabricante no confirmado",attributes:product.attributes,product,rows:Object.freeze(rows),facts,sources:Object.freeze((lookup.sources??[]).map(s=>({id:s.id,name:s.name,status:s.status,url:s.source?.url??null})))});
 }
 export function buildTechnologyComparison({lookups,resource,metric="ramGB"}={}) {
   if(!Array.isArray(lookups)||lookups.length<2||lookups.length>4) throw new TypeError("La comparación requiere entre 2 y 4 dispositivos.");
@@ -104,4 +104,126 @@ export function buildTechnologyComparison({lookups,resource,metric="ramGB"}={}) 
     identityPairs.push({left:products[i].name,right:products[j].name,matchType:match.matchType,sameVariant:match.sameVariant,variantConflicts:match.variantConflicts});
   }
   return Object.freeze({products:Object.freeze(products),rows:Object.freeze(rows),metric:metricDefinition,ranking,metricUnavailable:!complete,identityPairs:Object.freeze(identityPairs),disclaimer:"La comparación usa datos recuperados de fuentes públicas, todavía no verificados ni guardados. El puntaje es relativo al criterio elegido y no representa calidad o rendimiento universal."});
+}
+
+function normalizedEvidenceValue(field, rawValue) {
+  if (field.unit) return numeric(rawValue, field.unit);
+  if (field.attribute === "connectivity") {
+    return Array.isArray(rawValue) ? rawValue.map(printable).filter(Boolean) : [printable(rawValue)].filter(Boolean);
+  }
+  return typeof rawValue === "string" && rawValue.trim() ? rawValue.trim() : null;
+}
+
+function trustedEvidenceUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname && !url.username && !url.password ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Builds a review-approved catalog candidate without promoting provider data
+ * beyond "reported". Conflicting or untraceable fields are deliberately omitted.
+ */
+export function buildTechnologyApprovalCandidate({
+  lookup,
+  resource,
+  idPrefix = "jbae-" + Date.now().toString(36),
+  retrievedAt = new Date().toISOString(),
+} = {}) {
+  if (!lookup || typeof lookup !== "object" || typeof lookup.slug !== "string" || !lookup.slug) {
+    throw new TypeError("La consulta TECH no contiene una identidad válida.");
+  }
+  const device = buildDevice(lookup, resource, 0);
+  const productId = "technology-" + lookup.slug;
+  const evidenceIds = {};
+  const evidenceRecords = [];
+  let sequence = 0;
+
+  for (const field of FIELDS) {
+    if (!field.attribute || !Object.hasOwn(device.attributes, field.attribute)) continue;
+    const canonicalValue = device.attributes[field.attribute];
+    const entries = device.facts.get(field.key) ?? [];
+    for (const entry of entries) {
+      const url = trustedEvidenceUrl(entry.url);
+      if (!url) continue;
+      const normalizedValue = normalizedEvidenceValue(field, entry.value);
+      if (normalizedValue === null || canonical(normalizedValue) !== canonical(canonicalValue)) continue;
+      const hasSourceTimestamp = typeof entry.observedAt === "string" && !Number.isNaN(Date.parse(entry.observedAt));
+      const observedAt = hasSourceTimestamp ? new Date(entry.observedAt).toISOString() : retrievedAt;
+      const id = idPrefix + ":" + field.attribute + ":" + (++sequence);
+      const note = hasSourceTimestamp
+        ? "Dato reportado por la fuente; JBAE normalizó la unidad cuando fue necesario. No verificado independientemente."
+        : "Dato reportado por la fuente; no publicó fecha de observación. Se registra la fecha de recuperación de JBAE. No verificado independientemente.";
+      const record = createEvidenceRecord({
+        id,
+        domain: "technology",
+        subjectId: productId,
+        field: field.attribute,
+        value: canonicalValue,
+        status: EVIDENCE_STATUSES.REPORTED,
+        confidence: 0.5,
+        source: { name: entry.source, url, type: SOURCE_TYPES.DATABASE },
+        observedAt,
+        note,
+      });
+      evidenceRecords.push(record);
+      (evidenceIds[field.attribute] ??= []).push(id);
+    }
+  }
+
+  if (!evidenceRecords.length) {
+    throw new Error("No hay especificaciones con valor coherente y fuente HTTPS trazable para guardar.");
+  }
+
+  const product = normalizeTechnologyProduct({
+    ...device.product,
+    id: productId,
+    evidenceIds,
+  });
+  return Object.freeze({
+    product,
+    evidenceRecords: Object.freeze(evidenceRecords),
+    reportedFieldCount: Object.keys(evidenceIds).length,
+    evidenceCount: evidenceRecords.length,
+  });
+}
+
+/** Imports evidence and its product in one KnowledgeStore snapshot commit. */
+export async function saveTechnologyCandidate(knowledgeStore, candidate) {
+  if (!knowledgeStore || typeof knowledgeStore.exportBackup !== "function" ||
+      typeof knowledgeStore.importBackup !== "function" ||
+      typeof knowledgeStore.getProducts !== "function") {
+    throw new TypeError("Se requiere un KnowledgeStore compatible.");
+  }
+  if (!candidate?.product || !Array.isArray(candidate.evidenceRecords) || !candidate.evidenceRecords.length) {
+    throw new TypeError("El candidato TECH no contiene producto y evidencias.");
+  }
+  if (knowledgeStore.getProducts({ domain: "technology" }).some(item => item.id === candidate.product.id)) {
+    throw new Error("Este dispositivo ya existe en la biblioteca. No se sobrescribió ni fusionó ningún registro.");
+  }
+
+  const current = knowledgeStore.exportBackup();
+  const timestamp = new Date().toISOString();
+  const snapshot = current.snapshot;
+  return knowledgeStore.importBackup({
+    format: current.format,
+    backupVersion: current.backupVersion,
+    exportedAt: timestamp,
+    snapshot: {
+      ...snapshot,
+      metadata: { ...snapshot.metadata, updatedAt: timestamp },
+      evidence: {
+        ...snapshot.evidence,
+        records: [...snapshot.evidence.records, ...candidate.evidenceRecords],
+      },
+      catalog: {
+        ...snapshot.catalog,
+        products: [...snapshot.catalog.products, candidate.product],
+      },
+    },
+  });
 }

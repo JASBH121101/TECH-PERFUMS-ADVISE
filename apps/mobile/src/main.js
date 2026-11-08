@@ -13,6 +13,8 @@ import {
   buildTechnologyComparison,
   TECHNOLOGY_COMPARISON_LOOKUP_FIELDS,
   TECHNOLOGY_COMPARISON_METRICS,
+  buildTechnologyApprovalCandidate,
+  saveTechnologyCandidate,
 } from "./technology-comparison.js";
 
 const app = document.querySelector("#app");
@@ -38,6 +40,9 @@ const state = {
   techCompareMetric: "ramGB",
   techComparisonStatus: "idle",
   techComparisonResult: null,
+  techSaveStatus: "idle",
+  techSaveMessage: "",
+  techSavedProductId: null,
 };
 
 function escapeHtml(value) {
@@ -282,7 +287,12 @@ function renderTechResults() {
     <section class="tech-results">
       <div class="result-section-title"><strong>${escapeHtml(result.model)}</strong><small>Slug: ${escapeHtml(result.slug)}</small></div>
       ${result.sources.map(renderTechSource).join("")}
-      <div class="result-disclaimer">${found ? "Estos datos son candidatos recuperados de fuentes públicas. Aún no se han guardado, cotejado ni verificado por JBAE." : "No se obtuvo una ficha coincidente con este slug. Confirma el nombre/identificador e inténtalo con la categoría correcta."} La búsqueda es exacta y no descarga catálogos completos.</div>
+      <div class="result-disclaimer">${found ? "Estos datos son candidatos recuperados de fuentes públicas. No están verificados independientemente." : "No se obtuvo una ficha coincidente con este slug. Confirma el nombre/identificador e inténtalo con la categoría correcta."} La búsqueda es exacta y no descarga catálogos completos.</div>
+      ${found && state.techSavedProductId === result.slug
+        ? '<div class="save-confirmation">Guardado en la biblioteca como información reportada. No está verificada.</div>'
+        : found ? `<button type="button" class="primary-action tech-action save-candidate-button" data-action="save-tech-candidate" ${state.techSaveStatus === "saving" ? "disabled" : ""}>${state.techSaveStatus === "saving" ? "Guardando candidato..." : "Guardar como dato reportado"}</button>` : ""}
+      ${state.techSaveMessage ? `<div class="${state.techSaveStatus === "error" ? "warning-panel" : "field-hint"}">${escapeHtml(state.techSaveMessage)}</div>` : ""}
+      ${found ? '<p class="field-hint">Al guardar, JBAE conserva la procedencia por campo y mantiene el estado «reportado». No se sobrescriben fichas existentes.</p>' : ""}
     </section>`;
 }
 
@@ -416,13 +426,37 @@ document.querySelector(".brand").addEventListener("click", event => {
   navigate("home");
 });
 
-app.addEventListener("click", event => {
+app.addEventListener("click", async event => {
   const routeButton = event.target.closest("[data-route]");
   if (routeButton) { navigate(routeButton.dataset.route); return; }
   const actionButton = event.target.closest("[data-action]");
   if (!actionButton) return;
 
-  if (actionButton.dataset.action === "tech-mode") {
+  if (actionButton.dataset.action === "save-tech-candidate") {
+    if (state.techSaveStatus === "saving" || !state.techLookupResult) return;
+    state.techSaveStatus = "saving";
+    state.techSaveMessage = "";
+    render();
+    try {
+      const candidate = buildTechnologyApprovalCandidate({
+        lookup: state.techLookupResult,
+        resource: state.techResource,
+      });
+      const result = await saveTechnologyCandidate(state.runtime.knowledgeStore, candidate);
+      state.techSavedProductId = state.techLookupResult.slug;
+      state.techSaveStatus = "saved";
+      state.techSaveMessage = "Se guardaron " + result.newRecordCount + " evidencias reportadas para " + candidate.product.name + ".";
+      state.runtime = {
+        ...state.runtime,
+        technologyCount: state.runtime.knowledgeStore.getProducts({ domain: DOMAINS.TECHNOLOGY }).length,
+        evidenceCount: state.runtime.knowledgeStore.queryEvidence().length,
+      };
+    } catch (error) {
+      state.techSaveStatus = "error";
+      state.techSaveMessage = error instanceof Error ? error.message : "No se pudo guardar el candidato.";
+    }
+    render();
+  } else if (actionButton.dataset.action === "tech-mode") {
     state.techMode=actionButton.dataset.mode; state.techComparisonStatus="idle"; state.techComparisonResult=null; render();
   } else if (actionButton.dataset.action === "fragrance-mode") {
     state.fragranceMode = actionButton.dataset.mode;
@@ -452,6 +486,7 @@ app.addEventListener("input", event => {
     state.fragrancePrompt = event.target.value;
   } else if (event.target.id === "tech-model") {
     state.techModel = event.target.value;
+    state.techSaveStatus = "idle"; state.techSaveMessage = ""; state.techSavedProductId = null;
     const preview = document.querySelector(".slug-preview");
     if (preview) preview.textContent = "Identificador de búsqueda: " + (slugifyTechnologyModel(state.techModel) || "—");
   } else if (event.target.id.startsWith("tech-compare-model-")) {
@@ -516,6 +551,7 @@ app.addEventListener("submit", async event => {
     }
     state.techLookupStatus = "loading";
     state.techLookupResult = null;
+    state.techSaveStatus = "idle"; state.techSaveMessage = ""; state.techSavedProductId = null;
     render();
     try {
       state.techLookupResult = await lookupTechnology({

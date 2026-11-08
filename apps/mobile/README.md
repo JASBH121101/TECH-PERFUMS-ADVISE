@@ -60,7 +60,7 @@ El workflow falla de forma cerrada si ya existe el marcador de identidad y la ca
 
 ## Pendiente / no certificado en dispositivo
 
-- Guardado local de candidatos TECH solo después de aprobación explícita y vinculación de evidencia por campo. La comparación detecta variantes y discrepancias, pero no certifica la veracidad de las fuentes.
+- La revisión humana sigue siendo necesaria para promover datos `reported` a `verified` o `cross_checked`; el botón de guardado no verifica la exactitud de los proveedores.
 - Pruebas en emulador y teléfono físico: primera importación SQLite, cierre/reapertura, recuperación tras terminación del proceso y restauración de backup.
 - SQLCipher no está habilitado en esta fase.
 - PWA: shell, manifiesto, iconos y caché offline de recursos estáticos implementados para Pages. La vista previa web todavía usa memoria temporal y no conserva el estado de conocimiento después de recargar; eso es independiente de la caché del service worker.
