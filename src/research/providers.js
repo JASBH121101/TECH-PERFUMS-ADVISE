@@ -1,12 +1,12 @@
+import { createSicsaResearchProvider } from "./nicaragua-retailers.js";
 import {
-  createSicsaResearchProvider,
   createRadioShackResearchProvider,
   createLaCuracaoResearchProvider,
   createElGalloMasGalloResearchProvider,
-  createSimanResearchProvider,
   createElVerdugoResearchProvider,
   NICARAGUA_RETAILER_INTEGRATION_STATUS,
-} from "./nicaragua-retailers.js";
+} from "./nicaragua-retailer-pages.js";
+import { createSimanResearchProvider } from "./siman-vtex.js";
 import { DOMAINS } from "../core/domains.js";
 import { SOURCE_TYPES } from "../core/evidence.js";
 import { assertFetch, assertPositiveInteger, createJsonReader, isoNow, readLimit, requireText } from "./provider-utils.js";

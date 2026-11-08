@@ -6,10 +6,10 @@ import {
   createRadioShackResearchProvider,
   createLaCuracaoResearchProvider,
   createElGalloMasGalloResearchProvider,
-  createSimanResearchProvider,
   createElVerdugoResearchProvider,
   NICARAGUA_RETAILER_INTEGRATION_STATUS,
-} from "../src/research/nicaragua-retailers.js";
+} from "../src/research/nicaragua-retailer-pages.js";
+import { createSimanResearchProvider } from "../src/research/siman-vtex.js";
 
 const fixedClock = () => new Date("2026-11-08T00:00:00.000Z");
 
