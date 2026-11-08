@@ -259,7 +259,7 @@ test("parses a Spanish customer request into explicit fragrance preferences", ()
       id: "soft-citrus", name: "Soft Citrus", productType: "perfume",
       attributes: {
         scentFamilies: ["citrus"], allNotes: ["bergamot", "lemon", "musk"],
-        characterTraits: ["fresh", "clean"], intensityLevel: "soft", projectionLevel: "close",
+        characterTraits: ["fresh", "clean"], intensityLevel: "soft", projectionLevel: "close", sillageLevel: "moderate",
         timesOfDay: ["day", "office"], climateTags: ["hot_humid"],
       },
     },
