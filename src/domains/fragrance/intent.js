@@ -92,7 +92,8 @@ export function parseFragranceCustomerMessage(message) {
   const nonIntrusivePhrases = [
     "no hostigoso", "no hostigosa", "no invasivo", "no invasiva",
     "no empalagoso", "no empalagosa", "no muy fuerte", "no demasiado fuerte",
-    "que no sea fuerte", "que no resulte fuerte", "not overpowering", "not too strong",
+    "que no sea fuerte", "que no resulte fuerte", "que no sea hostigoso", "que no sea hostigosa",
+    "que no resulte hostigoso", "que no resulte hostigosa", "not overpowering", "not too strong",
   ];
   const asksSoft = includesAny(text, softWords) || includesAny(text, nonIntrusivePhrases);
   const negatedStrong = includesAny(text, [
