@@ -44,7 +44,7 @@ function normalizeHourRange(range, fieldName) {
       typeof range.min !== "number" || typeof range.max !== "number" ||
       !Number.isFinite(range.min) || !Number.isFinite(range.max) ||
       range.min <= 0 || range.max <= range.min) {
-    throw new TypeError(fieldName + " must contain positive finite min/max hours with max > min");
+    throw new TypeError(fieldName + " must contain positive finite min/max hours with max >= min, with a positive interval width");
   }
   return { min: range.min, max: range.max };
 }
@@ -70,7 +70,7 @@ export function normalizeFragranceProduct(input) {
   const name = typeof input.name === "string" && input.name.trim() ? input.name.trim() : null;
   if (!id || !name) throw new TypeError("Fragrance product requires id and name");
   const productType = String(input.productType ?? "").trim().toLowerCase();
-  if (!PRODUCT_TYPES.has(productType)) throw new TypeError("productType must be perfume, body_mist, body_spray, attar_oil or body_lotion");
+  if (!PRODUCT_TYPES.has(productType)) throw new TypeError("productType must be a supported explicit fragrance format");
   if (input.domain !== undefined && input.domain !== DOMAINS.FRAGRANCE) throw new TypeError("Fragrance adapter cannot normalize another domain");
   if (!input.attributes || typeof input.attributes !== "object" || Array.isArray(input.attributes)) throw new TypeError("Fragrance product attributes must be an object");
 

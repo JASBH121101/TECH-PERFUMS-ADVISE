@@ -164,6 +164,6 @@ test("rejects comparisons across technology device types and fragrance product t
       { id: "edp", name: "EDP", domain: "fragrance", productType: "perfume", attributes: { longevityHours: 8 } },
       { id: "mist", name: "Mist", domain: "fragrance", productType: "body_mist", attributes: { longevityHours: 2 } },
     ],
-    priorities: [{ field: "longevityHours", weight: 1 }],
+    priorities: [{ field: "climateSuitabilityScore", weight: 1 }],
   }), /different fragrance product types/);
 });

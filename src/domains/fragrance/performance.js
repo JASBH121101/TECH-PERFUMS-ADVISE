@@ -112,18 +112,18 @@ function aggregateEvidence(claims) {
     : null;
   const allStrict = claims.every(claim => claim.basis === "independent_test");
   const allReported = claims.every(claim => claim.basis === "reported_observation");
-  const status = allStrict
+  const evidenceStatus = allStrict
     ? (claims.some(claim => claim.status === "cross_checked") ? "cross_checked" : "verified")
     : allReported ? "reported" : "mixed";
   const sourceCount = sourceMap.size;
   const evidenceStrength = allReported
     ? "limited"
-    : status === "cross_checked" && sourceCount >= 2 && averageConfidence >= 0.8
+    : evidenceStatus === "cross_checked" && sourceCount >= 2 && averageConfidence >= 0.8
       ? "strong"
       : "good";
 
   return Object.freeze({
-    status,
+    evidenceStatus,
     basis: allStrict ? "independent_test" : allReported ? "reported_observation" : "mixed",
     evidenceStrength,
     evidenceCount: evidenceIds.length,
@@ -165,7 +165,7 @@ function buildRangeEstimate(product, definition, evidenceStore, allowReported) {
     return unavailable(reason, "The two interval bounds must each have matching, eligible evidence before a customer-facing range can be shown.");
   }
   const metadata = aggregateEvidence(claims);
-  if (metadata.status === "mixed") {
+  if (metadata.evidenceStatus === "mixed") {
     return unavailable("mixed_evidence", "The interval bounds do not share the same evidence class; no combined range is displayed.");
   }
 

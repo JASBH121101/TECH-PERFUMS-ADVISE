@@ -73,6 +73,7 @@ test("returns performance ranges only when both ends have matching independent-t
   assert.equal(profile.longevity.max, 7);
   assert.equal(profile.longevity.display, "5–7 hours (estimated)");
   assert.equal(profile.longevity.basis, "independent_test");
+  assert.equal(profile.longevity.evidenceStatus, "verified");
   assert.equal(profile.projectionDuration.display, "1–3 hours (estimated)");
   assert.equal(profile.intensity.label, "soft / suave");
   assert.equal(profile.projection.label, "cercana a la piel");
@@ -121,6 +122,7 @@ test("reported community observations require explicit opt-in and remain labelle
   const allowed = buildFragrancePerformanceProfile(product, store, { allowReported: true });
   assert.equal(allowed.longevity.status, "estimated");
   assert.equal(allowed.longevity.basis, "reported_observation");
+  assert.equal(allowed.longevity.evidenceStatus, "reported");
   assert.match(allowed.longevity.disclaimer, /not an independently verified test/u);
   assert.equal(allowed.longevity.evidenceStrength, "limited");
 });
