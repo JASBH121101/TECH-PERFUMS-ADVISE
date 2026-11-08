@@ -57,7 +57,7 @@ export function createSimanResearchProvider({
   });
 
   return Object.freeze({
-    id: RETAILER_CONFIGS.siman.id,
+    id: SIMAN_CONFIG.id,
     domains: Object.freeze([DOMAINS.TECHNOLOGY]),
     async search(request) {
       if (request?.domain && request.domain !== DOMAINS.TECHNOLOGY) {
@@ -70,7 +70,7 @@ export function createSimanResearchProvider({
       }
       if (productUrl.protocol !== "https:" || productUrl.hostname !== "ni.siman.com" ||
           productUrl.username || productUrl.password || productUrl.port || productUrl.hash ||
-          !RETAILER_CONFIGS.siman.pathPattern.test(productUrl.pathname)) {
+          !SIMAN_CONFIG.pathPattern.test(productUrl.pathname)) {
         throw new TypeError("SIMAN query must be an exact product URL on its approved Nicaragua storefront");
       }
 
