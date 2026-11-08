@@ -165,8 +165,10 @@ export function createSimanResearchProvider({
     const response = await fetchImpl(input, init);
     if (response?.url) {
       const finalUrl = new URL(response.url);
-      if (finalUrl.protocol !== "https:" || finalUrl.hostname !== "ni.siman.com") {
-        throw new Error("SIMAN VTEX request redirected outside its approved storefront");
+      if (finalUrl.origin !== requested.origin ||
+          finalUrl.pathname !== requested.pathname ||
+          finalUrl.search !== requested.search) {
+        throw new Error("SIMAN VTEX request redirected outside its exact public endpoint allowlist");
       }
     }
     if (!response || response.ok !== true) return response;
@@ -293,13 +295,14 @@ export function createSimanResearchProvider({
       }
 
       let variants = null;
+      let variationsEndpoint = null;
       if (field === "variants") {
         const productId = String(product.productId ?? "");
         if (!/^\d+$/u.test(productId) || !Number.isSafeInteger(Number(productId)) ||
             Number(productId) < 1) {
           return [];
         }
-        const variationsEndpoint =
+        variationsEndpoint =
           "https://ni.siman.com/api/catalog_system/pub/products/variations/" +
           encodeURIComponent(productId);
         const variationData = await readJson(variationsEndpoint, "SIMAN VTEX public SKU variations");
@@ -338,7 +341,11 @@ export function createSimanResearchProvider({
           type: SOURCE_TYPES.DISTRIBUTOR,
           retailer: "Almacenes SIMAN",
           market: "NI",
-          references: [productUrl.toString(), endpoint],
+          references: [
+            productUrl.toString(),
+            endpoint,
+            ...(variationsEndpoint ? [variationsEndpoint] : []),
+          ],
         },
         observedAt: isoNow(clock),
         note: priceField
