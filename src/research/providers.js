@@ -193,7 +193,7 @@ function pickOpenBeautyFactsValue(product, field) {
     product_quantity: product.product_quantity,
     product_quantity_unit: product.product_quantity_unit,
   };
-  return map[field] ?? map[field.replace(/[A-Z]/gu, letter => \`_\${letter.toLowerCase()}\`)];
+  return map[field] ?? map[field.replace(/[A-Z]/gu, letter => "_" + letter.toLowerCase())];
 }
 
 /**
