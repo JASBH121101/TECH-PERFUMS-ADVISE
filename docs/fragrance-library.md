@@ -27,6 +27,16 @@ The JBAE import is an adaptation: CSV fields are normalized into the JBAE Fragra
 
 The separate FragDB sample found during research is CC BY-NC 4.0 and is not included in this commercial-capable seed library.
 
+## Regional coverage and catalog boundaries
+
+The current snapshot contains **331 perfume records across 11 selected Middle Eastern / Arabic-fragrance houses**: Afnan (53), Ajmal (21), Al Haramain (3), Amouage (25), Arabian Oud (1), Armaf (189), Khadlaj (1), Lattafa (23), Nabeel (8), Rasasi (4) and Swiss Arabian (3). The country field is preserved exactly as supplied by Scento; for example, this snapshot lists Ajmal as India. These are observed source counts, not a claim that the regional market is fully covered.
+
+The seed is a perfume catalog, not a complete fragrance-commerce catalog. It does **not** currently include a verified bulk collection of body mists, body sprays, attars/oils, lotions, decants, bottle sizes, local stock or prices. The domain adapter can represent those product types, but the seed does not fabricate entries for them. They require separate traceable sources and review.
+
+The 14 source families are Scento's own taxonomy: Amber & Resin, Green Leaf, Orchard Fruit, Oud Court, Petal Garden, Powder Veil, Salt & Mineral, Skin Musk, Smoke & Leather, Spice Route, Sunlit Citrus, Velvet Sweet, White Bloom, and Wood & Root. JBAE retains the taxonomy label rather than pretending it is a universal industry standard.
+
+The offline library also exposes a deterministic similarity search based on weighted Jaccard overlap: notes (65%), families (20%), character traits (10%) and seasons (5%). It reports shared attributes and a similarity index. This is a discovery heuristic only; it does not establish a clone, exact equivalence, identical smell or equal longevity/performance.
+
 ## Evidence policy
 
 Each imported factual attribute is linked to its Scento perfume page and a dated dataset record. JBAE assigns these claims status `reported`, not `verified` or `cross_checked`, because JBAE has not independently revalidated each perfume page. The source's own curation claim is not treated as an independent JBAE verification.
