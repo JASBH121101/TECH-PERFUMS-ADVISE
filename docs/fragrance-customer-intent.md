@@ -17,7 +17,7 @@ Spanish accents are normalized. Explicit structured preferences supplied by the 
 
 ## Integration
 
-Pass `customerMessage` to `AdvisorCore.advise({ domain: "fragrance", products, customerMessage })`. The response includes `customerIntent` (recognized preferences and signal trace) and, when enough preference dimensions are available, an explainable `preferenceMatch`.
+Pass `customerMessage` to `AdvisorCore.advise({ domain: "fragrance", products, customerMessage })`. The response includes `customerIntent` (recognized preferences and signal trace), an explainable `preferenceMatch`, and `customerExplanation` with customer-facing Spanish copy. The explanation only names matched preference criteria and only displays duration/projection intervals that have already passed the evidence policy. If there is no eligible match or the message is ambiguous, it asks for clarification rather than inventing a winner.
 
 A long-lasting request selects the existing conservative `long_lasting` profile. It does not create duration values. The profile can only score candidate attributes supplied to the engine; evidence-backed performance ranges remain governed by the performance evidence policy.
 
