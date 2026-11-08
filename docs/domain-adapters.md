@@ -2,11 +2,11 @@
 
 ## Technology Core
 
-`normalizeTechnologyProduct()` accepts only smartphones, tablets and laptops. It normalizes explicit unit-bearing values to canonical fields such as `ramGB`, `storageGB`, `displaySizeInches`, `weightGrams`, `batteryCapacityMah` and `batteryCapacityWh`.
+`normalizeTechnologyProduct()` supports smartphones, tablets, laptops, desktops, workstations, consoles, handheld consoles, televisions, monitors, projectors, smartwatches, fitness trackers, headphones, earbuds, speakers, cameras, routers, network devices, printers, accessories and other explicitly typed devices.
 
-Storage TB is converted using 1 TB = 1024 GB. Display centimeters are converted to inches. Weight kilograms are converted to grams. Battery capacity requires an explicit mAh or Wh unit and remains in a separate canonical field; the adapter never compares unlike battery units.
+The adapter normalizes explicit unit-bearing values to canonical fields such as `ramGB`, `storageGB`, `displaySizeInches`, `weightGrams`, `batteryCapacityMah` and `batteryCapacityWh`. Storage TB is converted using 1 TB = 1024 GB. Display centimeters are converted to inches. Weight kilograms are converted to grams. Battery capacity requires an explicit mAh or Wh unit and remains in a separate canonical field; the adapter never compares unlike battery units.
 
-Price fields stay separate as `priceUSD` and `priceNIO`. Currency conversion is not performed implicitly. Quality scores are accepted only on the 0–100 scale and must be supplied by a measurement/research layer; raw megapixels are not treated as camera quality.
+Price fields stay separate as `priceUSD` and `priceNIO`. Currency conversion is not performed implicitly. Quality scores are accepted only on the 0–100 scale and must be supplied by a measurement/research layer; raw megapixels are not treated as camera quality. The taxonomy is broader than the current live provider coverage: category support in the model does not imply that every category has a complete source or spec sheet.
 
 ## Fragrance Core
 
