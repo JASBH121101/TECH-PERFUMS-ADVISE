@@ -108,7 +108,7 @@ export function auditFragranceLibrary({ products, evidenceStore = null } = {}) {
           record.domain === "fragrance" &&
           record.subjectId === product.id &&
           record.field === field &&
-          JSON.stringify(record.value) === JSON.stringify(value);
+          canonicalValue(record.value) === canonicalValue(value);
         if (!matches) malformedEvidenceLinkCount += 1;
         return matches;
       });
