@@ -1,6 +1,7 @@
 import "./styles.css";
 import { DOMAINS } from "../../../src/index.js";
 import { closeStorage, initializeStorage } from "./storage.js";
+import { initializeUpdateManager } from "./update-manager.js";
 import { searchProducts } from "./search.js";
 import { buildFragranceAdvice } from "./personalization.js";
 import {
@@ -511,6 +512,7 @@ async function boot() {
     runtimeLabel.textContent = state.runtime.native ? "OFFLINE READY" : "PREVIEW MODE";
     runtimeLabel.parentElement.classList.toggle("is-preview", !state.runtime.native);
     render();
+    initializeUpdateManager();
   } catch (error) {
     runtimeLabel.textContent = "ERROR";
     runtimeLabel.parentElement.classList.add("is-error");
