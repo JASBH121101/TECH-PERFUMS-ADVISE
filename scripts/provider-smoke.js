@@ -78,12 +78,48 @@ async function inspectSimanSkuVariants(productUrl) {
         };
       }),
     }));
+    const variationsEndpoint =
+      "https://ni.siman.com/api/catalog_system/pub/products/variations/" +
+      encodeURIComponent(String(product.productId));
+    let variationDiagnostics = { status: "not_attempted" };
+    try {
+      const variationResponse = await fetch(variationsEndpoint, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!variationResponse.ok) {
+        variationDiagnostics = { status: "deferred", httpStatus: variationResponse.status };
+      } else {
+        const variationData = await variationResponse.json();
+        variationDiagnostics = {
+          status: "pass",
+          dimensions: Array.isArray(variationData?.dimensions) ? variationData.dimensions : [],
+          dimensionsMap: variationData?.dimensionsMap ?? null,
+          skus: (Array.isArray(variationData?.skus) ? variationData.skus : []).map(sku => ({
+            sku: sku?.sku ?? null,
+            skuName: sku?.skuname ?? null,
+            dimensions: sku?.dimensions ?? null,
+            available: typeof sku?.available === "boolean" ? sku.available : null,
+            availableQuantity: sku?.availablequantity ?? null,
+            price: sku?.bestPrice ?? null,
+            listPrice: sku?.listPrice ?? null,
+          })).slice(0, 20),
+        };
+      }
+    } catch (error) {
+      variationDiagnostics = {
+        status: "deferred",
+        error: String(error?.message ?? error),
+      };
+    }
+
     console.log("SIMAN SKU-level diagnostics: " + JSON.stringify({
       productId: product.productId ?? null,
       productName: product.productName ?? null,
       productSpecifications: selectSpecifications(product),
       itemCount: items.length,
       items: items.slice(0, 20),
+      publicVariations: variationDiagnostics,
     }));
   } catch (error) {
     console.log("SIMAN SKU-level diagnostics: DEFERRED — " +
