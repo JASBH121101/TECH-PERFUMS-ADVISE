@@ -68,6 +68,7 @@ const COREINFO_FIELD_ALIASES = Object.freeze({
   refresh_rate: ["refresh_rate", "refresh_rate_hz"],
   battery: ["battery", "battery_capacity", "capacity"],
   battery_capacity: ["battery_capacity", "battery", "capacity"],
+  battery_capacity_wh: ["battery_capacity_wh", "battery_wh", "capacity_wh"],
   camera: ["camera", "main_camera", "rear_camera"],
   cameras: ["cameras", "camera", "rear_camera"],
   weight: ["weight", "device_weight"],
