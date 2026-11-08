@@ -107,8 +107,13 @@ export function matchFragrances({ products, preferences = {}, minimumMatchCovera
     }
     const avoided = avoidedNotes.filter(note => normalizedNotes.includes(note));
     if (avoided.length) exclusions.push("contains_avoided_notes");
-    const noteDataExists = normalizedNotes.length > 0;
-    if (avoidedNotes.length && !noteDataExists) exclusions.push("avoidance_not_verifiable");
+    const hasCompleteNoteCoverage = asList(attributes.allNotes).length > 0 ||
+      (asList(attributes.topNotes).length > 0 &&
+       asList(attributes.middleNotes).length > 0 &&
+       asList(attributes.baseNotes).length > 0);
+    if (avoidedNotes.length && !hasCompleteNoteCoverage) {
+      exclusions.push("avoidance_not_verifiable");
+    }
 
     const values = [];
     const add = (key, weight, score) => {
