@@ -520,8 +520,6 @@ export function createDefaultResearchProviders(options = {}) {
 }
 
 export {
-  createOpenBeautyFactsResearchProvider,
-  createTenMlResearchProvider,
   createSicsaResearchProvider,
   createRadioShackResearchProvider,
   createLaCuracaoResearchProvider,
