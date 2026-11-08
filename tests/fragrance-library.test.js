@@ -256,6 +256,10 @@ test("reports field coverage without converting missing source data into inferre
   );
   assert.equal(report.distributions.concentrations[0].value, "elixir");
   assert.equal(report.distributions.primaryFamilies[0].value, "White Bloom");
+  assert.equal(
+    report.distributions.mostCommonNotes.find((item) => item.value === "Bergamot").count,
+    1,
+  );
   assert.match(report.interpretation, /does not measure factual accuracy/u);
   const markdown = renderScentoCoverageMarkdown(report);
   assert.match(markdown, /Field coverage/u);
