@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#090d13" />
+    <meta name="description" content="Asesor independiente de tecnología y fragancias, con biblioteca local." />
+    <title>JBAE · Advisor</title>
+  </head>
+  <body>
+    <div class="app-frame">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Inicio" data-route="home">
+          <span class="brand-mark">J</span>
+          <span class="brand-copy"><strong>JBAE</strong><small>ADVISOR SYSTEM</small></span>
+        </a>
+        <span class="runtime-pill"><i></i><span id="runtime-label">INICIANDO</span></span>
+      </header>
+      <main id="app" class="main-content" aria-live="polite">
+        <section class="loading-state"><div class="loading-orbit"><span></span></div><p>Preparando tu espacio de asesoría</p></section>
+      </main>
+      <nav class="bottom-nav" id="bottom-nav" aria-label="Navegación principal">
+        <button class="nav-item active" type="button" data-route="home"><span>⌂</span><small>Inicio</small></button>
+        <button class="nav-item" type="button" data-route="fragrance"><span>✦</span><small>Fragancias</small></button>
+        <button class="nav-item" type="button" data-route="tech"><span>▣</span><small>TECH</small></button>
+        <button class="nav-item" type="button" data-route="library"><span>▤</span><small>Biblioteca</small></button>
+      </nav>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

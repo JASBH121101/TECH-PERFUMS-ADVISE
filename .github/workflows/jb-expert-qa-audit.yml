@@ -5,10 +5,12 @@ on:
   push:
     branches:
       - feature/jb-advisor-engine
+      - feature/jbae-standalone-android-app
     paths:
       - "src/**"
       - "tests/**"
       - "docs/**"
+      - "apps/mobile/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/jb-expert-qa-audit.yml"

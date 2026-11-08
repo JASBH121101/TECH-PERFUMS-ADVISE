@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/jb-advisor-engine
+      - feature/jbae-standalone-android-app
   pull_request:
     branches:
       - main
@@ -29,10 +30,13 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           set -euo pipefail
-          find src tests scripts -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+          find src tests scripts apps/mobile/src apps/mobile/scripts -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -r -n1 node --check
 
-      - name: Run automated tests
+      - name: Run engine tests
         run: npm test
+
+      - name: Run mobile app tests
+        run: npm --prefix apps/mobile test
 
       - name: Build complete fragrance knowledge seed
         run: npm run build:fragrance-library
