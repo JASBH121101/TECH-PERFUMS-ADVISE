@@ -1,5 +1,4 @@
 import { apkUpdater } from "./apk-updater.js";
-import { apkUpdater } from "./apk-updater.js";
 import { compareVersions, fetchLatestJbaeRelease } from "./update-utils.js";
 
 const CURRENT_VERSION = import.meta.env.VITE_APP_VERSION || "0.4.0";
@@ -238,12 +237,6 @@ async function checkForUpdates(interactive = false) {
       button.removeAttribute("aria-busy");
     }
   }
-}
-
-function startMonitor(release) {
-  stopMonitor();
-  void pollDownload(release);
-  monitorTimer = window.setInterval(() => void pollDownload(release), 1500);
 }
 
 async function restorePendingDownload() {
