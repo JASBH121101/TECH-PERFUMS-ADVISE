@@ -8,31 +8,36 @@
 
 ## Core layers
 
-1. **Advisor Core:** request normalization, orchestration, policy enforcement.
-2. **Research Engine:** source discovery and retrieval adapters.
-3. **Evidence Engine:** provenance, timestamps, confidence, conflict handling.
-4. **Comparison Engine:** relative, domain-scoped scoring with optional strict evidence linkage.
+1. **Advisor Core:** request normalization, orchestration and policy enforcement.
+2. **Research Engine:** source discovery, bounded retrieval adapters and unconfirmed research candidates.
+3. **Evidence Engine:** provenance, timestamps, confidence, immutable claims and conflict handling.
+4. **Comparison Engine:** relative, domain-scoped scoring with optional strict evidence linkage and category guards.
 5. **Product Identity Matcher:** cross-source product/variant matching using universal identifiers, manufacturer identifiers, normalized brand/model/category and variant conflicts; never auto-merges.
-6. **Recommendation Engine:** user-priority weighting, profiles, coverage gates and explainable ranking.
+6. **Recommendation Engine:** user-priority weighting, domain profiles, coverage gates and explainable ranking.
 7. **Knowledge Engine:** versioned local snapshots, validated migrations, append-only evidence persistence, JSON backup and safe merge restore, with a Capacitor SQLite adapter.
-8. **Domain cores:** independent Fragrance and Technology adapters with separate field schemas and units.
+8. **Domain cores:** independent Fragrance and Technology adapters with separate field schemas, product types and units.
 
 ## Domain boundaries
 
-- Technology covers smartphones, tablets and laptops only.
-- Fragrance treats perfume concentration separately from body mist, body spray, attar/oil and body lotion.
+- Technology supports smartphones, tablets, laptops, desktops, workstations, consoles/handheld consoles, televisions, monitors/projectors, wearables, audio devices, cameras, networking devices, printers, accessories and other explicitly typed devices.
+- Fragrance keeps perfume concentration separate from body mist, body spray, attar/oil and body lotion.
 - Unit conversion is explicit. USD and NIO prices remain separate until a caller supplies a dated FX conversion with its own evidence.
 - Missing facts are not imputed. Camera quality, real-world battery life, fragrance longevity and projection require measured or sourced values.
+- Category-specific field coverage depends on the provider and the product record; a supported field is not a guarantee that a source supplies it.
 
 ## Autonomy policy
 
 ### Automatic
-- Research and stage new candidate records.
-- Refresh unverified facts while retaining provenance.
+
+- Retrieve data and create unconfirmed research candidates.
 - Run comparisons and non-destructive validation.
 - Detect duplicates and inconsistencies.
+- Refresh unverified facts while retaining provenance.
 
 ### Approval required
+
+- Stage research candidates into persistent local knowledge.
+- Promote claims to verified or cross-checked status.
 - Change verified facts or domain scoring policies.
 - Delete or merge records/evidence.
 - Change trusted-source policy.
@@ -40,6 +45,7 @@
 - Export or share private user data.
 
 ### Prohibited without explicit authorization
+
 - Purchases, payments, and marketplace publication.
 - Sharing private information.
 - Destructive backup operations.
