@@ -4,6 +4,7 @@ import { DOMAINS } from "../src/core/domains.js";
 import {
   createDefaultResearchProviders,
   createScentoResearchProvider,
+  createTenMlResearchProvider,
   createWikidataResearchProvider,
   createTechApiResearchProvider,
   createCoreInfoResearchProvider,
@@ -177,6 +178,7 @@ test("default research provider registry contains isolated fragrance and technol
   });
   assert.deepEqual(providers.map(provider => provider.id), [
     "scento-perfume-api",
+    "10ml-fragrance-index",
     "wikidata",
     "coreinfo-device-catalog",
     "sicsa-nicaragua-retail",
@@ -187,9 +189,10 @@ test("default research provider registry contains isolated fragrance and technol
     "el-verdugo-nicaragua-catalog",
   ]);
   assert.deepEqual(providers[0].domains, [DOMAINS.FRAGRANCE]);
-  assert.deepEqual(providers[1].domains, [DOMAINS.TECHNOLOGY]);
+  assert.deepEqual(providers[1].domains, [DOMAINS.FRAGRANCE]);
   assert.deepEqual(providers[2].domains, [DOMAINS.TECHNOLOGY]);
   assert.deepEqual(providers[3].domains, [DOMAINS.TECHNOLOGY]);
+  assert.deepEqual(providers[4].domains, [DOMAINS.TECHNOLOGY]);
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("ram_capacity"));
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("storage_capacity"));
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("cpu"));
@@ -303,6 +306,7 @@ test("TechAPI stays opt-in while the local Nicaragua retailer provider is enable
   });
   assert.deepEqual(providers.map(provider => provider.id), [
     "scento-perfume-api",
+    "10ml-fragrance-index",
     "wikidata",
     "coreinfo-device-catalog",
     "sicsa-nicaragua-retail",
@@ -677,5 +681,121 @@ test("TechAPI exposes PDA and identity-only device-catalog exact-slug resources"
   await assert.rejects(
     () => provider.search({ query: "device-catalog example", field: "name" }),
     /exact resource:slug/u,
+  );
+});
+
+
+test("10ML provider maps detailed fragrance results and preserves its visible commercial-use attribution", async () => {
+  const calls = [];
+  const payload = {
+    total: 2,
+    results: [
+      {
+        id: "lattafa-khamrah-edp",
+        name: "Khamrah",
+        house: "Lattafa",
+        year: 2022,
+        gender: "unisex",
+        concentration: "EDP",
+        family: "Amber gourmand",
+        accords: ["sweet", "warm spicy", "amber"],
+        key_notes: ["cinnamon", "dates", "vanilla"],
+        pyramid: {
+          top: ["Cinnamon", "Nutmeg"],
+          heart: ["Dates", "Praline"],
+          base: ["Vanilla", "Tonka bean"],
+        },
+        seasons: ["autumn", "winter"],
+        occasions: ["evening"],
+        styles: ["sweet", "gourmand"],
+        longevity: 5,
+        projection: 4,
+        perfumers: ["Perfumer One"],
+        character: "Warm gourmand profile.",
+        profile: "full",
+      },
+      {
+        id: "al-haramain-laventure",
+        name: "L'Aventure",
+        house: "Al Haramain",
+        family: "Chypre fruity",
+        accords: ["fruity", "woody"],
+        key_notes: ["bergamot", "pineapple"],
+        pyramid: { top: ["Bergamot"], heart: ["Jasmine"], base: ["Musk"] },
+        profile: "full",
+      },
+    ],
+    source: "10ML Fragrance Index",
+  };
+  const provider = createTenMlResearchProvider({
+    fetchImpl: async url => {
+      calls.push(String(url));
+      return response(payload);
+    },
+    clock: fixedClock,
+    maxProfiles: 2,
+    minRequestIntervalMs: 0,
+  });
+  const records = await provider.search({
+    domain: DOMAINS.FRAGRANCE,
+    query: "Lattafa",
+    field: "notes",
+    limit: 10,
+  });
+  assert.equal(records.length, 2);
+  assert.deepEqual(records[0].value, payload.results[0].pyramid);
+  assert.equal(records[0].id, "lattafa-khamrah-edp");
+  assert.equal(records[0].source.name, "10ML Fragrance Index");
+  assert.equal(records[0].source.type, "database");
+  assert.equal(records[0].source.attribution, "Data: 10ML Fragrance Index");
+  assert.equal(records[0].source.references[0], "https://10ml.com/perfume-api");
+  assert.match(records[0].source.url, /\\/api\\/v1\\/perfumes\\/lattafa-khamrah-edp$/u);
+  assert.equal(records[0].source.license.includes("free commercial use"), true);
+  assert.match(records[0].note, /remains unconfirmed in JBAE/u);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0], /q=Lattafa/u);
+  assert.match(calls[0], /format=detailed/u);
+  assert.match(calls[0], /limit=2/u);
+});
+
+test("10ML provider caches fetched pages and does not invent missing pyramid tiers", async () => {
+  let calls = 0;
+  const provider = createTenMlResearchProvider({
+    fetchImpl: async () => {
+      calls += 1;
+      return response({
+        results: [{
+          id: "house-sample",
+          name: "House Sample",
+          house: "Sample House",
+          family: "Woody",
+          key_notes: ["cedar", "musk"],
+          pyramid: {},
+        }],
+      });
+    },
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  const base = { domain: DOMAINS.FRAGRANCE, query: "Sample House" };
+  const notes = await provider.search({ ...base, field: "notes" });
+  const top = await provider.search({ ...base, field: "top_notes" });
+  assert.deepEqual(notes[0].value, { keyNotes: ["cedar", "musk"] });
+  assert.deepEqual(top, []);
+  assert.equal(calls, 1);
+});
+
+test("10ML provider rejects excessive query lengths and malformed upstream search payloads", async () => {
+  const provider = createTenMlResearchProvider({
+    fetchImpl: async () => response({ result: [] }),
+    minRequestIntervalMs: 0,
+  });
+  await assert.rejects(
+    () => provider.search({ query: "x".repeat(201), field: "name" }),
+    /200 characters or fewer/u,
+  );
+  await assert.rejects(
+    () => provider.search({ query: "Lattafa", field: "name" }),
+    /missing results/u,
   );
 });
