@@ -9,7 +9,7 @@ const FAMILY_TERMS = Object.freeze([
 ]);
 
 function normalizeText(value) {
-  return value.normalize("NFD").replace(/[\\u0300-\\u036f]/gu, "").toLocaleLowerCase();
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/gu, "").toLocaleLowerCase();
 }
 
 function includesAny(text, terms) {
