@@ -108,7 +108,7 @@ export function createTenMlResearchProvider({
   clock = () => new Date(),
   maxProfiles = 5,
   timeoutMs = 12_000,
-  cacheTtlMs = 30 * 60_000,
+  cacheTtlMs = 5 * 60_000,
   minRequestIntervalMs = 1_000,
 } = {}) {
   assertFetch(fetchImpl);
