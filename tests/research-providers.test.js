@@ -850,6 +850,94 @@ test("Open Beauty Facts looks up one cosmetics GTIN and preserves ODbL attributi
   assert.equal(Object.hasOwn(result[0], "image_url"), false);
 });
 
+test("Open Beauty Facts discovers bounded category candidates without assigning a JBAE product type", async () => {
+  const requested = [];
+  const provider = createOpenBeautyFactsResearchProvider({
+    fetchImpl: async url => {
+      requested.push(new URL(String(url)));
+      return response({
+        count: 1,
+        products: [{
+          code: "3560070791460",
+          product_name: "Example Body Mist",
+          brands: "Example Brand",
+          categories: "Body mists",
+          categories_tags: ["en:body-mists"],
+          ingredients_text: "Aqua, parfum",
+          product_quantity: "150",
+          product_quantity_unit: "ml",
+        }],
+      });
+    },
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+
+  const records = await provider.search({
+    domain: DOMAINS.FRAGRANCE,
+    query: "category:body-mists",
+    field: "name",
+    limit: 2,
+  });
+  assert.equal(records.length, 1);
+  assert.equal(records[0].value, "Example Body Mist");
+  assert.equal(records[0].id, "3560070791460");
+  assert.equal(records[0].confidence, 0.55);
+  assert.match(records[0].note, /not an approved JBAE productType/u);
+  assert.equal(records[0].source.name, "Open Beauty Facts");
+  assert.match(records[0].source.license, /ODbL 1\.0/u);
+  assert.equal(requested.length, 1);
+  assert.equal(requested[0].pathname, "/api/v2/search");
+  assert.equal(requested[0].searchParams.get("categories_tags_en"), "body-mists");
+  assert.equal(requested[0].searchParams.get("page"), "1");
+  assert.equal(requested[0].searchParams.get("page_size"), "2");
+  assert.match(requested[0].searchParams.get("fields"), /categories_tags/u);
+  assert.equal(Object.hasOwn(records[0], "image_url"), false);
+});
+
+test("Open Beauty Facts category discovery rejects free text and malformed taxonomy slugs", async () => {
+  let calls = 0;
+  const provider = createOpenBeautyFactsResearchProvider({
+    fetchImpl: async () => {
+      calls += 1;
+      return response({ products: [] });
+    },
+    minRequestIntervalMs: 0,
+  });
+  await assert.rejects(
+    () => provider.search({ query: "body mist", field: "name" }),
+    /category:<taxonomy-slug>/u,
+  );
+  await assert.rejects(
+    () => provider.search({ query: "category:body mists", field: "name" }),
+    /category:<taxonomy-slug>/u,
+  );
+  assert.equal(calls, 0);
+});
+
+test("Open Beauty Facts category response maps source size and brand fields without inventing missing values", async () => {
+  const provider = createOpenBeautyFactsResearchProvider({
+    fetchImpl: async () => response({
+      count: 1,
+      products: [{
+        code: "12345678",
+        product_name: "Example Body Cream",
+        brands: "Example",
+        categories_tags: ["en:body-creams"],
+        product_quantity: "250",
+        product_quantity_unit: "ml",
+      }],
+    }),
+    minRequestIntervalMs: 0,
+  });
+  const amount = await provider.search({ query: "category:body-creams", field: "product_quantity" });
+  const unit = await provider.search({ query: "category:body-creams", field: "product_quantity_unit" });
+  const missing = await provider.search({ query: "category:body-creams", field: "ingredients_text" });
+  assert.equal(amount[0].value, "250");
+  assert.equal(unit[0].value, "ml");
+  assert.deepEqual(missing, []);
+});
+
 test("Open Beauty Facts validates barcode lookups and treats absent products or fields as empty", async () => {
   let calls = 0;
   const provider = createOpenBeautyFactsResearchProvider({
