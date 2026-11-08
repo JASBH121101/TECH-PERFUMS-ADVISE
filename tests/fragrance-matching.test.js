@@ -43,6 +43,16 @@ test("matches preferences with an explainable weighted breakdown", () => {
   assert.ok(result.ranking[0].matchedCriteria.includes("scentFamilies"));
 });
 
+test("does not penalize customers who specify only one preference dimension", () => {
+  const result = matchFragrances({
+    products,
+    preferences: { preferredFamilies: ["citrica"] },
+  });
+  assert.equal(result.ranking[0].id, "soft-fresh");
+  assert.equal(result.ranking[0].coverage, 100);
+  assert.equal(result.ranking[0].eligibility, "eligible");
+});
+
 test("hard-excludes avoided notes and products with unverified exclusions", () => {
   const result = matchFragrances({
     products: [
