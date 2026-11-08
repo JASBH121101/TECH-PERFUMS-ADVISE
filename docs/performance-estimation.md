@@ -25,7 +25,7 @@ Projection distance is not projection duration. Intensity is not longevity. Sill
 
 An independent wear-test record should identify the exact product/version, measured field, value, source, date and test context. Where available, record application amount, application locations, skin/climate conditions, tester count and observation method in the source note or supplemental test record. The evidence source must describe the test rather than merely repeat promotional claims.
 
-Each field endpoint uses a separate evidence record. For a 5–7 hour longevity interval, one record supports 5 hours and a second supports 7 hours. Both records must reference the same canonical product ID and their matching field names. The engine does not average incompatible or conflicting sources into a range.
+Each field endpoint uses a separate evidence record. For a 5–7 hour longevity interval, one record supports 5 hours and a second supports 7 hours. Both records must reference the same canonical product ID and their matching field names. The engine does not average incompatible or conflicting sources into a range. Supporting URLs listed under one evidence record are references, not additional independent sources; the profile counts primary evidence-source URLs separately from supporting references when describing evidence strength.
 
 ## Interpretation and customer disclaimer
 
