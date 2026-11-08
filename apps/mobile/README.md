@@ -7,7 +7,7 @@ JBAE es una aplicación Android y una vista previa web independientes que consum
 - Aplicación Capacitor con navegación principal entre Inicio, FRAGRANCE, TECH y Biblioteca.
 - FRAGRANCE: búsqueda offline, fichas de perfumes y asesor personalizado en español.
 - Biblioteca inicial construida desde el snapshot Scento del repositorio; la procedencia permanece como reportada y no equivale a verificación sensorial.
-- TECH: consulta exacta por modelo a CoreInfo y TechAPI para smartphones, tablets, laptops, smartwatches y monitores. Incluye comparación visual de 2–4 equipos, normalización de unidades y variantes con IDs por configuración, detección de conflictos entre fuentes y puntuación relativa solo cuando el criterio elegido está completo. Los resultados siguen siendo candidatos sin verificar y no se guardan automáticamente.
+- TECH: consulta exacta por modelo a CoreInfo y TechAPI para smartphones, tablets, laptops, smartwatches y monitores. Incluye comparación visual de 2–4 equipos, normalización de unidades y variantes con IDs por configuración, detección de conflictos entre fuentes y perfil "Uso general (equilibrado)" con ponderación de varias dimensiones y desglose de cobertura, además de criterios individuales. Los resultados siguen siendo candidatos sin verificar y no se guardan automáticamente.
 - SQLite nativo mediante `@capacitor-community/sqlite`, con importación inicial del seed y uso de `CapacitorSQLiteKnowledgeAdapter`.
 - Actualizador Android propio: GitHub Releases, DownloadManager en segundo plano, recuperación del estado de descarga y validación de paquete, versión, tamaño, estructura APK y continuidad del certificado.
 - Vista previa pública en GitHub Pages con manifiesto PWA, iconos instalables y service worker para shell/recursos del mismo origen.
@@ -60,6 +60,7 @@ El workflow falla de forma cerrada si ya existe el marcador de identidad y la ca
 
 ## Pendiente / no certificado en dispositivo
 
+- El perfil "Uso general" es un índice relativo de especificaciones comunes (RAM, almacenamiento, batería, resolución de cámara principal y peso); exige al menos tres dimensiones y 60% de cobertura. El procesador/GPU se muestra sin puntuar por nombre si no hay benchmarks comparables. Megapíxeles no equivalen a calidad fotográfica y mAh/Wh no equivalen directamente a horas de autonomía.
 - La revisión humana sigue siendo necesaria para promover datos `reported` a `verified` o `cross_checked`; el botón de guardado no verifica la exactitud de los proveedores.
 - Pruebas en emulador y teléfono físico: primera importación SQLite, cierre/reapertura, recuperación tras terminación del proceso y restauración de backup.
 - SQLCipher no está habilitado en esta fase.
