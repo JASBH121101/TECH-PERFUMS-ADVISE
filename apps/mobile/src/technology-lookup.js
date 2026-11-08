@@ -20,6 +20,7 @@ const FIELD_DEFINITIONS = Object.freeze([
   { key: "displayResolution", label: "Resolución", core: "display_resolution", tech: "display_resolution" },
   { key: "refreshRate", label: "Frecuencia de pantalla", core: "refresh_rate", tech: "refresh_rate" },
   { key: "battery", label: "Batería", core: "battery_capacity", tech: "battery_mah" },
+  { key: "batteryWh", label: "Energía de batería", core: "battery_capacity_wh", tech: "battery_wh" },
   { key: "camera", label: "Cámara", core: "camera", tech: "main_camera_mp" },
   { key: "weight", label: "Peso", core: "weight", tech: "weight_g" },
   { key: "connectivity", label: "Conectividad", core: "connectivity", tech: "connectivity" },
