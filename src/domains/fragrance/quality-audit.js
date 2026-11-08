@@ -239,6 +239,7 @@ export function renderFragranceQualityAuditMarkdown(report) {
     "- Evidence records: **" + report.totals.evidenceRecords + "**",
     "- Distinct source URLs: **" + report.totals.distinctSourceUrls + "**",
     "- Claim fields with valid evidence links: **" + report.totals.claimFieldsWithValidEvidenceLinks + "/" + report.totals.claimFields + "** (" + report.totals.claimFieldLinkCoveragePercent + "%)",
+    "- Claim fields with linked evidence not assessed (ledger unavailable): **" + (report.totals.claimFieldsWithEvidenceLinksNotAssessed ?? 0) + "**",
     "- Verified or cross-checked records: **" + report.totals.verifiedOrCrossCheckedRecords + "**",
     "- Reported records: **" + report.totals.reportedRecords + "**",
     "- Malformed evidence links: **" + report.totals.malformedEvidenceLinks + "**",
