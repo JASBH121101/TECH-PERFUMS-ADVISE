@@ -3,6 +3,13 @@
 **Reviewed:** 2026-11-08  
 **Decision:** research only; no supplemental product records have been imported.
 
+## Free-only rule
+
+JBAE fragrance research is restricted to sources that can be used at no cost without a payment card, paid trial, subscription, paid quota or metered billing. A free trial that can convert to a paid plan does **not** qualify. Do not register for, activate, call or integrate a paid provider as a fallback. If a free provider becomes paid, adds mandatory billing, or changes its reuse terms, disable that provider until a new no-cost option is reviewed.
+
+This rule applies to fragrance catalog expansion and performance evidence. The Beauty API and any other paid catalog API are excluded. No purchase, paid trial or subscription is authorized by this project decision.
+
+
 The existing Scento CC BY 4.0 snapshot remains the current bulk perfume seed in JBAE. Only no-cost sources are considered for the next phase; paid plans, trials, metered APIs and subscriptions are excluded. This document records free candidate sources for future perfume, body mist, body spray, attar/oil and performance-evidence coverage. A public webpage, API or downloadable file is not by itself permission to copy a catalog.
 
 ## Source decisions
