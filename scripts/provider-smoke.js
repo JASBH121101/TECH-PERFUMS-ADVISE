@@ -12,6 +12,7 @@ import {
   createSimanResearchProvider,
   createElVerdugoResearchProvider,
 } from "../src/research/providers.js";
+import { compareNicaraguaRetailerOffers } from "../src/research/nicaragua-retailer-comparison.js";
 
 const timeoutMs = 15_000;
 
@@ -245,6 +246,53 @@ async function run() {
       } else {
         throw error;
       }
+    }
+  }
+
+
+  try {
+    const comparison = await compareNicaraguaRetailerOffers({
+      subjectId: "smoke-samsung-galaxy-a17-4gb-128gb-grey",
+      offers: [
+        {
+          retailer: "radioshack",
+          url: "https://www.radioshackla.com/nicaragua/celular-samsung-a17-128-gb-6-7-470890800019-gris/p",
+        },
+        {
+          retailer: "laCuracao",
+          url: "https://www.lacuracaonline.com/nicaragua/celular-samsung-a17-128-gb-6-7-470890800019-gris/p",
+        },
+        {
+          retailer: "siman",
+          url: "https://ni.siman.com/celular-samsung-galaxy-a17-128gb-4gb-ram-pantalla-6-7---17-02-cm--octa-core-camara-trasera-triple-50mp-/p",
+        },
+      ],
+      providerOptions: {
+        radioshack: { timeoutMs, minRequestIntervalMs: 500 },
+        laCuracao: { timeoutMs, minRequestIntervalMs: 500 },
+        siman: { timeoutMs, minRequestIntervalMs: 500 },
+      },
+    });
+    console.log("Nicaragua Samsung A17 comparison: identity=" + comparison.identity.status +
+      "; price=" + comparison.priceComparison.status);
+    for (const offer of comparison.offers) {
+      console.log(offer.retailerName + ": " + offer.status +
+        "; GTIN=" + (offer.data.gtin ?? "not published") +
+        "; NIO price=" + (offer.data.price?.amount ?? "not published") +
+        "; stock=" + (offer.data.availability?.status ?? "not published"));
+    }
+    if (comparison.identity.status === "exact_variant" &&
+        comparison.priceComparison.status === "comparable") {
+      console.log("Nicaragua cross-retailer comparison: PASS — exact variant and comparable NIO prices.");
+    } else {
+      console.log("Nicaragua cross-retailer comparison: DEFERRED — exact identity/price comparability not yet certified.");
+    }
+  } catch (error) {
+    const message = String(error?.message ?? error);
+    if (/HTTP (?:403|404|429|5\d\d)|timed out|fetch failed|ECONN|ENOTFOUND|redirected outside/i.test(message)) {
+      console.log("Nicaragua cross-retailer comparison: DEFERRED — live retailer source unavailable (" + message + ")");
+    } else {
+      throw error;
     }
   }
 
