@@ -36,3 +36,13 @@ jobs:
 
       - name: Build complete fragrance knowledge seed
         run: npm run build:fragrance-library
+
+      - name: Publish fragrance library coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: fragrance-library-coverage
+          path: |
+            dist/fragrance-library/scento-library-coverage.json
+            dist/fragrance-library/scento-library-coverage.md
+          if-no-files-found: error
+          retention-days: 30
