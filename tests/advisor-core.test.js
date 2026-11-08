@@ -201,3 +201,53 @@ test("reports insufficient coverage instead of inventing a winner", () => {
   assert.equal(result.recommendation.decision, "insufficient_coverage");
   assert.equal(result.recommendation.winnerId, null);
 });
+
+
+test("integrates explainable fragrance preference matching into Fragrance Advisor", () => {
+  const advisor = new AdvisorCore();
+  const candidates = [
+    {
+      id: "soft-citrus", name: "Soft Citrus", productType: "perfume",
+      attributes: {
+        scentFamilies: ["citrus"], allNotes: ["bergamot", "lemon", "musk"],
+        intensityLevel: "soft", projectionLevel: "close",
+        timesOfDay: ["day"], climateTags: ["hot_humid"],
+      },
+    },
+    {
+      id: "sweet-evening", name: "Sweet Evening", productType: "perfume",
+      attributes: {
+        scentFamilies: ["gourmand"], allNotes: ["vanilla", "caramel", "amber"],
+        intensityLevel: "strong", projectionLevel: "strong",
+        timesOfDay: ["evening"], climateTags: ["cold"],
+      },
+    },
+  ];
+  const result = advisor.advise({
+    domain: "fragrance",
+    products: candidates,
+    profile: "hot_humid_daily",
+    preferences: {
+      preferredFamilies: ["citrus"],
+      preferredNotes: ["bergamot"],
+      avoidNotes: ["vanilla"],
+      occasion: "day",
+      climate: "hot_humid",
+      intensity: "soft",
+      projection: "close",
+    },
+  });
+  assert.equal(result.preferenceMatch.decision, "matched");
+  assert.equal(result.preferenceMatch.ranking[0].id, "soft-citrus");
+  assert.equal(result.preferenceMatch.ranking[0].eligibility, "eligible");
+  assert.equal(result.performance[0].longevity.status, "unavailable");
+});
+
+test("keeps preference matching absent for technology requests", () => {
+  const result = new AdvisorCore().advise({
+    domain: "technology",
+    products: phones,
+    profile: "balanced",
+  });
+  assert.equal(result.preferenceMatch, null);
+});
