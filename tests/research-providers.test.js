@@ -753,7 +753,7 @@ test("10ML provider maps detailed fragrance results and preserves its visible co
   assert.equal(records[0].source.type, "database");
   assert.equal(records[0].source.attribution, "Data: 10ML Fragrance Index");
   assert.equal(records[0].source.references[0], "https://10ml.com/perfume-api");
-  assert.match(records[0].source.url, /\\/api\\/v1\\/perfumes\\/lattafa-khamrah-edp$/u);
+  assert.match(records[0].source.url, /\/api\/v1\/perfumes\/lattafa-khamrah-edp$/u);
   assert.equal(records[0].source.license.includes("free commercial use"), true);
   assert.match(records[0].note, /remains unconfirmed in JBAE/u);
   assert.equal(calls.length, 1);
