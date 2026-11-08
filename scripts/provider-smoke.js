@@ -120,42 +120,58 @@ async function run() {
     timeoutMs, minRequestIntervalMs: 6_500,
   });
   // Only body mists are in the Open Beauty Facts scope; perfumes use fragrance sources.
-  // This bounded category lookup is not free-text search or a catalogue crawl.
+  // Three pages maximum, ten products per page, never a catalogue crawl.
   // The 6.5s pacing stays below the documented 10-search-requests/minute ceiling.
   const beautyCategoryTargets = ["body-mists"];
-  let beautySearchDeferred = false;
   for (const categoryTag of beautyCategoryTargets) {
-    if (beautySearchDeferred) break;
-    try {
-      const candidates = await openBeautyFacts.search({
-        domain: DOMAINS.FRAGRANCE,
-        subjectId: "smoke-open-beauty-facts-" + categoryTag,
-        field: "product_record",
-        query: "category:" + categoryTag,
-        limit: 2,
-      });
-      const uniqueCandidates = [...new Map(candidates.map(candidate => [candidate.id, candidate])).values()];
-      if (uniqueCandidates.length) {
-        for (const candidate of uniqueCandidates) {
+    const candidatesByGtin = new Map();
+    let candidateRows = 0;
+    let pagesChecked = 0;
+    let beautySearchDeferred = false;
+    for (const page of [1, 2, 3]) {
+      if (beautySearchDeferred) break;
+      try {
+        const candidates = await openBeautyFacts.search({
+          domain: DOMAINS.FRAGRANCE,
+          subjectId: "smoke-open-beauty-facts-" + categoryTag + "-page-" + page,
+          field: "product_record",
+          query: "category:" + categoryTag,
+          page,
+          limit: 10,
+        });
+        pagesChecked += 1;
+        candidateRows += candidates.length;
+        for (const candidate of candidates) {
           assert.match(candidate.source.attribution, /Open Beauty Facts/u);
           assert.match(candidate.source.license, /ODbL 1\.0/u);
+          candidatesByGtin.set(candidate.id, candidate);
         }
-        console.log("Open Beauty Facts " + categoryTag + ": CANDIDATES — " +
-          uniqueCandidates.map(candidate => JSON.stringify(candidate.value)).join("; ") +
-          "; unique GTINs, review-only, no import.");
-      } else {
-        console.log("Open Beauty Facts " + categoryTag +
-          ": NO ELIGIBLE BODY-MIST CANDIDATES in this bounded query; this does not prove global absence.");
+        console.log("Open Beauty Facts " + categoryTag + " page " + page +
+          ": " + candidates.length + " eligible review candidate(s).");
+      } catch (error) {
+        const message = String(error?.message ?? error);
+        console.log("Open Beauty Facts category discovery page " + page +
+          ": DEFERRED — " + message);
+        // Stop after an upstream block/rate limit rather than retrying more categories/pages.
+        if (/HTTP (?:403|404|429|5\d\d)|timed out|fetch failed|ECONN|ENOTFOUND/i.test(message)) {
+          beautySearchDeferred = true;
+        } else {
+          throw error;
+        }
       }
-    } catch (error) {
-      const message = String(error?.message ?? error);
-      console.log("Open Beauty Facts category discovery: DEFERRED — " + message);
-      // Stop after an upstream block/rate limit rather than retrying more categories.
-      if (/HTTP (?:403|404|429|5\d\d)|timed out|fetch failed|ECONN|ENOTFOUND/i.test(message)) {
-        beautySearchDeferred = true;
-      } else {
-        throw error;
-      }
+    }
+    const uniqueCandidates = [...candidatesByGtin.values()];
+    const duplicatesRemoved = candidateRows - uniqueCandidates.length;
+    if (uniqueCandidates.length) {
+      console.log("Open Beauty Facts " + categoryTag + ": " + pagesChecked +
+        "/3 pages checked; " + candidateRows + " candidate rows; " +
+        uniqueCandidates.length + " unique GTINs; " + duplicatesRemoved +
+        " duplicates removed — " +
+        uniqueCandidates.map(candidate => JSON.stringify(candidate.value)).join("; ") +
+        "; review-only, no import.");
+    } else {
+      console.log("Open Beauty Facts " + categoryTag + ": " + pagesChecked +
+        "/3 pages checked; no eligible body-mist candidates. This does not prove global absence.");
     }
   }
 

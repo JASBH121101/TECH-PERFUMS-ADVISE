@@ -303,9 +303,11 @@ export function createOpenBeautyFactsResearchProvider({
           throw new TypeError("Only category:body-mists is enabled for Open Beauty Facts in JBAE");
         }
         const limit = readLimit(request.limit, 5, 10);
+        const page = request.page ?? 1;
+        assertPositiveInteger(page, "page", 3);
         const url = new URL(OPEN_BEAUTY_FACTS_BASE + "/api/v2/search");
         url.searchParams.set("categories_tags_en", categoryTag);
-        url.searchParams.set("page", "1");
+        url.searchParams.set("page", String(page));
         url.searchParams.set("page_size", String(limit));
         url.searchParams.set(
           "fields",

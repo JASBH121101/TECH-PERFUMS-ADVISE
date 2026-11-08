@@ -895,6 +895,35 @@ test("Open Beauty Facts discovers bounded category candidates without assigning 
   assert.equal(Object.hasOwn(records[0], "image_url"), false);
 });
 
+test("Open Beauty Facts supports bounded page 3 and rejects page 4 without a request", async () => {
+  const requested = [];
+  const provider = createOpenBeautyFactsResearchProvider({
+    fetchImpl: async url => {
+      requested.push(new URL(String(url)));
+      return response({ products: [] });
+    },
+    minRequestIntervalMs: 0,
+  });
+  await provider.search({
+    query: "category:body-mists",
+    field: "name",
+    page: 3,
+    limit: 10,
+  });
+  assert.equal(requested.length, 1);
+  assert.equal(requested[0].searchParams.get("page"), "3");
+  assert.equal(requested[0].searchParams.get("page_size"), "10");
+  await assert.rejects(
+    () => provider.search({
+      query: "category:body-mists",
+      field: "name",
+      page: 4,
+    }),
+    /page must be an integer between 1 and 3/u,
+  );
+  assert.equal(requested.length, 1);
+});
+
 test("Open Beauty Facts category discovery rejects free text, malformed tags and out-of-scope categories", async () => {
   let calls = 0;
   const provider = createOpenBeautyFactsResearchProvider({
