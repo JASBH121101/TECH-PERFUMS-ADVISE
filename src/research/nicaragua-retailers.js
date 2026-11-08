@@ -686,7 +686,15 @@ export function createSimanResearchProvider({
         throw new Error("SIMAN VTEX request redirected outside its approved storefront");
       }
     }
-    return response;
+    if (!response || response.ok !== true) return response;
+    const payload = await response.json();
+    return {
+      ok: response.ok,
+      status: response.status,
+      url: response.url,
+      headers: response.headers,
+      json: async () => Array.isArray(payload) ? { products: payload } : payload,
+    };
   };
   const readJson = createJsonReader(safeFetch, {
     timeoutMs,
@@ -725,10 +733,10 @@ export function createSimanResearchProvider({
       const endpoint = "https://ni.siman.com/api/catalog_system/pub/products/search/" +
         encodeURIComponent(slug) + "/p";
       const body = await readJson(endpoint, "SIMAN VTEX public product search");
-      if (!Array.isArray(body)) throw new TypeError("SIMAN VTEX search returned an invalid product list");
-      const product = body.find(item =>
+      if (!Array.isArray(body.products)) throw new TypeError("SIMAN VTEX search returned an invalid product list");
+      const product = body.products.find(item =>
         typeof item?.linkText === "string" && item.linkText.toLowerCase() === slug.toLowerCase()
-      ) ?? (body.length === 1 && typeof body[0]?.linkText !== "string" ? body[0] : null);
+      ) ?? (body.products.length === 1 && typeof body.products[0]?.linkText !== "string" ? body.products[0] : null);
       if (!product) return [];
 
       const items = Array.isArray(product.items) ? product.items : [];
