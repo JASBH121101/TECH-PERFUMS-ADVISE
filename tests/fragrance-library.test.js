@@ -157,3 +157,62 @@ test("ships the complete 2026-10-29 open perfume reference snapshot", async () =
   const perfumeIds = bundle.snapshot.catalog.products.map((item) => item.id);
   assert.equal(new Set(perfumeIds).size, perfumeIds.length);
 });
+
+test("finds offline similarity candidates from shared notes and family without claiming equivalence", () => {
+  const first = sampleCsv();
+  const second = sampleCsv({
+    id: "sample-two",
+    name: "Sample Two",
+    top: "Bergamot; Mandarin",
+    heart: "Jasmine; Rose",
+    base: "Musk",
+    notes: "Bergamot; Mandarin; Jasmine; Rose; Musk",
+  }).split("\n").slice(1).join("\n");
+  const library = createScentoFragranceLibrary({
+    perfumesCsv: first + "\n" + second,
+    housesCsv: sampleHouses,
+    materialsCsv: sampleMaterials,
+  });
+  const similar = library.findSimilarPerfumes("sample-one");
+  assert.equal(similar.length, 1);
+  assert.equal(similar[0].product.id, "scento:sample-two");
+  assert.ok(similar[0].similarityScore > 0);
+  assert.ok(similar[0].sharedNotes.includes("Bergamot"));
+  assert.ok(similar[0].sharedFamilies.includes("White Bloom"));
+  assert.deepEqual(similar[0].matchReasons, ["notes", "families", "character", "seasons"]);
+  assert.match(similar[0].caveat, /not proof of smell equivalence/u);
+});
+
+test("imports all 1,479 source perfumes and 20,280 evidence records into KnowledgeStore idempotently", async () => {
+  const [perfumesCsv, housesCsv, materialsCsv] = await Promise.all([
+    readSource("perfumes.csv"),
+    readSource("houses.csv"),
+    readSource("materials.csv"),
+  ]);
+  const knowledgeStore = await KnowledgeStore.open({
+    adapter: new MemoryKnowledgeAdapter(),
+    clock: () => new Date("2026-10-29T00:00:00.000Z"),
+  });
+  const data = {
+    knowledgeStore,
+    perfumesCsv,
+    housesCsv,
+    materialsCsv,
+    importedAt: "2026-10-29T00:00:00.000Z",
+  };
+  const first = await importScentoFragranceLibrary(data);
+  assert.equal(first.perfumeCount, 1479);
+  assert.equal(first.houseCount, 160);
+  assert.equal(first.materialCount, 420);
+  assert.equal(first.evidenceCount, 20280);
+  assert.equal(first.importResult.newProductCount, 1479);
+  assert.equal(first.importResult.newRecordCount, 20280);
+  assert.equal(knowledgeStore.getProducts({ domain: "fragrance" }).length, 1479);
+  assert.equal(knowledgeStore.queryEvidence({ domain: "fragrance" }).length, 20280);
+
+  const second = await importScentoFragranceLibrary(data);
+  assert.equal(second.importResult.newProductCount, 0);
+  assert.equal(second.importResult.newRecordCount, 0);
+  assert.equal(second.importResult.duplicateProductCount, 1479);
+  assert.equal(second.importResult.duplicateRecordCount, 20280);
+});
