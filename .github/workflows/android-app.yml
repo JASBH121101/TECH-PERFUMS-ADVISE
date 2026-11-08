@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 35
     env:
       APP_VERSION: "0.4.0"
-      VERSION_CODE: \${{ 1000 + github.run_number }}
+      VERSION_CODE: ${{ 1000 + github.run_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -72,7 +72,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.android/debug.keystore
-          key: jbae-android-signing-v1-\${{ runner.os }}
+          key: jbae-android-signing-v1-${{ runner.os }}
       - name: Ensure stable signing identity
         shell: bash
         run: |
@@ -95,8 +95,8 @@ jobs:
           fi
       - name: Set Android version and persistent signing configuration
         env:
-          APP_VERSION: \${{ env.APP_VERSION }}
-          VERSION_CODE: \${{ env.VERSION_CODE }}
+          APP_VERSION: ${{ env.APP_VERSION }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
         run: |
           python3 - <<'PY'
           import os, re
@@ -119,10 +119,10 @@ jobs:
               }
               '''
               source = source.replace("android {", "android {\n" + block, 1)
-          build_types = re.search(r'buildTypes\\s*\\{', source)
+          build_types = re.search(r'buildTypes\s*\{', source)
           if not build_types:
               raise SystemExit("Gradle buildTypes block was not found.")
-          release = re.search(r'release\\s*\\{', source[build_types.end():])
+          release = re.search(r'release\s*\{', source[build_types.end():])
           if not release:
               raise SystemExit("Gradle release build type was not found.")
           release_start = build_types.end() + release.start()
@@ -134,7 +134,7 @@ jobs:
               end += 1
           block = source[release_start:end]
           if "signingConfig" not in block:
-              block = block[:-1] + "\\n            signingConfig signingConfigs.release\\n        }"
+              block = block[:-1] + "\n            signingConfig signingConfigs.release\n        }"
               source = source[:release_start] + block + source[end:]
           path.write_text(source, encoding="utf-8")
           PY
@@ -145,7 +145,7 @@ jobs:
           ./gradlew assembleRelease --no-daemon
       - name: Verify APK signature and package
         env:
-          VERSION_CODE: \${{ env.VERSION_CODE }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
         run: |
           set -euo pipefail
           APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
@@ -158,11 +158,11 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ~/.android/debug.keystore
-          key: jbae-android-signing-v1-\${{ runner.os }}
+          key: jbae-android-signing-v1-${{ runner.os }}
       - name: Mark signing identity as established
         if: success() && steps.signing-cache.outputs.cache-hit != 'true'
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           echo "JBAE Android signing identity is stored in the protected GitHub Actions cache. Builds must fail closed if the cache is missing." > .github/jbae-android-signing-key-persisted
@@ -173,7 +173,7 @@ jobs:
           git push origin "HEAD:$GITHUB_REF_NAME"
       - name: Publish installable APK release
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk JBAE.apk
@@ -187,7 +187,7 @@ jobs:
           fi
       - name: Verify published APK asset
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           URL="https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/download/jbae-v$APP_VERSION/JBAE.apk"
