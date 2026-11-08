@@ -95,7 +95,7 @@ test("same barcode cannot conceal a conflicting RAM or storage configuration", a
 test("retailer internal SKU mislabeled as UPC is not treated as a universal barcode", async () => {
   const skuOnly = fakeProvider({
     name: "Samsung A17 4GB + 128GB Gris",
-    identifiers: { gtin: null, upc: "470890800019" },
+    identifiers: { gtin: null, upc: "470890800019", mpn: null },
   });
   const withGtin = fakeProvider({
     name: "Samsung A17 4GB + 128GB Gris",
@@ -105,7 +105,8 @@ test("retailer internal SKU mislabeled as UPC is not treated as a universal barc
     offers: offers.slice(0, 2),
     providers: { radioshack: skuOnly, laCuracao: withGtin },
   });
-  assert.equal(resultValue.identity.status, "review_required");
+  assert.equal(resultValue.offers[0].status, "identity_incomplete");
+  assert.equal(resultValue.identity.status, "incomplete");
   assert.equal(resultValue.priceComparison.status, "blocked_identity");
 });
 
