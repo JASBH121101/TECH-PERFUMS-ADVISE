@@ -1,0 +1,12 @@
+{
+  "name": "JBAE · Advisor System",
+  "short_name": "JBAE",
+  "description": "Asesor independiente de fragancias y tecnología.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090d13",
+  "theme_color": "#090d13",
+  "lang": "es",
+  "icons": []
+}
