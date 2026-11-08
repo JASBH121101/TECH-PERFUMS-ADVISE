@@ -91,6 +91,7 @@ export {
   FRAGRANCE_CONCENTRATIONS,
 } from "./domains/fragrance/adapter.js";
 export { buildFragrancePerformanceProfile } from "./domains/fragrance/performance.js";
+export { matchFragrances } from "./domains/fragrance/matching.js";
 export {
   auditFragranceLibrary,
   renderFragranceQualityAuditMarkdown,
