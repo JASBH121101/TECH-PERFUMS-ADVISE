@@ -13,6 +13,7 @@ import {
   buildTechnologyComparison,
   TECHNOLOGY_COMPARISON_LOOKUP_FIELDS,
   TECHNOLOGY_COMPARISON_METRICS,
+  TECHNOLOGY_COMPARISON_PROFILES,
   buildTechnologyApprovalCandidate,
   saveTechnologyCandidate,
 } from "./technology-comparison.js";
@@ -37,7 +38,7 @@ const state = {
   techLookupResult: null,
   techMode: "lookup",
   techCompareModels: ["", "", "", ""],
-  techCompareMetric: "ramGB",
+  techCompareMetric: "general",
   techComparisonStatus: "idle",
   techComparisonResult: null,
   techSaveStatus: "idle",
@@ -298,15 +299,23 @@ function renderTechResults() {
 }
 
 function renderTechComparisonForm() {
-  const metricOptions=TECHNOLOGY_COMPARISON_METRICS.map(m=>`<option value="${m.value}" ${state.techCompareMetric===m.value?"selected":""}>${escapeHtml(m.label)}</option>`).join("");
+  const profileOptions=TECHNOLOGY_COMPARISON_PROFILES.map(profile=>
+    `<option value="${profile.value}" ${state.techCompareMetric===profile.value?"selected":""}>${escapeHtml(profile.label)}</option>`);
+  const metricOptions=TECHNOLOGY_COMPARISON_METRICS.map(metric=>
+    `<option value="${metric.value}" ${state.techCompareMetric===metric.value?"selected":""}>${escapeHtml(metric.label)}</option>`);
   const inputs=state.techCompareModels.map((model,i)=>`<div class="field-group"><label for="tech-compare-model-${i+1}">DISPOSITIVO ${i+1} ${i<2?"· OBLIGATORIO":"· OPCIONAL"}</label><input id="tech-compare-model-${i+1}" autocomplete="off" maxlength="120" placeholder="${i===0?"Ej.: Samsung Galaxy S24 Ultra":i===1?"Ej.: Xiaomi 14T Pro":"Añadir otro modelo"}" value="${escapeHtml(model)}" ${i<2?"required":""}></div>`).join("");
+  const generalSelected=state.techCompareMetric==="general";
   return `<form id="tech-compare-form" class="tech-compare-form">
     <div class="form-heading"><strong>Comparar de 2 a 4 dispositivos</strong><p>Consulta las mismas especificaciones en CoreInfo y TechAPI. Los conflictos entre fuentes se mostrarán, no se corregirán por suposición.</p></div>
     <div class="field-group"><label for="tech-resource">CATEGORÍA</label><select id="tech-resource">
       <option value="smartphones" ${state.techResource==="smartphones"?"selected":""}>Celulares</option><option value="tablets" ${state.techResource==="tablets"?"selected":""}>Tablets</option><option value="laptops" ${state.techResource==="laptops"?"selected":""}>Laptops</option><option value="watches" ${state.techResource==="watches"?"selected":""}>Smartwatches</option><option value="monitors" ${state.techResource==="monitors"?"selected":""}>Monitores</option>
     </select></div>
     <div class="tech-compare-inputs">${inputs}</div>
-    <div class="field-group"><label for="tech-compare-metric">CRITERIO DE PUNTUACIÓN RELATIVA</label><select id="tech-compare-metric">${metricOptions}</select><span class="field-hint">Solo se puntúa si todos los equipos tienen ese dato y no existe conflicto. No es una calificación universal.</span></div>
+    <div class="field-group"><label for="tech-compare-metric">PERFIL DE ANÁLISIS</label><select id="tech-compare-metric">
+      ${profileOptions.join("")}<optgroup label="Análisis por característica">${metricOptions.join("")}</optgroup>
+    </select><span class="field-hint">${generalSelected
+      ?"Uso general pondera memoria, almacenamiento, batería, cámara y portabilidad. El procesador se muestra para revisión, pero no se inventa una puntuación sin benchmarks comparables."
+      :"El análisis individual compara solo la característica seleccionada y no representa el equilibrio general del dispositivo."}</span></div>
     <button class="primary-action tech-action" type="submit" ${state.techComparisonStatus==="loading"?"disabled":""}>${state.techComparisonStatus==="loading"?"Consultando dispositivos...":"Comparar dispositivos"} <span>↗</span></button>
   </form>
   ${state.techComparisonStatus==="loading"?'<div class="loading-inline">Consultando fuentes para cada dispositivo...</div>':renderTechComparisonResults()}`;
@@ -317,13 +326,32 @@ function renderTechComparisonResults() {
   if(result.error)return `<div class="warning-panel"><strong>No se pudo completar la comparación.</strong>${escapeHtml(result.error)}</div>`;
   const header=result.products.map(p=>`<th><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.brand)}</small></th>`).join("");
   const rows=result.rows.map(row=>`<tr><th scope="row">${escapeHtml(row.label)}</th>${row.values.map(v=>`<td class="${v.conflict?"comparison-conflict":""}">${escapeHtml(v.display)}${v.conflict?'<small class="conflict-label">Conflicto entre fuentes</small>':""}</td>`).join("")}</tr>`).join("");
-  const ranking=result.ranking?`<section class="comparison-rank"><strong>Puntuación relativa · ${escapeHtml(result.metric.label)}</strong><ol>${result.ranking.ranking.map(x=>`<li><span>${escapeHtml(x.name)}</span><b>${x.score===null?"Sin datos":x.score+"/100"}</b></li>`).join("")}</ol><small>El puntaje compara únicamente el criterio elegido.</small></section>`:
-  `<div class="warning-panel"><strong>No hay datos comparables para puntuar ${escapeHtml(result.metric.label.toLowerCase())}.</strong>La tabla conserva los valores disponibles, pero no calcula un ganador cuando falta información o hay discrepancias.</div>`;
+  let ranking="";
+  if(result.ranking){
+    ranking=`<section class="comparison-rank"><strong>${result.profile?"Puntuación de uso general (equilibrado)":"Puntuación relativa · "+escapeHtml(result.metric.label)}</strong>
+      <ol>${result.ranking.ranking.map(x=>`<li><span>${escapeHtml(x.name)}</span><b>${x.score===null?"Sin datos":x.score+"/100"}</b></li>`).join("")}</ol>
+      <small>${result.profile
+        ?"Índice comparativo entre estos modelos. Cobertura del perfil: "+result.profile.coveragePercent+"% ("+result.profile.availableDimensionCount+" dimensiones comunes)."
+        :"El puntaje compara únicamente el criterio elegido."}</small></section>`;
+  } else {
+    ranking=`<div class="warning-panel"><strong>${result.profile?"No hay suficientes datos comunes para calcular el equilibrio general.":"No hay datos comparables para puntuar "+escapeHtml(result.metric.label.toLowerCase())+"."}</strong>
+      ${result.profile
+        ?"Se requieren al menos tres dimensiones comunes y una cobertura mínima del 60%. Cobertura actual: "+result.profile.coveragePercent+"%."
+        :"La tabla conserva los valores disponibles, pero no calcula un ganador cuando falta información o hay discrepancias."}</div>`;
+  }
+  let profileDetails="";
+  if(result.profile){
+    const devices=result.profile.scores.map(device=>`<article class="profile-device"><strong>${escapeHtml(device.name)}</strong><div class="profile-dimensions">${device.dimensions.map(d=>`<div><span>${escapeHtml(d.label)} <small>${d.weightPercent}%</small></span><b>${d.score===null?"N/D":d.score+"/100"}</b></div>`).join("")}</div></article>`).join("");
+    const excluded=result.profile.excludedDimensions.length
+      ?`<p class="field-hint">No incluidas por falta de datos comunes: ${result.profile.excludedDimensions.map(x=>escapeHtml(x.label)).join(", ")}.</p>`:"";
+    profileDetails=`<section class="comparison-rank"><strong>Desglose del equilibrio</strong>${devices}${excluded}<ul>${result.profile.notes.map(note=>`<li>${escapeHtml(note)}</li>`).join("")}</ul></section>`;
+  }
   const identity=result.identityPairs.map(x=>`<li><span>${escapeHtml(x.left)} ↔ ${escapeHtml(x.right)}</span><b>${escapeHtml(x.matchType.replaceAll("_"," "))}</b>${x.variantConflicts?.length?`<small>Variantes distintas: ${escapeHtml(x.variantConflicts.join(", "))}</small>`:""}</li>`).join("");
   const sources=result.products.map(p=>`<div class="comparison-source-card"><strong>${escapeHtml(p.name)}</strong>${p.sources.map(s=>{const url=safeExternalUrl(s.url);return `<span>${escapeHtml(s.name)} · ${escapeHtml(s.status)}</span>${url?`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Fuente ↗</a>`:""}`;}).join("")}</div>`).join("");
   return `<section class="tech-comparison-results"><div class="result-section-title"><strong>Comparación técnica</strong><small>${result.products.length} equipos</small></div>
     <div class="comparison-table-wrap"><table class="tech-comparison-table"><thead><tr><th>Especificación</th>${header}</tr></thead><tbody>${rows}</tbody></table></div>
-    ${ranking}<section class="comparison-rank"><strong>Identidad y variantes</strong><ul>${identity}</ul></section>
+    ${ranking}${profileDetails}
+    <section class="comparison-rank"><strong>Identidad y variantes</strong><ul>${identity}</ul></section>
     <section class="comparison-sources"><strong>Procedencia de los datos</strong>${sources}</section>
     <div class="result-disclaimer">${escapeHtml(result.disclaimer)} Ningún dispositivo fue guardado en la biblioteca.</div></section>`;
 }
