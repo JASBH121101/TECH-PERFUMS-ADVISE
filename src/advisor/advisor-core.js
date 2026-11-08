@@ -3,6 +3,7 @@ import { normalizeFragranceProduct } from "../domains/fragrance/adapter.js";
 import { buildFragrancePerformanceProfile } from "../domains/fragrance/performance.js";
 import { matchFragrances } from "../domains/fragrance/matching.js";
 import { parseFragranceCustomerMessage } from "../domains/fragrance/intent.js";
+import { buildFragranceCustomerExplanation } from "../domains/fragrance/customer-explanation.js";
 import { normalizeTechnologyProduct } from "../domains/technology/adapter.js";
 import { recommendProducts } from "../recommendation/recommend.js";
 
@@ -125,6 +126,10 @@ export class AdvisorCore {
         })
       : null;
 
+    const customerExplanation = request.domain === DOMAINS.FRAGRANCE
+      ? buildFragranceCustomerExplanation({ preferenceMatch, performance })
+      : null;
+
     return Object.freeze({
       engineId: "JBAE",
       domain: request.domain,
@@ -138,6 +143,7 @@ export class AdvisorCore {
       recommendation,
       preferenceMatch,
       customerIntent,
+      customerExplanation,
       performance,
       limitations: Object.freeze([
         "Recommendations rank only the supplied candidates; the advisor does not discover or fetch products in this operation.",
