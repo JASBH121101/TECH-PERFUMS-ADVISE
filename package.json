@@ -12,5 +12,9 @@
     "check": "node --check src/index.js && node --test",
     "smoke:providers": "node scripts/provider-smoke.js",
     "build:fragrance-library": "node scripts/build-fragrance-library.mjs"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
   }
 }
