@@ -71,3 +71,46 @@ test("guarda variantes de RAM/almacenamiento del mismo modelo como SKU distintos
  assert.deepEqual(a.product.variant,{ramGB:8,storageGB:256});
  assert.deepEqual(b.product.variant,{ramGB:12,storageGB:512});
 });
+
+
+test("el perfil Uso general pondera dimensiones diversas y desglosa cada puntuación",()=>{
+ const devices=[
+  lookup("Phone A","profile-a",[["brand","Acme"],["ram","12 GB"],["storage","512 GB"],["battery","5000 mAh"],["camera","50 MP"],["weight","190 g"]]),
+  lookup("Phone B","profile-b",[["brand","Beta"],["ram","8 GB"],["storage","256 GB"],["battery","4500 mAh"],["camera","64 MP"],["weight","210 g"]]),
+ ];
+ const result=buildTechnologyComparison({lookups:devices,resource:"smartphones"});
+ assert.equal(result.metric.value,"general");
+ assert.equal(result.profile.available,true);
+ assert.equal(result.profile.coveragePercent,100);
+ assert.equal(result.profile.availableDimensionCount,5);
+ assert.equal(result.ranking.decision,"ranked");
+ assert.equal(result.profile.scores.length,2);
+ assert.ok(result.profile.scores.every(item=>item.dimensions.length===5));
+ assert.ok(result.profile.notes.some(note=>note.includes("megapíxeles")));
+});
+
+test("el perfil no inventa puntuación con menos de tres dimensiones comunes",()=>{
+ const result=buildTechnologyComparison({
+  resource:"smartphones",
+  lookups:[
+   lookup("Phone A","sparse-a",[["ram","8 GB"],["storage","256 GB"]]),
+   lookup("Phone B","sparse-b",[["ram","12 GB"],["storage","512 GB"]]),
+  ],
+ });
+ assert.equal(result.profile.available,false);
+ assert.equal(result.ranking,null);
+ assert.equal(result.profile.coveragePercent,40);
+});
+
+test("el perfil no mezcla capacidades de batería en mAh y Wh",()=>{
+ const result=buildTechnologyComparison({
+  resource:"laptops",
+  lookups:[
+   lookup("Laptop A","battery-a",[["ram","16 GB"],["storage","512 GB"],["weight","1.4 kg"]]),
+   lookup("Laptop B","battery-b",[["ram","8 GB"],["storage","256 GB"],["weight","1.6 kg"]], [["batteryWh","60 Wh"]]),
+  ],
+ });
+ assert.equal(result.profile.dimensions.some(item=>item.label==="Batería"),false);
+ assert.equal(result.profile.coveragePercent,55);
+ assert.equal(result.profile.available,false);
+});
