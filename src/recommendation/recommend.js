@@ -143,6 +143,12 @@ const PROFILES = deepFreeze({
       { field: "versatilityScore", weight: 2 },
       { field: "longevityMinHours", weight: 1 },
     ]),
+    balanced: Object.freeze([
+      { field: "versatilityScore", weight: 3 },
+      { field: "climateSuitabilityScore", weight: 2 },
+      { field: "occasionFitScore", weight: 2 },
+      { field: "freshnessScore", weight: 1 },
+    ]),
   }),
 });
 
