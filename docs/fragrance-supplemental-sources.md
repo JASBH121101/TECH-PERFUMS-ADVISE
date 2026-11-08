@@ -51,7 +51,7 @@ Do not mix ODbL-derived records into the existing CC BY 4.0 seed without decidin
 - Scento API: https://www.scento.com/developers/perfume-api
 - Scento Terms: https://www.scento.com/terms
 - Open Beauty Facts API project separation: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/tutorials/scanning-cosmetics-pet-food-and-other-products/
-- Open Beauty Facts license guidance: https://openfoodfacts.github.io/openfoodfacts-server/dev/how-to-download-the-data/
+- Open Beauty Facts license guidance: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/tutorials/license-be-on-the-legal-side/
 - INCIDB database license: https://github.com/INCIDB/cosmetics-skincare-inci-database/blob/master/LICENSE
 - The Beauty API FAQ and reuse terms: https://thebeautyapi.com/faq
 - SMELLIONAIRE dataset: https://smellionaire.store/data
