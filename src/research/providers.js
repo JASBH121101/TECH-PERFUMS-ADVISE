@@ -229,6 +229,7 @@ export function createOpenBeautyFactsResearchProvider({
       }
       const field = requireText(request.field, "field");
       const url = new URL(OPEN_BEAUTY_FACTS_BASE + "/api/v3/product/" + barcode + ".json");
+      url.searchParams.set("product_type", "beauty");
       url.searchParams.set(
         "fields",
         "code,product_name,product_name_en,brands,categories,categories_tags,ingredients_text,ingredients,last_modified_t",
@@ -250,15 +251,17 @@ export function createOpenBeautyFactsResearchProvider({
           name: "Open Beauty Facts",
           url: sourceUrl,
           type: SOURCE_TYPES.DATABASE,
-          attribution: "Contains information from Open Beauty Facts, made available under the Open Database License (ODbL) 1.0.",
+          attribution: "Product data from Open Beauty Facts; database under ODbL 1.0 and individual contents under Database Contents License 1.0.",
           references: [
             "https://world.openbeautyfacts.org/",
             OPEN_BEAUTY_FACTS_ODBL,
+            "https://opendatacommons.org/licenses/dbcl/1-0/",
+            "https://creativecommons.org/licenses/by-sa/3.0/",
           ],
-          license: "ODbL 1.0 for the database; individual contents and product images may have separate rights. Images are not imported.",
+          license: "Database: ODbL 1.0; individual contents: Database Contents License 1.0; product images: CC BY-SA 3.0 (not requested or imported).",
         },
         observedAt: isoNow(clock),
-        note: "Exact cosmetics barcode lookup only. Open Beauty Facts records are community-contributed; verify the package, exact item and category. categories/categories_tags are raw source taxonomy, not an approved JBAE productType. Product images are deliberately excluded because their rights are separate. ODbL attribution and share-alike conditions must be preserved if a derivative database is distributed. This candidate remains unconfirmed.",
+        note: "Exact cosmetics barcode lookup only. Open Beauty Facts records are community-contributed; verify the package, exact item and category. categories/categories_tags are raw source taxonomy, not an approved JBAE productType. Product images are deliberately excluded because they use separate CC BY-SA 3.0 rights. The database is ODbL 1.0 and individual contents use Database Contents License 1.0; preserve the applicable notices and share-alike conditions. This candidate remains unconfirmed.",
       }];
     },
   });
