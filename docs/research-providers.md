@@ -7,6 +7,7 @@ JBAE's provider adapters are read-only candidate collectors. Every returned clai
 | Domain / category | Current source | Supported fields in this adapter | Coverage status |
 |---|---|---|---|
 | Fragrance | Scento | Identity, house, perfumer, year, concentration, family, subfamily, character, notes, accords, signature materials, seasons and wear hours | Live provider; bounded smoke test |
+| Cosmetics / body products | Open Beauty Facts | Name, brand, raw category tags, GTIN, ingredient-label text and package quantity when present | Bounded structured category-tag lookup plus optional exact GTIN lookup; source taxonomy remains untyped and unconfirmed. |
 | Technology categories | CoreInfo | Smartphones, laptops, tablets, smartwatches, headphones, earbuds, speakers, TVs, monitors and consoles/handhelds (record-dependent) | Live exact-slug JSON provider; bounded smoke test |
 | Nicaragua technology retail | SICSA Nicaragua | Exact product identity, SKU, NIO price, explicit stock quantity/status and sitewide delivery notice | Live exact-product page provider; tax and shipping caveats retained |
 | Smartphones / tablets | Wikidata | Identity, manufacturer, OS, device type, release date, display diagonal, RAM, storage, CPU and GPU | Partial and uneven |
@@ -30,6 +31,19 @@ A mapped field means the provider understands its Wikidata property. It does not
 Documentation: https://www.scento.com/developers/perfume-api  
 Terms: https://www.scento.com/terms-of-service#perfume-api
 
+## Open Beauty Facts cosmetics and body-product discovery
+
+- Provider ID: open-beauty-facts-cosmetics; read-only, no API key and no payment dependency.
+- Structured category search: pass category:<taxonomy-slug> as the research query. The adapter uses GET /api/v2/search with categories_tags_en, page 1 and a caller-bounded page size (maximum 10). It requests product names, brands, source category tags, ingredient-label fields and package quantity where present.
+- Exact GTIN/EAN/UPC lookup remains available through GET /api/v3/product/{code}.json, but it is optional. Category discovery does not require the user to supply a barcode.
+- Open Beauty Facts documents API v2 as deprecated but still supported. v2/v3 provide structured filters, not free-text product search. The documented search ceiling is 10 requests/minute/IP; the adapter defaults to a 6.5-second request interval. The API docs also ask API users to submit an API usage form.
+- The live smoke probes category tags body-mists, body-sprays, attars, attar, perfume-oils, body-oils, body-lotions, body-creams, deodorants, perfumes and decants, with at most two records per tag. This is bounded discovery, not a catalogue crawl.
+- An empty category result means only that no product was returned by that bounded query; it is not proof that the category or product type does not exist. A returned tag is upstream community taxonomy, not an approved JBAE productType; exact item identity and product form require review. Body creams are not silently relabelled as body lotions, and deodorants remain distinct from perfumes.
+- The database is ODbL 1.0, individual contents are Database Contents License 1.0 and images use CC BY-SA 3.0. The adapter never requests image fields. Product records are community-contributed and can be incomplete or inaccurate; all claims remain unconfirmed.
+
+API overview: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/  
+Structured category search: https://openfoodfacts.github.io/documentation/docs/Product-Opener/v2/search/get-search/  
+Open Beauty Facts: https://world.openbeautyfacts.org/
 ## 10ML Fragrance Index
 
 - Provider ID: `10ml-fragrance-index`; free, read-only JSON REST API with no API key or account.
