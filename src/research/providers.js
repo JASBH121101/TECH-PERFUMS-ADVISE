@@ -54,7 +54,7 @@ function pickFragranceValue(detail, field) {
     seasons: detail.wears?.seasons,
     wear_hours: detail.wears?.hours,
   };
-  return map[field] ?? map[field.replace(/[A-Z]/gu, letter => `_${letter.toLowerCase()}`)];
+  return map[field] ?? map[field.replace(/[A-Z]/gu, letter => "_" + letter.toLowerCase())];
 }
 
 const TENML_BASE = "https://mcp.10ml.com/api/v1";
