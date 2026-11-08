@@ -288,7 +288,7 @@ test("SIMAN does not accept mismatched VTEX product records or an external API r
   });
   await assert.rejects(
     () => redirect.search({ query: url, field: "name" }),
-    /redirected outside its approved storefront/u,
+    /redirected outside its exact public endpoint allowlist/u,
   );
 });
 
