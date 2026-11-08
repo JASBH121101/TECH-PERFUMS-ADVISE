@@ -51,3 +51,23 @@ El workflow \`JBAE Android App\` repite los pasos en un runner limpio y publica 
 - Los resultados TECH siguen sin verificar. Comparación de 2–4 dispositivos, normalización de variantes, persistencia con aprobación y cotejo entre fuentes siguen pendientes.
 - Todavía no hay prueba en dispositivo físico ni APK Release firmado.
 - La base SQLite local está configurada sin cifrado SQLCipher en esta fase.
+
+
+## Web preview on GitHub Pages
+
+After the Pages deployment workflow is enabled, the standalone preview is published at:
+
+\`https://jasbh121101.github.io/TECH-PERFUMS-ADVISE/\`
+
+The web preview loads the same interface and fragrance seed. Browser preview storage is session-memory only; the installed Android app uses native SQLite.
+
+The header refresh icon checks the official GitHub Releases feed. In a browser it offers the published APK download. In Android it uses the native updater and Android's package installer.
+
+## Signed Android updates
+
+- Package ID remains \`com.jb.advisor.mobile\`.
+- Release builds use a persistent JBAE-specific Android signing key restored from the GitHub Actions cache.
+- The workflow fails closed if a previously established key cache is missing; it must never silently rotate the signing identity.
+- The native updater validates package ID, version, completed file size, APK structure and signing-certificate continuity before opening Android's installer.
+- Android still requires user confirmation. Silent installation is not supported.
+- The first transition from the earlier CI debug APK may require a one-time uninstall because that earlier workflow did not preserve its signing key. Subsequent releases retain the same signing identity.
