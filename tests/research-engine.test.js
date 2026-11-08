@@ -155,3 +155,44 @@ test("does not stage invalid candidates or exceed pending candidate capacity", a
     approved: true,
   }), /addEvidence/);
 });
+
+
+test("research candidates preserve source attribution, references and license metadata", async () => {
+  const provider = baseProvider({
+    id: "open-beauty-facts-cosmetics",
+    async search() {
+      return [{
+        id: "3560070791460",
+        value: ["en:body-mists"],
+        confidence: 0.72,
+        source: {
+          name: "Open Beauty Facts",
+          url: "https://world.openbeautyfacts.org/product/3560070791460",
+          type: "database",
+          attribution: "Contains information from Open Beauty Facts under ODbL 1.0.",
+          references: [
+            "https://world.openbeautyfacts.org/",
+            "https://opendatacommons.org/licenses/odbl/1-0/",
+          ],
+          license: "ODbL 1.0; individual contents may have separate rights",
+        },
+        observedAt: "2026-11-08T14:00:00.000Z",
+        note: "Raw categories only; product type awaits review.",
+      }];
+    },
+  });
+  const engine = new ResearchEngine({ providers: [provider], clock });
+  const result = await engine.research({
+    ...request,
+    field: "category",
+    providerId: "open-beauty-facts-cosmetics",
+  });
+  const source = result.candidates[0].evidence.source;
+  assert.equal(source.attribution, "Contains information from Open Beauty Facts under ODbL 1.0.");
+  assert.deepEqual(source.references, [
+    "https://world.openbeautyfacts.org/",
+    "https://opendatacommons.org/licenses/odbl/1-0/",
+  ]);
+  assert.match(source.license, /ODbL 1.0/u);
+  assert.equal(result.candidates[0].evidence.status, "unconfirmed");
+});
