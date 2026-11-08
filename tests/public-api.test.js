@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import * as engine from "../src/index.js";
+import * as engine from "jb-advisor-engine";
 
 test("public entry point exposes stable engine metadata", () => {
   assert.equal(engine.ENGINE_NAME, "JB Advisor Engine");
