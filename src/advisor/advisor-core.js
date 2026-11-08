@@ -2,6 +2,7 @@ import { DOMAINS } from "../core/domains.js";
 import { normalizeFragranceProduct } from "../domains/fragrance/adapter.js";
 import { buildFragrancePerformanceProfile } from "../domains/fragrance/performance.js";
 import { matchFragrances } from "../domains/fragrance/matching.js";
+import { parseFragranceCustomerMessage } from "../domains/fragrance/intent.js";
 import { normalizeTechnologyProduct } from "../domains/technology/adapter.js";
 import { recommendProducts } from "../recommendation/recommend.js";
 
@@ -80,12 +81,20 @@ export class AdvisorCore {
       ? this.#knowledgeStore.getEvidenceStore()
       : this.#evidenceStore;
     const minimumScoredCoverage = request.minimumScoredCoverage ?? this.#minimumScoredCoverage;
+    const customerIntent = request.domain === DOMAINS.FRAGRANCE && request.customerMessage
+      ? parseFragranceCustomerMessage(request.customerMessage)
+      : null;
+    const preferences = customerIntent
+      ? { ...customerIntent.preferences, ...(request.preferences ?? {}) }
+      : request.preferences;
+    const resolvedProfile = request.profile ??
+      (customerIntent?.preferences.performancePriority === "long_lasting" ? "long_lasting" : undefined);
 
     const evidencePolicy = request.evidencePolicy ?? {};
     const recommendation = recommendProducts({
       products,
       priorities: request.priorities,
-      profile: request.profile,
+      profile: resolvedProfile,
       evidenceStore,
       evidencePolicy,
       minimumScoredCoverage,
@@ -97,10 +106,11 @@ export class AdvisorCore {
           { allowReported: evidencePolicy.allowReported === true },
         )))
       : null;
-    const preferenceMatch = request.domain === DOMAINS.FRAGRANCE && request.preferences
+    const preferenceMatch = request.domain === DOMAINS.FRAGRANCE && preferences &&
+      Object.keys(preferences).some(key => key !== "performancePriority")
       ? matchFragrances({
           products,
-          preferences: request.preferences,
+          preferences,
           minimumMatchCoverage: request.minimumMatchCoverage ?? 60,
         })
       : null;
@@ -117,6 +127,7 @@ export class AdvisorCore {
       }),
       recommendation,
       preferenceMatch,
+      customerIntent,
       performance,
       limitations: Object.freeze([
         "Recommendations rank only the supplied candidates; the advisor does not discover or fetch products in this operation.",
