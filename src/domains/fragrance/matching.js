@@ -82,11 +82,10 @@ export function matchFragrances({ products, preferences = {}, minimumMatchCovera
   const projectionTarget = preferences.projection === undefined ? null : normalizeText(preferences.projection);
   const allowedTypes = normalizeList(preferences.productTypes, "productTypes");
 
-  const criteria = [
-    { key: "scentFamilies", weight: 25, preferred: preferredFamilies },
-    { key: "notes", weight: 30, preferred: preferredNotes },
-    { key: "characterTraits", weight: 15, preferred: preferredCharacters },
-  ];
+  const criteria = [];
+  if (preferredFamilies.length) criteria.push({ key: "scentFamilies", weight: 25 });
+  if (preferredNotes.length) criteria.push({ key: "notes", weight: 30 });
+  if (preferredCharacters.length) criteria.push({ key: "characterTraits", weight: 15 });
   if (occasion) criteria.push({ key: "occasion", weight: 10 });
   if (climate) criteria.push({ key: "climate", weight: 10 });
   if (intensityTarget) criteria.push({ key: "intensity", weight: 6 });
