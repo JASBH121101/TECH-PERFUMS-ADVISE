@@ -92,6 +92,7 @@ export {
 } from "./domains/fragrance/adapter.js";
 export { buildFragrancePerformanceProfile } from "./domains/fragrance/performance.js";
 export { matchFragrances } from "./domains/fragrance/matching.js";
+export { parseFragranceCustomerMessage } from "./domains/fragrance/intent.js";
 export {
   auditFragranceLibrary,
   renderFragranceQualityAuditMarkdown,
