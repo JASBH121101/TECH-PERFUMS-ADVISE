@@ -52,7 +52,8 @@ Do not mix ODbL-derived records into the existing CC BY 4.0 seed without decidin
 - Open Beauty Facts API project separation: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/tutorials/scanning-cosmetics-pet-food-and-other-products/
 - Open Beauty Facts license guidance: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/tutorials/license-be-on-the-legal-side/
 - INCIDB database license: https://github.com/INCIDB/cosmetics-skincare-inci-database/blob/master/LICENSE
-- The Beauty API FAQ and reuse terms: https://thebeautyapi.com/faq
+- 10ML Fragrance Index terms (updated 2026-11-07): https://mcp.10ml.com/terms
+- 10ML API documentation: https://mcp.10ml.com/openapi.json
 - SMELLIONAIRE dataset: https://smellionaire.store/data
 - SMELLIONAIRE test method: https://smellionaire.store/method
 - FragDB sample license: https://huggingface.co/datasets/FragDBnet/fragrance-database
