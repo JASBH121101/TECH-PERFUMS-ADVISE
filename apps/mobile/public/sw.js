@@ -55,21 +55,17 @@ self.addEventListener("fetch", event => {
     return;
   }
 
+  const refresh = fetch(request).then(async response => {
+    if (response.ok && response.type !== "opaque") {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  }).catch(() => null);
+
+  event.waitUntil(refresh.then(() => undefined));
   event.respondWith((async () => {
     const cached = await caches.match(request);
-    const refresh = fetch(request).then(async response => {
-      if (response.ok && response.type !== "opaque") {
-        const cache = await caches.open(CACHE_NAME);
-        await cache.put(request, response.clone());
-      }
-      return response;
-    }).catch(() => null);
-
-    if (cached) {
-      event.waitUntil(refresh);
-      return cached;
-    }
-
-    return (await refresh) || new Response("", { status: 503 });
+    return cached || (await refresh) || new Response("", { status: 503 });
   })());
 });
