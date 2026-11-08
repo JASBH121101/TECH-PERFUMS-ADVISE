@@ -11,6 +11,7 @@ JBAE now includes the Scento Perfume Database snapshot dated **2026-10-29**:
 - 91 perfumes do not have all three pyramid tiers recorded.
 - The validated Knowledge Store seed contains 20,280 field-scoped evidence records for the available source attributes.
 - 251 perfume records have no concentration label.
+- The generated coverage report measures 1,388 complete note pyramids (93.8%), concentration labels on 1,228 records (83.0%), release years on 80 records (5.4%) and perfumer credits on 69 records (4.7%).
 
 The source files are preserved under `data/fragrance/sources/scento-2026-10-29/`. Empty source fields remain empty. JBAE does not infer missing notes, concentration, year or perfumer.
 
@@ -62,7 +63,7 @@ npm run build:fragrance-library
 The generated files are written to ignored `dist/fragrance-library/`:
 
 - `scento-knowledge-snapshot.json`: schema-v2 products plus field-scoped evidence.
-- `scento-supporting-reference.json`: houses and materials reference catalogs.
+- `scento-supporting-reference.json`: houses and materials reference catalogs.\n- `scento-library-coverage.json` and `scento-library-coverage.md`: generated source-field coverage and distribution reports.
 
 The exported `importScentoFragranceLibrary()` function merges the snapshot into an already-open KnowledgeStore. Its merge is non-destructive and idempotent for identical IDs. With a `CapacitorSQLiteKnowledgeAdapter`, the same import path can seed the app's local SQLite store once the Android shell and native plugin exist.
 
