@@ -84,3 +84,43 @@ test("reports unavailable evidence assessment when the ledger is not connected",
   const report = auditFragranceLibrary({ products: [product] });
   assert.ok(report.warnings.some(item => /not assessed/u.test(item)));
 });
+
+
+test("does not mark evidence links malformed when the evidence ledger was not supplied", () => {
+  const product = normalizeFragranceProduct({
+    id: "perfume-1",
+    name: "Unassessed links",
+    productType: "perfume",
+    attributes: { scentFamily: "Citrus" },
+    evidenceIds: { scentFamily: ["existing-evidence-id"] },
+  });
+  const report = auditFragranceLibrary({ products: [product] });
+  assert.equal(report.totals.malformedEvidenceLinks, 0);
+  assert.equal(report.totals.claimFieldsWithEvidenceLinksNotAssessed, 1);
+  assert.equal(report.totals.claimFieldsWithValidEvidenceLinks, 0);
+});
+
+test("matches structured evidence values independent of object key insertion order", () => {
+  const store = new EvidenceStore();
+  store.add({
+    id: "structured-claim",
+    domain: "fragrance",
+    subjectId: "perfume-1",
+    field: "customDescriptor",
+    value: { family: "fresh", profile: { dry: false, sweet: true } },
+    status: "reported",
+    confidence: 0.8,
+    source: { name: "Structured source", url: "https://example.com/structured", type: "database" },
+    observedAt: "2026-11-08T10:00:00.000Z",
+  });
+  const product = normalizeFragranceProduct({
+    id: "perfume-1",
+    name: "Structured claim",
+    productType: "perfume",
+    attributes: { customDescriptor: { profile: { sweet: true, dry: false }, family: "fresh" } },
+    evidenceIds: { customDescriptor: ["structured-claim"] },
+  });
+  const report = auditFragranceLibrary({ products: [product], evidenceStore: store });
+  assert.equal(report.totals.claimFieldsWithValidEvidenceLinks, 1);
+  assert.equal(report.totals.malformedEvidenceLinks, 0);
+});
