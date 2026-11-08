@@ -18,6 +18,15 @@ const CATEGORICAL_PERFORMANCE_FIELDS = Object.freeze([
   "sillageLevel",
 ]);
 
+function canonicalValue(value) {
+  if (Array.isArray(value)) return "[" + value.map(canonicalValue).join(",") + "]";
+  if (value && typeof value === "object") {
+    return "{" + Object.keys(value).sort()
+      .map(key => JSON.stringify(key) + ":" + canonicalValue(value[key])).join(",") + "}";
+  }
+  return JSON.stringify(value);
+}
+
 function freezeDeep(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
   Object.freeze(value);
@@ -37,7 +46,7 @@ function hasStrictIndependentEvidence(product, field, value, evidenceStore) {
         record.domain !== "fragrance" ||
         record.subjectId !== product.id ||
         record.field !== field ||
-        JSON.stringify(record.value) !== JSON.stringify(value)) return false;
+        canonicalValue(record.value) !== canonicalValue(value)) return false;
     records.push(record);
   }
 
@@ -77,6 +86,7 @@ export function auditFragranceLibrary({ products, evidenceStore = null } = {}) {
   let claimFieldCount = 0;
   let linkedClaimFieldCount = 0;
   let malformedEvidenceLinkCount = 0;
+  let unassessedEvidenceLinkFieldCount = 0;
   const missingEvidenceFields = {};
   for (const product of products) {
     for (const [field, value] of Object.entries(product.attributes ?? {})) {
@@ -85,6 +95,11 @@ export function auditFragranceLibrary({ products, evidenceStore = null } = {}) {
       const ids = product.evidenceIds?.[field];
       if (!Array.isArray(ids) || ids.length === 0) {
         missingEvidenceFields[field] = (missingEvidenceFields[field] ?? 0) + 1;
+        continue;
+      }
+      if (!evidenceStore) {
+        // Linked IDs cannot be called malformed when the ledger itself was not supplied.
+        unassessedEvidenceLinkFieldCount += 1;
         continue;
       }
       const valid = ids.every(id => {
@@ -185,6 +200,7 @@ export function auditFragranceLibrary({ products, evidenceStore = null } = {}) {
         ? Number(((linkedClaimFieldCount / claimFieldCount) * 100).toFixed(1))
         : 0,
       malformedEvidenceLinks: malformedEvidenceLinkCount,
+      claimFieldsWithEvidenceLinksNotAssessed: unassessedEvidenceLinkFieldCount,
       verifiedOrCrossCheckedRecords: verifiedRecordCount,
       reportedRecords: reportedRecordCount,
     },
