@@ -119,8 +119,9 @@ async function retrieveOffer({ retailer, url }, provider, subjectId) {
     });
   }
 
-  const hasIdentity = typeof data.name === "string" &&
-    Boolean(data.gtin || data.upc || data.mpn);
+  const hasStableIdentifier = Boolean(data.gtin || data.mpn ||
+    (data.upc && String(data.upc).trim() !== String(data.sku ?? "").trim()));
+  const hasIdentity = typeof data.name === "string" && hasStableIdentifier;
   const observedAt = FIELDS.map(field => evidence[field]?.observedAt)
     .filter(Boolean).sort().at(-1) ?? null;
 
@@ -137,12 +138,17 @@ async function retrieveOffer({ retailer, url }, provider, subjectId) {
 
 function compareIdentity(offers) {
   const available = offers.filter(offer => offer.status === "available");
-  if (available.length !== offers.length) {
+  const unresolvedRetailers = offers
+    .filter(offer => offer.status !== "available")
+    .map(offer => offer.retailer);
+  if (available.length < 2) {
     return Object.freeze({
       status: "incomplete",
       matchedIdentifier: null,
+      confirmedRetailers: Object.freeze(available.map(offer => offer.retailer)),
+      unresolvedRetailers: Object.freeze(unresolvedRetailers),
       pairwise: Object.freeze([]),
-      note: "Every requested retailer must return a product identity and at least one stable manufacturer identifier before the set can be certified as the same variant.",
+      note: "Fewer than two retailers returned an identity with a stable manufacturer identifier.",
     });
   }
 
@@ -172,8 +178,9 @@ function compareIdentity(offers) {
     match.conflicts.includes("mpn") ||
     match.conflicts.includes("brand")
   );
-  const status = allExact ? "exact_variant" :
-    hasIdentifierConflict ? "mismatch" : "review_required";
+  const status = hasIdentifierConflict ? "mismatch" :
+    !allExact ? "review_required" :
+      unresolvedRetailers.length > 0 ? "partial_exact_variant" : "exact_variant";
   const identifiers = pairwise.map(match => match.matchedIdentifier).filter(Boolean);
   const matchedIdentifier = allExact && identifiers.length > 0 &&
     identifiers.every(value => value === identifiers[0]) ? identifiers[0] : null;
@@ -181,29 +188,41 @@ function compareIdentity(offers) {
   return Object.freeze({
     status,
     matchedIdentifier,
+    confirmedRetailers: Object.freeze(available.map(offer => offer.retailer)),
+    unresolvedRetailers: Object.freeze(unresolvedRetailers),
     pairwise: Object.freeze(pairwise),
-    note: allExact
-      ? "All retailer listings match as the same variant using the deterministic product identity matcher."
-      : hasIdentifierConflict
-        ? "At least one stable product identifier conflicts. Prices must not be ranked as the same product."
-        : "The available listings are not proven to be the same exact variant. Human review is required before comparing prices.",
+    note: status === "exact_variant"
+      ? "All requested retailer listings match as the same variant using the deterministic product identity matcher."
+      : status === "partial_exact_variant"
+        ? "The available retailer subset matches as the same exact variant. Unresolved retailers are excluded from the partial comparison."
+        : status === "mismatch"
+          ? "At least one stable product identifier conflicts. Prices must not be ranked as the same product."
+          : "The available listings are not proven to be the same exact variant. Human review is required before comparing prices.",
   });
 }
 
 function comparePrices(offers, identity) {
-  if (identity.status !== "exact_variant") {
+  const exactIdentity = identity.status === "exact_variant" ||
+    identity.status === "partial_exact_variant";
+  if (!exactIdentity) {
     return Object.freeze({
       status: "blocked_identity",
+      scope: "none",
+      unresolvedRetailers: identity.unresolvedRetailers ?? Object.freeze([]),
       currency: null,
       taxIncluded: null,
       lowestPrice: null,
       highestPrice: null,
       spread: null,
-      note: "Price ranking is blocked until every requested retailer is confirmed to list the same exact variant.",
+      note: "Price ranking is blocked until at least two retailer listings are confirmed to be the same exact variant.",
     });
   }
 
-  const prices = offers.map(offer => ({
+  const eligibleOffers = offers.filter(offer =>
+    identity.confirmedRetailers.includes(offer.retailer)
+  );
+  const partial = identity.status === "partial_exact_variant";
+  const prices = eligibleOffers.map(offer => ({
     retailer: offer.retailer,
     retailerName: offer.retailerName,
     price: offer.data.price,
@@ -213,12 +232,14 @@ function comparePrices(offers, identity) {
       typeof item.price.currency !== "string")) {
     return Object.freeze({
       status: "incomplete",
+      scope: partial ? "matching_subset" : "all_requested_retailers",
+      unresolvedRetailers: identity.unresolvedRetailers ?? Object.freeze([]),
       currency: null,
       taxIncluded: null,
       lowestPrice: null,
       highestPrice: null,
       spread: null,
-      note: "At least one retailer has no explicit current price; no complete price ranking is produced.",
+      note: "At least one retailer in the confirmed identity set has no explicit current price; no complete price ranking is produced.",
     });
   }
 
@@ -227,6 +248,8 @@ function comparePrices(offers, identity) {
   if (currencies.size !== 1 || taxStates.size !== 1) {
     return Object.freeze({
       status: "not_comparable",
+      scope: partial ? "matching_subset" : "all_requested_retailers",
+      unresolvedRetailers: identity.unresolvedRetailers ?? Object.freeze([]),
       currency: null,
       taxIncluded: null,
       lowestPrice: null,
@@ -242,7 +265,9 @@ function comparePrices(offers, identity) {
   const first = sorted[0];
   const last = sorted.at(-1);
   return Object.freeze({
-    status: "comparable",
+    status: partial ? "partial_comparable" : "comparable",
+    scope: partial ? "matching_subset" : "all_requested_retailers",
+    unresolvedRetailers: identity.unresolvedRetailers ?? Object.freeze([]),
     currency: first.price.currency,
     taxIncluded: first.price.taxIncluded,
     lowestPrice: Object.freeze({
@@ -261,7 +286,9 @@ function comparePrices(offers, identity) {
       amount: Number((last.price.amount - first.price.amount).toFixed(2)),
       currency: first.price.currency,
     }),
-    note: "Prices use the same explicit currency and tax-inclusion state. Delivery, financing and checkout fees are not included.",
+    note: partial
+      ? "Prices compare only the subset of retailers with a confirmed exact-variant match. This is not a winner across all requested stores."
+      : "Prices use the same explicit currency and tax-inclusion state. Delivery, financing and checkout fees are not included.",
   });
 }
 

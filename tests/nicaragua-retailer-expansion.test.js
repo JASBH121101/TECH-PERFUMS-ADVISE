@@ -211,6 +211,26 @@ test("SIMAN does not accept mismatched VTEX product records or an external API r
   );
 });
 
+test("retailer parser reads identifiers beyond the first five thousand characters of product detail", async () => {
+  const url = cases[0].url;
+  const html = [
+    "<html><body><h1>Samsung A17 4GB + 128GB Gris</h1>",
+    "<p>" + "detail ".repeat(900) + "</p>",
+    "<p>GTIN: 8806097667995</p><p>MPN: SMA175FZAFGTO</p>",
+    "<p>SKU: 470890800019</p><p>Precio especial C$7,399.00</p><p>En stock</p>",
+    "</body></html>",
+  ].join("");
+  const provider = createRadioShackResearchProvider({
+    fetchImpl: async requestUrl => htmlResponse(html, String(requestUrl)),
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  const [gtin] = await provider.search({ query: url, field: "gtin" });
+  const [mpn] = await provider.search({ query: url, field: "mpn" });
+  assert.equal(gtin.value, "8806097667995");
+  assert.equal(mpn.value, "SMA175FZAFGTO");
+});
+
 test("retailer parser prefers an explicit promotional price and preserves + IVA as tax-exclusive", async () => {
   const url = cases[0].url;
   const provider = createRadioShackResearchProvider({

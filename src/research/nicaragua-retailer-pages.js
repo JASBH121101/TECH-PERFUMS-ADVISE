@@ -108,7 +108,7 @@ function parseRetailerProductPage(html) {
   const titleIndex = h1Text ? pageText.toLowerCase().indexOf(h1Text.toLowerCase()) : -1;
   const nameIndex = nameText ? pageText.toLowerCase().indexOf(nameText.toLowerCase()) : -1;
   const start = titleIndex >= 0 ? titleIndex : nameIndex;
-  const productText = start >= 0 ? pageText.slice(start, start + 5_000) : pageText.slice(0, 5_000);
+  const productText = start >= 0 ? pageText.slice(start, start + 20_000) : pageText.slice(0, 5_000);
 
   const identifier = label => productText.match(
     new RegExp("\\b" + label + "\\b\\s*:?\\s*([A-Z0-9_-]+)", "iu"),

@@ -8,12 +8,13 @@
 
 El motor compara primero los identificadores universales (GTIN/EAN/UPC) y los identificadores de fabricante (MPN), y valida RAM/almacenamiento detectables en el nombre del producto. Un SKU interno de tienda no se trata como código universal, aunque una página lo etiquete incorrectamente como UPC si el mismo valor también aparece como SKU.
 
-- `exact_variant`: todas las parejas coinciden en la misma variante.
+- `exact_variant`: todas las tiendas solicitadas coinciden en la misma variante.
+- `partial_exact_variant`: al menos dos tiendas coinciden exactamente, pero una o más tiendas quedaron sin identidad suficiente; solo se puede comparar ese subconjunto.
 - `review_required`: faltan identificadores comunes o hay atributos de variante insuficientes/conflictivos.
 - `mismatch`: hay un conflicto explícito entre identificadores universales o identificadores de fabricante.
 - `incomplete`: al menos una tienda no entregó identidad utilizable.
 
-Los precios se ordenan únicamente cuando toda la lista solicitada coincide como variante exacta, cada tienda publica un precio, y todas usan la misma moneda y el mismo estado de inclusión de impuestos. No se convierten monedas ni se estiman IVA, envío, financiación o cargos de checkout.
+Los precios se ordenan únicamente dentro del conjunto con identidad exacta demostrada, cuando cada tienda de ese conjunto publica un precio y todas usan la misma moneda y el mismo estado de inclusión de impuestos. Si falta una tienda, el resultado se marca `partial_comparable` y no declara ganador global. No se convierten monedas ni se estiman IVA, envío, financiación o cargos de checkout.
 
 ## Resultado y seguridad
 

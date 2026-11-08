@@ -277,7 +277,9 @@ async function run() {
       "; price=" + comparison.priceComparison.status);
     for (const offer of comparison.offers) {
       console.log(offer.retailerName + ": " + offer.status +
+        "; SKU=" + (offer.data.sku ?? "not published") +
         "; GTIN=" + (offer.data.gtin ?? "not published") +
+        "; MPN=" + (offer.data.mpn ?? "not published") +
         "; NIO price=" + (offer.data.price?.amount ?? "not published") +
         "; stock=" + (offer.data.availability?.status ?? "not published"));
     }

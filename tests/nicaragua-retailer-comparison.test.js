@@ -27,8 +27,8 @@ function fakeProvider({ name, identifiers = {}, price, availability = { status: 
     name,
     sku: identifiers.sku ?? "470890800019",
     upc: identifiers.upc ?? null,
-    gtin: identifiers.gtin ?? gtin,
-    mpn: identifiers.mpn ?? mpn,
+    gtin: Object.hasOwn(identifiers, "gtin") ? identifiers.gtin : gtin,
+    mpn: Object.hasOwn(identifiers, "mpn") ? identifiers.mpn : mpn,
     price: price ?? { amount: 7399, currency: "NIO", taxIncluded: null, display: "C$7,399.00" },
     availability,
     warranty: "12 meses",
@@ -137,8 +137,10 @@ test("returns deferred retailer status and refuses full-set certification", asyn
     providers: { radioshack: good, laCuracao: good, siman: broken },
   });
   assert.equal(resultValue.offers[2].status, "deferred");
-  assert.equal(resultValue.identity.status, "incomplete");
-  assert.equal(resultValue.priceComparison.status, "blocked_identity");
+  assert.equal(resultValue.identity.status, "partial_exact_variant");
+  assert.deepEqual(resultValue.identity.unresolvedRetailers, ["siman"]);
+  assert.equal(resultValue.priceComparison.status, "partial_comparable");
+  assert.equal(resultValue.priceComparison.scope, "matching_subset");
 });
 
 test("validates retailer list, duplicates and supported IDs", async () => {
