@@ -33,5 +33,5 @@ test("Pages app registers the service worker only for the deployed subpath", asy
   const main = await read("src/main.js");
   assert.match(main, /navigator\.serviceWorker\.register/u);
   assert.match(main, /import\.meta\.env\.BASE_URL/u);
-  assert.match(main, /BASE_URL !== "\/"/u);
+  assert.ok(main.includes('if (baseUrl === "/" || !("serviceWorker" in navigator)) return;'));
 });
