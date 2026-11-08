@@ -66,6 +66,18 @@ The generated files are written to ignored `dist/fragrance-library/`:
 
 The exported `importScentoFragranceLibrary()` function merges the snapshot into an already-open KnowledgeStore. Its merge is non-destructive and idempotent for identical IDs. With a `CapacitorSQLiteKnowledgeAdapter`, the same import path can seed the app's local SQLite store once the Android shell and native plugin exist.
 
+## Generated coverage report
+
+The build also emits an auditable coverage report from the normalized source records:
+
+- `scento-library-coverage.json`: machine-readable totals, field-presence counts, note-pyramid completeness and distributions.
+- `scento-library-coverage.md`: human-readable coverage tables and frequency summaries.
+
+The report includes release-year, perfumer, concentration-label, family, character, season, time-of-day, note-tier, all-notes and description coverage. It also summarizes concentration labels, Scento primary/secondary families, houses and the most common pyramid notes. A note is counted at most once per perfume in the frequency summary.
+
+Coverage is a measure of whether the snapshot contains a source value. It is **not** a measure of factual accuracy, fragrance quality, similarity quality, longevity, sillage or independent verification. Missing values remain missing; no enrichment is inferred by the report. The CI workflow publishes the JSON and Markdown reports as a 30-day artifact named `fragrance-library-coverage`.
+
+
 ## Source records
 
 - Dataset repository: https://github.com/Scento-com/perfume-dataset
