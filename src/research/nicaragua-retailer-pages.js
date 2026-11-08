@@ -114,8 +114,13 @@ function parseRetailerProductPage(html) {
   const nameIndex = nameText ? pageText.toLowerCase().indexOf(nameText.toLowerCase()) : -1;
   const start = titleIndex >= 0 ? titleIndex : nameIndex;
   const productText = start >= 0 ? pageText.slice(start, start + 20_000) : pageText.slice(0, 5_000);
+  // Retailers such as El Gallo publish SKU/availability badges immediately before the H1.
+  // Include only a bounded pre-title context when extracting labelled identifiers.
+  const identityText = start >= 0
+    ? pageText.slice(Math.max(0, start - 1_200), start + 20_000)
+    : productText;
 
-  const identifier = label => productText.match(
+  const identifier = label => identityText.match(
     new RegExp("\\b" + label + "\\b\\s*(?::|\\|)?\\s*([A-Z0-9_-]+)", "iu"),
   )?.[1] ?? null;
   const sku = product.sku ?? product.productID ?? identifier("SKU");

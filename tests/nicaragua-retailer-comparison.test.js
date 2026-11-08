@@ -177,7 +177,29 @@ test("same phone family with different manufacturer model and color is rejected 
     providers: { radioshack: grey, laCuracao: blue },
   });
   assert.equal(resultValue.identity.status, "mismatch");
-  assert.ok(resultValue.identity.pairwise[0].variantConflicts.includes("color"));
+  assert.ok(resultValue.identity.pairwise[0].conflicts.includes("mpn"));
+  assert.equal(resultValue.priceComparison.status, "blocked_identity");
+});
+
+
+test("same manufacturer identity with different explicit product colors requires review", async () => {
+  const grey = fakeProvider({
+    name: "Samsung Galaxy A17 4GB RAM 128GB",
+    identifiers: { gtin: "8806097667995", mpn: "SMA175FZAFGTO" },
+    color: "Gris",
+  });
+  const blue = fakeProvider({
+    name: "Samsung Galaxy A17 4GB RAM 128GB",
+    identifiers: { gtin: "8806097667995", mpn: "SMA175FZAFGTO" },
+    color: "Azul",
+    price: { amount: 7999.13, currency: "NIO", taxIncluded: null },
+  });
+  const resultValue = await compareNicaraguaRetailerOffers({
+    offers: offers.slice(0, 2),
+    providers: { radioshack: grey, laCuracao: blue },
+  });
+  assert.equal(resultValue.identity.status, "review_required");
+  assert.deepEqual(resultValue.identity.pairwise[0].variantConflicts, ["color"]);
   assert.equal(resultValue.priceComparison.status, "blocked_identity");
 });
 
