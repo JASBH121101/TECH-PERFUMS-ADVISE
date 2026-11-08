@@ -81,12 +81,15 @@ function summarizeVtexVariantOffers(item, variation) {
   const hasPublishedQuantity = publishedQuantity !== null &&
     Number.isFinite(publishedQuantity) && publishedQuantity >= 0;
 
-  const sellerStatus = quantities.some(value => value > 0) || flags.some(value => value === true)
+  const sellerHasAvailableOffer =
+    quantities.some(value => value > 0) || flags.some(value => value === true);
+  const allSellerOffersUnavailable = offers.length > 0 && (
+    (quantities.length === offers.length && quantities.every(value => value === 0)) ||
+    (flags.length === offers.length && flags.every(value => value === false))
+  );
+  const sellerStatus = sellerHasAvailableOffer
     ? true
-    : offers.length > 0 &&
-        ((quantities.length === offers.length && quantities.every(value => value === 0)) ||
-         (flags.length === offers.length && flags.every(value => value === false))
-        ? false : null;
+    : allSellerOffersUnavailable ? false : null;
   const variationStatus = typeof variation?.available === "boolean"
     ? variation.available
     : hasPublishedQuantity ? publishedQuantity > 0 : null;
