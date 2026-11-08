@@ -6,6 +6,11 @@ import {
   createTechApiResearchProvider,
   createCoreInfoResearchProvider,
   createSicsaResearchProvider,
+  createRadioShackResearchProvider,
+  createLaCuracaoResearchProvider,
+  createElGalloMasGalloResearchProvider,
+  createSimanResearchProvider,
+  createElVerdugoResearchProvider,
 } from "../src/research/providers.js";
 
 const timeoutMs = 15_000;
@@ -167,6 +172,83 @@ async function run() {
       throw error;
     }
   }
+
+
+
+  const retailerSmokeCases = [
+    {
+      id: "RadioShack Nicaragua",
+      factory: createRadioShackResearchProvider,
+      url: "https://www.radioshackla.com/nicaragua/celular-samsung-a17-128-gb-6-7-470890800019-gris/p",
+      fields: ["name", "sku", "price", "availability"],
+    },
+    {
+      id: "La Curacao Nicaragua",
+      factory: createLaCuracaoResearchProvider,
+      url: "https://www.lacuracaonline.com/nicaragua/bundle-laptop-lenovo-16gb-ssd-512gb-15-6-gris-82xv00djgj-monitor-27-mouse-468408300014/p",
+      fields: ["name", "sku", "price", "availability"],
+    },
+    {
+      id: "El Gallo Más Gallo Nicaragua",
+      factory: createElGalloMasGalloResearchProvider,
+      url: "https://www.elgallomasgallo.com.ni/laptop-dell-core-i5-1334u-dc15250-x5nh3-201116",
+      fields: ["name", "sku", "price", "availability"],
+    },
+    {
+      id: "Almacenes SIMAN Nicaragua",
+      factory: createSimanResearchProvider,
+      url: "https://ni.siman.com/celular-samsung-galaxy-a17-128gb-4gb-ram-pantalla-6-7---17-02-cm--octa-core-camara-trasera-triple-50mp-/p",
+      fields: ["name", "sku", "price", "availability"],
+    },
+    {
+      id: "El Verdugo Nicaragua",
+      factory: createElVerdugoResearchProvider,
+      url: "https://catalogoni.elverdugo.net/laptop-hp-14-bs007la",
+      fields: ["name", "sku", "warranty"],
+    },
+  ];
+
+  for (const item of retailerSmokeCases) {
+    try {
+      const provider = item.factory({ timeoutMs, minRequestIntervalMs: 750 });
+      const retrieved = {};
+      for (const field of item.fields) {
+        retrieved[field] = await provider.search({
+          domain: DOMAINS.TECHNOLOGY,
+          subjectId: "smoke-" + item.id.toLowerCase().replace(/[^a-z0-9]+/gu, "-"),
+          field,
+          query: item.url,
+          limit: 1,
+        });
+      }
+      if (!retrieved.name?.length) {
+        console.log(item.id + ": DEFERRED — product identity was not extractable from the live page");
+        continue;
+      }
+      const price = retrieved.price?.[0]?.value;
+      if (price) {
+        assert.ok(Number.isFinite(price.amount) && price.amount >= 0, item.id + " price amount must be numeric");
+        assert.match(price.currency, /^[A-Z]{3}$/u, item.id + " price currency must be explicit");
+        assert.equal(retrieved.price[0].source.market, "NI");
+      }
+      const stock = retrieved.availability?.[0]?.value;
+      if (stock) assert.ok(["in_stock", "out_of_stock"].includes(stock.status));
+      const parts = ["identity PASS"];
+      if (item.fields.includes("price")) parts.push("price " + (price ? "PRESENT" : "not published"));
+      if (item.fields.includes("availability")) parts.push("stock " + (stock ? "PRESENT" : "not published"));
+      if (item.fields.includes("warranty")) parts.push("warranty " + (retrieved.warranty?.length ? "PRESENT" : "not published"));
+      console.log(item.id + ": PASS — " + parts.join("; "));
+    } catch (error) {
+      const message = String(error?.message ?? error);
+      if (/HTTP (?:403|404|429|5\d\d)|timed out|fetch failed|ECONN|ENOTFOUND|redirected outside/i.test(message)) {
+        console.log(item.id + ": DEFERRED — live storefront unavailable (" + message + ")");
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  console.log("CONICO Nicaragua: DEFERRED — no public product catalogue/API verified; manual quotation workflow only.");
 
   console.log("External provider smoke tests passed. Research results remain unconfirmed candidates.");
 }

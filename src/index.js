@@ -37,7 +37,20 @@ export function getEngineInfo() {
 export { AdvisorCore, createAdvisorCore } from "./advisor/advisor-core.js";
 export { ResearchEngine } from "./research/research-engine.js";
 export { CatalogIndex, searchCatalog } from "./knowledge/catalog-index.js";
-export { createScentoResearchProvider, createWikidataResearchProvider, createTechApiResearchProvider, createCoreInfoResearchProvider, createSicsaResearchProvider, createDefaultResearchProviders } from "./research/providers.js";
+export {
+  createScentoResearchProvider,
+  createWikidataResearchProvider,
+  createTechApiResearchProvider,
+  createCoreInfoResearchProvider,
+  createSicsaResearchProvider,
+  createRadioShackResearchProvider,
+  createLaCuracaoResearchProvider,
+  createElGalloMasGalloResearchProvider,
+  createSimanResearchProvider,
+  createElVerdugoResearchProvider,
+  createDefaultResearchProviders,
+  NICARAGUA_RETAILER_INTEGRATION_STATUS,
+} from "./research/providers.js";
 export {
   createEvidenceRecord,
   EVIDENCE_STATUSES,

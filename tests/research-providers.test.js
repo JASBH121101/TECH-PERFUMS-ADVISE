@@ -176,7 +176,15 @@ test("default research provider registry contains isolated fragrance and technol
     wikidata: { fetchImpl: async () => response({}), minRequestIntervalMs: 0 },
   });
   assert.deepEqual(providers.map(provider => provider.id), [
-    "scento-perfume-api", "wikidata", "coreinfo-device-catalog", "sicsa-nicaragua-retail",
+    "scento-perfume-api",
+    "wikidata",
+    "coreinfo-device-catalog",
+    "sicsa-nicaragua-retail",
+    "radioshack-nicaragua-retail",
+    "la-curacao-nicaragua-retail",
+    "el-gallo-mas-gallo-nicaragua-retail",
+    "siman-nicaragua-retail",
+    "el-verdugo-nicaragua-catalog",
   ]);
   assert.deepEqual(providers[0].domains, [DOMAINS.FRAGRANCE]);
   assert.deepEqual(providers[1].domains, [DOMAINS.TECHNOLOGY]);
