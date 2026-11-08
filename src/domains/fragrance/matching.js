@@ -355,7 +355,7 @@ export function matchFragrances({
       headline: reasons.length ? "Esta opción coincide con varias preferencias expresadas." : "No hay suficientes coincidencias positivas para justificar esta opción.",
       reasons: Object.freeze(reasons),
       tradeoffs: Object.freeze(scored.filter(item => item.score < 40).map(item => ({ criterion: item.key, score: item.score }))),
-      evidenceNote: evidenceStore ? "La evidencia enlazada se evaluó bajo la política configurada." : "Las coincidencias utilizan atributos del catálogo no verificados independientemente.",
+      evidenceNote: evidenceStore ? "La evidencia enlazada se evaluó bajo la política configurada." : "Las coincidencias utilizan atributos del catálogo no verificados independientemente; esto no certifica la calidad ni el rendimiento.",
     });
     return Object.freeze({
       id: product.id, name: product.name, productType: product.productType,
