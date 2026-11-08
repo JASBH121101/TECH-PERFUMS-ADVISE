@@ -520,7 +520,7 @@ test("SIMAN exposes exact public SKU variants without promoting internal SKU IDs
     limit: 1,
   });
 
-  assert.equal(record.value.length, 2);
+  assert.equal(record.value.length, 4);
   assert.deepEqual(record.value[0], {
     retailerSku: "3001",
     name: "Example Phone 4GB 128GB Grey",
