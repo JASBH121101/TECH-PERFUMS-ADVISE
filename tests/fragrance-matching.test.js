@@ -65,6 +65,19 @@ test("hard-excludes avoided notes and products with unverified exclusions", () =
   assert.ok(result.ranking.find(item => item.id === "unknown").exclusions.includes("avoidance_not_verifiable"));
 });
 
+test("does not claim an avoided note is absent when only a partial note pyramid exists", () => {
+  const partial = {
+    id: "partial", name: "Partial Notes", domain: "fragrance", productType: "perfume",
+    attributes: { topNotes: ["citrus"], scentFamilies: ["citrica"] },
+  };
+  const result = matchFragrances({
+    products: [partial],
+    preferences: { avoidNotes: ["vanilla"], preferredFamilies: ["citrica"] },
+  });
+  assert.equal(result.ranking[0].eligibility, "excluded");
+  assert.ok(result.ranking[0].exclusions.includes("avoidance_not_verifiable"));
+});
+
 test("filters product types and does not turn missing fields into matches", () => {
   const result = matchFragrances({
     products,
