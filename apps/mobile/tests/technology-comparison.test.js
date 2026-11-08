@@ -29,9 +29,10 @@ test("acepta hasta cuatro modelos y rechaza duplicados/categorías desconocidas"
 test("crea un candidato TECH con evidencia reportada por campo y sin elevar verificación",()=>{
  const input=lookup("Phone A","phone-a",[["brand","Acme"],["chipset","Snapdragon X"],["ram","8 GB"],["storage","256 GB"]]);
  const candidate=buildTechnologyApprovalCandidate({lookup:input,resource:"smartphones",idPrefix:"approval-test"});
- assert.equal(candidate.product.id,"technology-phone-a");
+ assert.equal(candidate.product.id,"technology-phone-a-ram-8gb-storage-256gb");
  assert.equal(candidate.product.attributes.ramGB,8);
  assert.equal(candidate.product.evidenceIds.ramGB.length,1);
+ assert.equal(candidate.product.evidenceIds.brand.length,1);
  assert.ok(candidate.evidenceRecords.every(record=>record.status==="reported"));
  assert.equal(candidate.evidenceRecords[0].source.type,"database");
 });
@@ -54,10 +55,19 @@ test("saves product and evidence in one knowledge snapshot and refuses overwrite
  assert.equal(saved.newProductCount,1);
  assert.equal(saved.newRecordCount,candidate.evidenceCount);
  const product=store.getProducts({domain:"technology"})[0];
- assert.equal(product.id,"technology-phone-a");
+ assert.equal(product.id,"technology-phone-a-ram-8gb-storage-256gb");
  assert.ok(store.queryEvidence({subjectId:product.id}).length>0);
  await assert.rejects(saveTechnologyCandidate(store,candidate),/ya existe/);
  const reopened=await KnowledgeStore.open({adapter});
  assert.equal(reopened.getProducts({domain:"technology"}).length,1);
  assert.equal(reopened.queryEvidence({subjectId:product.id}).length,candidate.evidenceCount);
+});
+
+test("guarda variantes de RAM/almacenamiento del mismo modelo como SKU distintos",()=>{
+ const base={resource:"smartphones"};
+ const a=buildTechnologyApprovalCandidate({lookup:lookup("Phone A","phone-a",[["brand","Acme"],["ram","8 GB"],["storage","256 GB"]]),...base,idPrefix:"variant-a"});
+ const b=buildTechnologyApprovalCandidate({lookup:lookup("Phone A","phone-a",[["brand","Acme"],["ram","12 GB"],["storage","512 GB"]]),...base,idPrefix:"variant-b"});
+ assert.notEqual(a.product.id,b.product.id);
+ assert.deepEqual(a.product.variant,{ramGB:8,storageGB:256});
+ assert.deepEqual(b.product.variant,{ramGB:12,storageGB:512});
 });

@@ -66,7 +66,7 @@ The GitHub Actions validation workflow checks JavaScript syntax and runs the ful
 
 ## Current validation
 
-On 2026-11-08, the latest successful JBAE CI run passed **288/288 engine tests** and **17/17 mobile tests**, plus JavaScript syntax validation and the fragrance-library build. The mobile release workflow also completed the Android Release build, package/version check, APK signature verification and release-asset byte-for-byte verification. The published initial Android release is `jbae-v0.4.0` (`versionCode=21`; 12,834,636 bytes). The [successful Android Release run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337409) and [successful CI run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337414) are available in GitHub Actions.
+On 2026-11-08, the latest successful JBAE CI run passed **306/306 engine tests** and **37/37 mobile tests**, plus JavaScript syntax validation and the fragrance-library build. The mobile release workflow also completed the Android Release build, package/version check, APK signature verification and release-asset byte-for-byte verification. The published initial Android release is `jbae-v0.4.0` (`versionCode=21`; 12,834,636 bytes). The [successful Android Release run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337409) and [successful CI run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337414) are available in GitHub Actions.
 
 The Pages preview deployed successfully at [JBAE GitHub Pages](https://jasbh121101.github.io/TECH-PERFUMS-ADVISE/) (see [deployment run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524466802)). JB Expert QA passed with **97/100**, 27 rules executed and 0 rule-execution errors. It reported five findings: two medium-severity findings (`code-quality.file-size` and `security.dynamic-code`, the latter requiring manual review of an HTML sink) and three informational findings. The dynamic source-link destinations are being restricted to absolute HTTPS URLs and covered by dedicated tests; the large UI module remains a maintainability task. See the [latest QA run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337656).
 
@@ -86,7 +86,7 @@ A dated Scento dataset snapshot is included under `data/fragrance/sources/scento
 - El Gallo Más Gallo remains deferred pending diagnosis of runner transport behavior; wider Nicaragua retailer coverage and exact-SKU matching across additional stores remain pending.
 - OCR intake and a representative, independently reviewed benchmark dataset with certification thresholds for recommendation quality remain pending.
 
-The mobile application supplies the native SQLite connection lifecycle and consumes the engine's `CapacitorSQLiteKnowledgeAdapter`. Passing CI and APK-signature checks does not substitute for emulator or physical-device certification.
+The mobile TECH flow now supports 2–4 device comparisons, source-conflict handling, variant-aware IDs and explicit approval to save eligible fields as `reported` evidence in a single KnowledgeStore snapshot. The Pages PWA shell precaches its built JS/CSS, manifest and icons. The mobile application supplies the native SQLite connection lifecycle and consumes the engine's `CapacitorSQLiteKnowledgeAdapter`. Passing CI and APK-signature checks does not substitute for emulator or physical-device certification.
 
 ## Security
 

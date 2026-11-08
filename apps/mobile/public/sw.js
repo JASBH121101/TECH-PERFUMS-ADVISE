@@ -10,11 +10,25 @@ const shellUrls = [
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(shellUrls))
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const shellResponse = await fetch(scopeUrl.href);
+    if (!shellResponse.ok) throw new Error("JBAE Pages shell could not be cached");
+    await cache.put(scopeUrl.href, shellResponse.clone());
+
+    const html = await shellResponse.text();
+    const assets = [...html.matchAll(/\\b(?:src|href)=["']([^"']+\\.(?:js|css))(?:\\?[^"']*)?["']/giu)]
+      .map(match => new URL(match[1], scopeUrl))
+      .filter(url => url.origin === scopeUrl.origin && url.href.startsWith(scopeUrl.href));
+    await Promise.all(assets.map(async url => {
+      try {
+        const response = await fetch(url.href);
+        if (response.ok) await cache.put(url.href, response);
+      } catch { /* The shell remains installable if an optional asset is unavailable. */ }
+    }));
+    await cache.addAll(shellUrls.slice(1));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", event => {

@@ -138,7 +138,10 @@ export function buildTechnologyApprovalCandidate({
     throw new TypeError("La consulta TECH no contiene una identidad válida.");
   }
   const device = buildDevice(lookup, resource, 0);
-  const productId = "technology-" + lookup.slug;
+  const variantParts = [];
+  if (Number.isFinite(device.attributes.ramGB)) variantParts.push("ram-" + String(device.attributes.ramGB).replace(".", "p") + "gb");
+  if (Number.isFinite(device.attributes.storageGB)) variantParts.push("storage-" + String(device.attributes.storageGB).replace(".", "p") + "gb");
+  const productId = "technology-" + lookup.slug + (variantParts.length ? "-" + variantParts.join("-") : "");
   const evidenceIds = {};
   const evidenceRecords = [];
   let sequence = 0;
@@ -172,6 +175,30 @@ export function buildTechnologyApprovalCandidate({
       });
       evidenceRecords.push(record);
       (evidenceIds[field.attribute] ??= []).push(id);
+    }
+  }
+
+  const brandValue = device.product.brand;
+  if (typeof brandValue === "string" && brandValue.trim()) {
+    for (const entry of device.facts.get("brand") ?? []) {
+      const url = trustedEvidenceUrl(entry.url);
+      if (!url || canonical(entry.value) !== canonical(brandValue)) continue;
+      const hasSourceTimestamp = typeof entry.observedAt === "string" && !Number.isNaN(Date.parse(entry.observedAt));
+      const observedAt = hasSourceTimestamp ? new Date(entry.observedAt).toISOString() : retrievedAt;
+      const id = idPrefix + ":brand:" + (++sequence);
+      evidenceRecords.push(createEvidenceRecord({
+        id,
+        domain: "technology",
+        subjectId: productId,
+        field: "brand",
+        value: brandValue,
+        status: EVIDENCE_STATUSES.REPORTED,
+        confidence: 0.5,
+        source: { name: entry.source, url, type: SOURCE_TYPES.DATABASE },
+        observedAt,
+        note: "Fabricante reportado por la fuente; confianza 0.5 es un valor de intake no calibrado, no una probabilidad. No verificado independientemente.",
+      }));
+      (evidenceIds.brand ??= []).push(id);
     }
   }
 
