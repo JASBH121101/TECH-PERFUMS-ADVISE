@@ -209,10 +209,14 @@ function pickOpenBeautyFactsValue(product, field) {
 }
 
 function hasBodyMistCategoryTag(product) {
-  return Array.isArray(product?.categories_tags) &&
-    product.categories_tags.some(tag =>
-      typeof tag === "string" && /^(?:[a-z]{2,3}:)?body-mists?$/iu.test(tag.trim())
-    );
+  if (!Array.isArray(product?.categories_tags)) return false;
+  const tags = product.categories_tags
+    .filter(tag => typeof tag === "string")
+    .map(tag => tag.trim().toLowerCase().replace(/^[a-z]{2,3}:/u, ""));
+  // Some cosmetics are dual-tagged as body mists but are actually sun-care sprays.
+  const incompatibleTags = new Set(["suncare", "sun-care", "sun-protection", "sunscreen", "sunscreens"]);
+  if (tags.some(tag => incompatibleTags.has(tag))) return false;
+  return tags.some(tag => /^body-mists?$/u.test(tag));
 }
 
 /**

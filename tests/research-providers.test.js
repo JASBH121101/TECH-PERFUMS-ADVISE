@@ -991,6 +991,28 @@ test("Open Beauty Facts returns a review-ready body-mist record without images o
   assert.equal(Object.hasOwn(records[0], "image_url"), false);
 });
 
+test("Open Beauty Facts rejects a sun-care mist even when OBF also tags it as a body mist", async () => {
+  const provider = createOpenBeautyFactsResearchProvider({
+    fetchImpl: async () => response({
+      count: 1,
+      products: [{
+        code: "8850029003177",
+        product_name: "Nivea refreshing mist suncare",
+        brands: "Beiersdorf, Nivea",
+        categories: "Suncare, Body mists",
+        categories_tags: ["en:suncare", "en:perfumes", "en:body-mists"],
+        product_quantity: "200",
+        product_quantity_unit: "ml",
+      }],
+    }),
+    minRequestIntervalMs: 0,
+  });
+  assert.deepEqual(await provider.search({
+    query: "category:body-mists",
+    field: "product_record",
+  }), []);
+});
+
 test("Open Beauty Facts rejects exact barcode records that are not tagged as body mists", async () => {
   const provider = createOpenBeautyFactsResearchProvider({
     fetchImpl: async () => response({

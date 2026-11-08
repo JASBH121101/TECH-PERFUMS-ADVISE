@@ -14,7 +14,7 @@ Open Beauty Facts remains the only enabled structured open-data discovery source
 - Review payload: GTIN, name, brand, categories, category tags, INCI text, package quantity/unit and source last-modified timestamp. Images are excluded.
 - Deduplication key: GTIN. Results remain unconfirmed research candidates and are not added to the seed automatically.
 
-A bounded three-page result is not a total-catalogue census. Products missing a valid GTIN or exact body-mists tag are intentionally omitted. An empty or small result does not prove that no other body-mist products exist.
+A bounded three-page result is not a total-catalogue census. Products missing a valid GTIN or exact body-mists tag are intentionally omitted. Records carrying contradictory category tags such as `suncare` are rejected even if OBF also marks them as body mists. In the 2026-11-08 smoke, the Nivea refreshing mist suncare record (GTIN 8850029003177) was rejected for this reason. An empty or small result does not prove that no other body-mist products exist.
 
 ## 2. Attars and perfumed oils — no suitable open catalogue identified
 
@@ -32,7 +32,7 @@ These official product pages establish that the named manufacturers sell oil-for
 | Al Haramain Ajmer | Concentrated perfume oil; alcohol-free, presented within an attar context | 15 ml; SKU AHP1831 | Strong manual oil-format example; not classified as traditional natural attar |
 | Al Haramain Zamzam | Concentrated perfume oil; alcohol-free; described as part of the house's attar range | 15 ml; SKU AHP1832 | Manual oil-format example; not imported |
 | Swiss Arabian Attar Mubakhar | Concentrated perfume oil; marketed as an attar | 20 ml | Manual attar-labelled oil example; not imported |
-| Al Haramain Solitaire Amber | Concentrated perfume oil; marketed as an attar | 12 ml; SKU AHP1983 | Manual oil-format example; not imported |
+| Arabian Oud Mukhallat Nagham | Listed in the manufacturer's Perfume Oils & Attar collection; described as a perfume-oil blend | 1/4, 1/2 and 1 tola variants; preserve source unit (no ml conversion) | Collection-page reference only; exact SKU/type not inferred |
 
 **Taxonomy rule:** an attar-labelled modern concentrated perfume oil is not automatically equivalent to a traditional distilled attar/itr. Keep manufacturer-reported format terminology, alcohol-free claim and actual composition as separate claims. Do not infer that a perfume oil is natural, alcohol-free or traditional unless the source explicitly supports that fact.
 
@@ -41,7 +41,8 @@ Manufacturer references:
 - https://shop.alharamainperfumes.com/uae/al-haramain-ajmer-pure-perfume-oil.html
 - https://shop.alharamainperfumes.com/default/al-haramain-zamzam-pure-perfume-oil.html
 - https://us.swissarabian.com/products/attar-mubakhar
-- https://shop.alharamainperfumes.com/default/haramain-solitaire-amber-attar-12ml.html
+- https://my.arabianoud.com/en/perfume-oils/c262185198 (collection page; oil sizes shown in tola, do not convert to ml)
+- https://my.arabianoud.com/en/perfume-oils/c262185198
 
 ## 3. Decants — separate package units from fragrance identity
 
