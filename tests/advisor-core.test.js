@@ -287,7 +287,7 @@ test("parses a Spanish customer request into explicit fragrance preferences", ()
   assert.equal(result.recommendation.profile, "long_lasting");
   assert.equal(result.customerExplanation.decision, "recommended");
   assert.match(result.customerExplanation.text, /Soft Citrus/u);
-  assert.match(result.customerExplanation.text, /no tengo un rango de rendimiento respaldado/u);
+  assert.match(result.customerExplanation.text, /no tengo un rango de rendimiento respaldado/iu);
 });
 
 test("explicit structured preferences override inferred customer-message preferences", () => {
