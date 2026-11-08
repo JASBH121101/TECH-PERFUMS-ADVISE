@@ -251,3 +251,69 @@ test("keeps preference matching absent for technology requests", () => {
   });
   assert.equal(result.preferenceMatch, null);
 });
+
+
+test("parses a Spanish customer request into explicit fragrance preferences", () => {
+  const candidates = [
+    {
+      id: "soft-citrus", name: "Soft Citrus", productType: "perfume",
+      attributes: {
+        scentFamilies: ["citrus"], allNotes: ["bergamot", "lemon", "musk"],
+        characterTraits: ["fresh", "clean"], intensityLevel: "soft", projectionLevel: "close",
+        timesOfDay: ["day", "office"], climateTags: ["hot_humid"],
+      },
+    },
+    {
+      id: "sweet-heavy", name: "Sweet Heavy", productType: "perfume",
+      attributes: {
+        scentFamilies: ["gourmand"], allNotes: ["vanilla", "caramel", "amber"],
+        characterTraits: ["sweet", "warm"], intensityLevel: "strong", projectionLevel: "strong",
+        timesOfDay: ["evening"], climateTags: ["cold"],
+      },
+    },
+  ];
+  const result = new AdvisorCore().advise({
+    domain: "fragrance",
+    products: candidates,
+    customerMessage: "Busco algo fresco y suave para el día a día, para trabajar, que no sea hostigoso y que dure bastante.",
+  });
+  assert.equal(result.customerIntent.needsClarification, false);
+  assert.equal(result.customerIntent.preferences.intensity, "soft");
+  assert.equal(result.customerIntent.preferences.projection, "close");
+  assert.equal(result.customerIntent.preferences.occasion, "day");
+  assert.equal(result.customerIntent.preferences.performancePriority, "long_lasting");
+  assert.equal(result.preferenceMatch.decision, "matched");
+  assert.equal(result.preferenceMatch.ranking[0].id, "soft-citrus");
+  assert.equal(result.recommendation.profile, "long_lasting");
+});
+
+test("explicit structured preferences override inferred customer-message preferences", () => {
+  const candidates = [
+    {
+      id: "soft", name: "Soft", productType: "perfume",
+      attributes: { intensityLevel: "soft", projectionLevel: "close", scentFamilies: ["citrus"] },
+    },
+    {
+      id: "strong", name: "Strong", productType: "perfume",
+      attributes: { intensityLevel: "strong", projectionLevel: "strong", scentFamilies: ["woody"] },
+    },
+  ];
+  const result = new AdvisorCore().advise({
+    domain: "fragrance",
+    products: candidates,
+    customerMessage: "Quiero algo suave y discreto.",
+    preferences: { intensity: "strong", projection: "strong" },
+  });
+  assert.equal(result.preferenceMatch.requestedPreferences.intensity, "strong");
+  assert.equal(result.preferenceMatch.requestedPreferences.projection, "strong");
+});
+
+test("reports clarification when a customer message contains no recognized fragrance intent", () => {
+  const result = new AdvisorCore().advise({
+    domain: "fragrance",
+    products: perfumes,
+    customerMessage: "Quiero algo especial.",
+  });
+  assert.equal(result.customerIntent.needsClarification, true);
+  assert.equal(result.preferenceMatch, null);
+});
