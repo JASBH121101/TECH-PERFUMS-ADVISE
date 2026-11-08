@@ -272,6 +272,145 @@ function validateLimit(limit, defaultValue = 25) {
   return value;
 }
 
+function countDistribution(values, limit = 30) {
+  const counts = new Map();
+  for (const rawValue of values) {
+    const value = optionalText(rawValue);
+    if (!value) continue;
+    const key = searchText(value);
+    if (!key) continue;
+    const current = counts.get(key);
+    if (current) current.count += 1;
+    else counts.set(key, { value, count: 1 });
+  }
+  return Object.freeze([...counts.values()]
+    .sort((left, right) =>
+      right.count - left.count || left.value.localeCompare(right.value)
+    )
+    .slice(0, limit)
+    .map((item) => Object.freeze(item)));
+}
+
+function buildCoverageReport(perfumes, houses, materials) {
+  const fieldDefinitions = [
+    { field: "releaseYear", label: "Release year", present: (a) => Number.isSafeInteger(a.releaseYear) },
+    { field: "perfumers", label: "Perfumer credits", present: (a) => Array.isArray(a.perfumers) && a.perfumers.length > 0 },
+    { field: "concentrationLabel", label: "Concentration label", present: (a) => Boolean(a.concentrationLabel) },
+    { field: "scentFamilies", label: "Scent family", present: (a) => Array.isArray(a.scentFamilies) && a.scentFamilies.length > 0 },
+    { field: "characterTraits", label: "Character traits", present: (a) => Array.isArray(a.characterTraits) && a.characterTraits.length > 0 },
+    { field: "seasons", label: "Season tags", present: (a) => Array.isArray(a.seasons) && a.seasons.length > 0 },
+    { field: "timesOfDay", label: "Time-of-day tags", present: (a) => Array.isArray(a.timesOfDay) && a.timesOfDay.length > 0 },
+    { field: "topNotes", label: "Top notes", present: (a) => Array.isArray(a.topNotes) && a.topNotes.length > 0 },
+    { field: "middleNotes", label: "Heart notes", present: (a) => Array.isArray(a.middleNotes) && a.middleNotes.length > 0 },
+    { field: "baseNotes", label: "Base notes", present: (a) => Array.isArray(a.baseNotes) && a.baseNotes.length > 0 },
+    { field: "allNotes", label: "All-notes list", present: (a) => Array.isArray(a.allNotes) && a.allNotes.length > 0 },
+    { field: "description", label: "Description", present: (a) => Boolean(a.description) },
+  ];
+  const total = perfumes.length;
+  const fieldCoverage = Object.freeze(fieldDefinitions.map(({ field, label, present }) => {
+    const presentCount = perfumes.reduce((count, product) =>
+      count + (present(product.attributes) ? 1 : 0), 0);
+    return Object.freeze({
+      field,
+      label,
+      present: presentCount,
+      missing: total - presentCount,
+      coveragePercent: total === 0 ? 0 : Math.round((presentCount / total) * 1000) / 10,
+    });
+  }));
+  const completePyramids = perfumes.filter((item) =>
+    item.attributes.topNotes?.length &&
+    item.attributes.middleNotes?.length &&
+    item.attributes.baseNotes?.length
+  ).length;
+  const noteValues = perfumes.flatMap((item) => [
+    ...(item.attributes.topNotes ?? []),
+    ...(item.attributes.middleNotes ?? []),
+    ...(item.attributes.baseNotes ?? []),
+  ]);
+  const report = {
+    schemaVersion: 1,
+    dataset: Object.freeze({
+      title: SCENTO_DATASET.title,
+      version: SCENTO_DATASET.version,
+      snapshotDate: SCENTO_DATASET.snapshotDate,
+      license: SCENTO_DATASET.license,
+      sourceUrl: SCENTO_DATASET.sourceUrl,
+      repositoryUrl: SCENTO_DATASET.repositoryUrl,
+    }),
+    totals: Object.freeze({
+      perfumes: total,
+      houses: houses.length,
+      materials: materials.length,
+    }),
+    notePyramid: Object.freeze({
+      complete: completePyramids,
+      incompleteOrMissing: total - completePyramids,
+      coveragePercent: total === 0 ? 0 : Math.round((completePyramids / total) * 1000) / 10,
+    }),
+    fieldCoverage,
+    distributions: Object.freeze({
+      concentrations: countDistribution(perfumes.map((item) => item.attributes.concentrationLabel), 20),
+      primaryFamilies: countDistribution(perfumes.map((item) => item.attributes.primaryScentFamily), 20),
+      secondaryFamilies: countDistribution(perfumes.map((item) => item.attributes.secondaryScentFamily), 20),
+      houses: countDistribution(perfumes.map((item) => item.brand), 30),
+      mostCommonNotes: countDistribution(noteValues, 30),
+    }),
+    interpretation: "Coverage measures source-field presence only. It does not measure factual accuracy, quality, performance or independent verification.",
+  };
+  return Object.freeze(report);
+}
+
+export function renderScentoCoverageMarkdown(report) {
+  if (!report || report.schemaVersion !== 1 || !Array.isArray(report.fieldCoverage)) {
+    throw new TypeError("report must be a schema-v1 fragrance coverage report");
+  }
+  const lines = [
+    "# Fragrance library coverage report",
+    "",
+    "- Dataset: **" + report.dataset.title + "** (" + report.dataset.version + ")",
+    "- Snapshot date: " + report.dataset.snapshotDate,
+    "- License: " + report.dataset.license,
+    "- Source: " + report.dataset.sourceUrl,
+    "",
+    "## Catalog totals",
+    "",
+    "- Perfumes: **" + report.totals.perfumes + "**",
+    "- Houses: **" + report.totals.houses + "**",
+    "- Materials: **" + report.totals.materials + "**",
+    "- Complete top/heart/base pyramids: **" + report.notePyramid.complete + "** (" + report.notePyramid.coveragePercent + "%)",
+    "- Incomplete or missing pyramids: **" + report.notePyramid.incompleteOrMissing + "**",
+    "",
+    "## Field coverage",
+    "",
+    "| Field | Present | Missing | Coverage |",
+    "| --- | ---: | ---: | ---: |",
+    ...report.fieldCoverage.map((item) =>
+      "| " + item.label + " | " + item.present + " | " + item.missing + " | " + item.coveragePercent + "% |"
+    ),
+    "",
+    "## Distributions",
+    "",
+    ...[
+      ["Concentration labels", report.distributions.concentrations],
+      ["Primary scent families", report.distributions.primaryFamilies],
+      ["Secondary scent families", report.distributions.secondaryFamilies],
+      ["Perfume houses (top 30)", report.distributions.houses],
+      ["Most common pyramid notes (top 30)", report.distributions.mostCommonNotes],
+    ].flatMap(([heading, items]) => [
+      "### " + heading,
+      "",
+      ...(items.length ? items.map((item) => "- " + item.value + ": " + item.count) : ["- No values recorded"]),
+      "",
+    ]),
+    "> " + report.interpretation,
+    "",
+    "Generated by npm run build:fragrance-library; source coverage is not independent verification.",
+    "",
+  ];
+  return lines.join("\n");
+}
+
 function createSearchableLibrary(perfumes, houses, materials) {
   const houseById = new Map(houses.map((house) => [house.id, house]));
   const perfumeById = new Map(perfumes.map((perfume) => [perfume.id, perfume]));
@@ -414,6 +553,7 @@ function createSearchableLibrary(perfumes, houses, materials) {
   }
 
   return Object.freeze({
+    coverageReport: buildCoverageReport(perfumes, houses, materials),
     metadata: Object.freeze({
       ...SCENTO_DATASET,
       perfumeCount: perfumes.length,
