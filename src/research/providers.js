@@ -238,7 +238,7 @@ export function createOpenBeautyFactsResearchProvider({
 
     const sourceUrl = OPEN_BEAUTY_FACTS_BASE + "/product/" + barcode;
     const discoveryNote = mode === "category"
-      ? 'Bounded structured category lookup for source tag "' + categoryTag + '. Open Beauty Facts category tags are community taxonomy claims, not an approved JBAE productType; confirm the exact item and product form. The API search is category-filtered, not free-text. This record remains unconfirmed.'
+      ? "Bounded structured category lookup for source tag " + categoryTag + ". Open Beauty Facts category tags are community taxonomy claims, not an approved JBAE productType; confirm the exact item and product form. The API search is category-filtered, not free-text. This record remains unconfirmed."
       : "Exact cosmetics barcode lookup only. Open Beauty Facts records are community-contributed; verify the package, exact item and category. categories/categories_tags are raw source taxonomy, not an approved JBAE productType. This candidate remains unconfirmed.";
 
     return {
