@@ -89,7 +89,7 @@ async function run() {
   ];
   const normalizeHouseName = value => String(value ?? "")
     .normalize("NFKD")
-    .replace(/[\\u0300-\\u036f]/gu, "")
+    .replace(/[\u0300-\u036f]/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/gu, " ")
     .trim();
