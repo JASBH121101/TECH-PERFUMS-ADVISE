@@ -1,6 +1,6 @@
 import "./styles.css";
 import { DOMAINS } from "../../../src/index.js";
-import { initializeStorage } from "./storage.js";
+import { closeStorage, initializeStorage } from "./storage.js";
 import { searchProducts } from "./search.js";
 
 const app = document.querySelector("#app");
@@ -26,7 +26,7 @@ function renderHome() {
       <div class="eyebrow"><span class="eyebrow-dot"></span> TU CENTRO DE DECISIONES</div>
       <h1>Elegir mejor.<br><span>Con información.</span></h1>
       <p>Dos asesores especializados, una experiencia independiente y una biblioteca que permanece en tu dispositivo.</p>
-      <div class="hero-footer"><span class="hero-status"><i></i> MOTOR LOCAL DISPONIBLE</span><span class="hero-version">JBAE · 0.1</span></div>
+      <div class="hero-footer"><span class="hero-status"><i></i> BIBLIOTECA LOCAL DISPONIBLE</span><span class="hero-version">JBAE · 0.1</span></div>
     </section>
     <section class="section-heading"><div><span class="kicker">ÁREAS DE ASESORÍA</span><h2>¿Qué estás buscando?</h2></div></section>
     <div class="module-grid">
@@ -257,5 +257,5 @@ async function boot() {
 }
 boot();
 window.addEventListener("beforeunload", () => {
-  import("./storage.js").then(({ closeStorage }) => closeStorage()).catch(() => undefined);
+  closeStorage().catch(() => undefined);
 });
