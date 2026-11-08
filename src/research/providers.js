@@ -189,21 +189,29 @@ function pickOpenBeautyFactsValue(product, field) {
     ingredients: product.ingredients,
     ingredients_text: product.ingredients_text,
     last_modified: product.last_modified_t,
+    product_quantity: product.product_quantity,
+    product_quantity_unit: product.product_quantity_unit,
   };
-  return map[field] ?? map[field.replace(/[A-Z]/gu, letter => "_" + letter.toLowerCase())];
+  return map[field] ?? map[field.replace(/[A-Z]/gu, letter => \`_\${letter.toLowerCase()}\`)];
 }
 
 /**
- * Open Beauty Facts exact-barcode lookup for cosmetics.
- * This deliberately avoids catalogue crawling and never imports product images.
- * Category values remain source taxonomy claims and must be reviewed before product typing.
+ * Open Beauty Facts read-only cosmetics discovery.
+ *
+ * Supports:
+ * - category:<taxonomy-slug> via structured API v2 category filters;
+ * - an exact 8-14 digit GTIN/EAN/UPC lookup via API v3.
+ *
+ * Category results preserve source tags and are never converted automatically
+ * into a JBAE product type. Images are deliberately excluded.
  */
 export function createOpenBeautyFactsResearchProvider({
   fetchImpl = globalThis.fetch,
   clock = () => new Date(),
   timeoutMs = 12_000,
   cacheTtlMs = 30 * 60_000,
-  minRequestIntervalMs = 1_000,
+  // OFF/OBF documents a 10 requests/minute limit for search. 6.5s leaves margin.
+  minRequestIntervalMs = 6_500,
 } = {}) {
   assertFetch(fetchImpl);
   if (typeof clock !== "function") throw new TypeError("clock must be a function");
@@ -219,50 +227,89 @@ export function createOpenBeautyFactsResearchProvider({
     requestHeaders,
   });
 
+  function toCandidate(product, field, mode, categoryTag) {
+    if (!product || typeof product !== "object" || Array.isArray(product)) return null;
+    const barcode = typeof product.code === "string" ? product.code : String(product.code ?? "");
+    if (!/^\d{8,14}$/u.test(barcode)) return null;
+    const value = pickOpenBeautyFactsValue(product, field);
+    if (value === undefined || value === null || value === "" ||
+        (Array.isArray(value) && value.length === 0)) return null;
+
+    const sourceUrl = OPEN_BEAUTY_FACTS_BASE + "/product/" + barcode;
+    const discoveryNote = mode === "category"
+      ? \`Bounded structured category lookup for source tag "\${categoryTag}". Open Beauty Facts category tags are community taxonomy claims, not an approved JBAE productType; confirm the exact item and product form. The API search is category-filtered, not free-text. This record remains unconfirmed.\`
+      : "Exact cosmetics barcode lookup only. Open Beauty Facts records are community-contributed; verify the package, exact item and category. categories/categories_tags are raw source taxonomy, not an approved JBAE productType. This candidate remains unconfirmed.";
+
+    return {
+      id: barcode,
+      value,
+      confidence: mode === "category" ? 0.55 : 0.72,
+      source: {
+        name: "Open Beauty Facts",
+        url: sourceUrl,
+        type: SOURCE_TYPES.DATABASE,
+        attribution: "Product data from Open Beauty Facts; database under ODbL 1.0 and individual contents under Database Contents License 1.0.",
+        references: [
+          "https://world.openbeautyfacts.org/",
+          "https://openfoodfacts.github.io/documentation/docs/Product-Opener/v2/search/get-search/",
+          "https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/",
+          OPEN_BEAUTY_FACTS_ODBL,
+          "https://opendatacommons.org/licenses/dbcl/1-0/",
+          "https://creativecommons.org/licenses/by-sa/3.0/",
+        ],
+        license: "Database: ODbL 1.0; individual contents: Database Contents License 1.0; product images: CC BY-SA 3.0 (not requested or imported).",
+      },
+      observedAt: isoNow(clock),
+      note: discoveryNote + " Product images are deliberately excluded because they use separate CC BY-SA 3.0 rights. Preserve the applicable database attribution, share-alike and individual-content notices.",
+    };
+  }
+
   return Object.freeze({
     id: "open-beauty-facts-cosmetics",
     domains: Object.freeze([DOMAINS.FRAGRANCE]),
     async search(request) {
-      const barcode = requireText(request.query, "query");
-      if (!/^\d{8,14}$/u.test(barcode)) {
-        throw new TypeError("query must be an 8-to-14 digit GTIN/EAN/UPC barcode");
-      }
+      const query = requireText(request.query, "query");
       const field = requireText(request.field, "field");
-      const url = new URL(OPEN_BEAUTY_FACTS_BASE + "/api/v3/product/" + barcode + ".json");
+
+      if (query.startsWith("category:")) {
+        const categoryTag = query.slice("category:".length).trim().toLowerCase();
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(categoryTag) || categoryTag.length > 80) {
+          throw new TypeError("category query must use category:<taxonomy-slug>");
+        }
+        const limit = readLimit(request.limit, 5, 10);
+        const url = new URL(OPEN_BEAUTY_FACTS_BASE + "/api/v2/search");
+        url.searchParams.set("categories_tags_en", categoryTag);
+        url.searchParams.set("page", "1");
+        url.searchParams.set("page_size", String(limit));
+        url.searchParams.set(
+          "fields",
+          "code,product_name,product_name_en,brands,categories,categories_tags,ingredients_text,ingredients,last_modified_t,product_quantity,product_quantity_unit",
+        );
+        const response = await readJson(url, "Open Beauty Facts category search");
+        if (!Array.isArray(response.products)) {
+          throw new TypeError("Open Beauty Facts category search response is missing products");
+        }
+        return response.products.slice(0, limit)
+          .map(product => toCandidate(product, field, "category", categoryTag))
+          .filter(Boolean);
+      }
+
+      if (!/^\d{8,14}$/u.test(query)) {
+        throw new TypeError("query must be category:<taxonomy-slug> or an 8-to-14 digit GTIN/EAN/UPC barcode");
+      }
+      const url = new URL(OPEN_BEAUTY_FACTS_BASE + "/api/v3/product/" + query + ".json");
       url.searchParams.set("product_type", "beauty");
       url.searchParams.set(
         "fields",
-        "code,product_name,product_name_en,brands,categories,categories_tags,ingredients_text,ingredients,last_modified_t",
+        "code,product_name,product_name_en,brands,categories,categories_tags,ingredients_text,ingredients,last_modified_t,product_quantity,product_quantity_unit",
       );
       const response = await readJson(url, "Open Beauty Facts product lookup");
       const product = response.product;
       if (response.status === 0 || !product || typeof product !== "object" || Array.isArray(product)) {
         return [];
       }
-      const value = pickOpenBeautyFactsValue(product, field);
-      if (value === undefined || value === null || value === "" ||
-          (Array.isArray(value) && value.length === 0)) return [];
-      const sourceUrl = OPEN_BEAUTY_FACTS_BASE + "/product/" + barcode;
-      return [{
-        id: barcode,
-        value,
-        confidence: 0.72,
-        source: {
-          name: "Open Beauty Facts",
-          url: sourceUrl,
-          type: SOURCE_TYPES.DATABASE,
-          attribution: "Product data from Open Beauty Facts; database under ODbL 1.0 and individual contents under Database Contents License 1.0.",
-          references: [
-            "https://world.openbeautyfacts.org/",
-            OPEN_BEAUTY_FACTS_ODBL,
-            "https://opendatacommons.org/licenses/dbcl/1-0/",
-            "https://creativecommons.org/licenses/by-sa/3.0/",
-          ],
-          license: "Database: ODbL 1.0; individual contents: Database Contents License 1.0; product images: CC BY-SA 3.0 (not requested or imported).",
-        },
-        observedAt: isoNow(clock),
-        note: "Exact cosmetics barcode lookup only. Open Beauty Facts records are community-contributed; verify the package, exact item and category. categories/categories_tags are raw source taxonomy, not an approved JBAE productType. Product images are deliberately excluded because they use separate CC BY-SA 3.0 rights. The database is ODbL 1.0 and individual contents use Database Contents License 1.0; preserve the applicable notices and share-alike conditions. This candidate remains unconfirmed.",
-      }];
+      const candidate = toCandidate(product, field, "barcode", null);
+      return candidate ? [candidate] : [];
     },
   });
 }
