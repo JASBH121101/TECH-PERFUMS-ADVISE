@@ -1,7 +1,8 @@
 import { apkUpdater } from "./apk-updater.js";
+import { apkUpdater } from "./apk-updater.js";
 import { compareVersions, fetchLatestJbaeRelease } from "./update-utils.js";
 
-const CURRENT_VERSION = import.meta.env.VITE_APP_VERSION || "0.3.0";
+const CURRENT_VERSION = import.meta.env.VITE_APP_VERSION || "0.4.0";
 let latestRelease = null;
 let noticeElement = null;
 let monitorTimer = null;
