@@ -16,114 +16,37 @@ import { compareNicaraguaRetailerOffers } from "../src/research/nicaragua-retail
 
 const timeoutMs = 15_000;
 
-// Read-only diagnostic for SIMAN's public exact-product Search API.
-// This logs only product/SKU identity attributes and offer snapshots so
-// variant-level evidence can be inspected without ranking mixed SKUs.
+// Live acceptance check for exact SIMAN SKU variants through the production adapter.
 async function inspectSimanSkuVariants(productUrl) {
-  const url = new URL(productUrl);
-  const slug = url.pathname.replace(/\/p\/?$/u, "").split("/").at(-1);
-  const endpoint = "https://ni.siman.com/api/catalog_system/pub/products/search/" +
-    encodeURIComponent(slug) + "/p";
   try {
-    const response = await fetch(endpoint, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(timeoutMs),
+    const provider = createSimanResearchProvider({ timeoutMs, minRequestIntervalMs: 500 });
+    const results = await provider.search({
+      domain: DOMAINS.TECHNOLOGY,
+      subjectId: "smoke-siman-a17-sku-variants",
+      field: "variants",
+      query: productUrl,
+      limit: 1,
     });
-    if (!response.ok) {
-      console.log("SIMAN SKU-level diagnostics: DEFERRED — HTTP " + response.status);
-      return;
-    }
-    const payload = await response.json();
-    const products = Array.isArray(payload) ? payload : payload?.products;
-    const product = Array.isArray(products)
-      ? products.find(item => String(item?.linkText ?? "").toLowerCase() === slug.toLowerCase())
-      : null;
-    if (!product) {
-      console.log("SIMAN SKU-level diagnostics: DEFERRED — exact product record not returned");
-      return;
-    }
-
-    const selectSpecifications = owner => [
-      ...(Array.isArray(owner?.productSpecifications) ? owner.productSpecifications : []),
-      ...(Array.isArray(owner?.specifications) ? owner.specifications : []),
-      ...(Array.isArray(owner?.specificationGroups)
-        ? owner.specificationGroups.flatMap(group =>
-            Array.isArray(group?.specifications) ? group.specifications : [])
-        : []),
-    ].map(specification => ({
-      name: specification?.name ?? specification?.originalName ??
-        specification?.Key ?? specification?.Name ?? null,
-      values: specification?.values ?? specification?.value ??
-        specification?.Value ?? specification?.ValueName ?? null,
-    })).filter(specification =>
-      /modelo|model|color|colour|ram|memoria|almacenamiento|rom/iu.test(String(specification.name ?? ""))
+    const variants = results[0]?.value ?? [];
+    const grey = variants.find(variant =>
+      String(variant.color ?? "").trim().toLowerCase() === "gris" &&
+      String(variant.capacity ?? "").trim().toLowerCase() === "128gb"
     );
-
-    const items = (Array.isArray(product.items) ? product.items : []).map(item => ({
-      itemId: item?.itemId ?? null,
-      ean: item?.ean ?? null,
-      referenceId: Array.isArray(item?.referenceId)
-        ? item.referenceId.map(entry => ({ key: entry?.Key ?? entry?.Name ?? null, value: entry?.Value ?? null }))
-        : [],
-      variations: Array.isArray(item?.variations) ? item.variations : [],
-      specifications: selectSpecifications(item),
-      offers: (Array.isArray(item?.sellers) ? item.sellers : []).map(seller => {
-        const offer = seller?.commertialOffer ?? seller?.commercialOffer ?? {};
-        return {
-          sellerId: seller?.sellerId ?? null,
-          price: offer.Price ?? null,
-          listPrice: offer.ListPrice ?? null,
-          availableQuantity: offer.AvailableQuantity ?? null,
-          isAvailable: typeof offer.IsAvailable === "boolean" ? offer.IsAvailable : null,
-        };
-      }),
-    }));
-    const variationsEndpoint =
-      "https://ni.siman.com/api/catalog_system/pub/products/variations/" +
-      encodeURIComponent(String(product.productId));
-    let variationDiagnostics = { status: "not_attempted" };
-    try {
-      const variationResponse = await fetch(variationsEndpoint, {
-        headers: { Accept: "application/json" },
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      if (!variationResponse.ok) {
-        variationDiagnostics = { status: "deferred", httpStatus: variationResponse.status };
-      } else {
-        const variationData = await variationResponse.json();
-        variationDiagnostics = {
-          status: "pass",
-          dimensions: Array.isArray(variationData?.dimensions) ? variationData.dimensions : [],
-          dimensionsMap: variationData?.dimensionsMap ?? null,
-          skus: (Array.isArray(variationData?.skus) ? variationData.skus : []).map(sku => ({
-            sku: sku?.sku ?? null,
-            skuName: sku?.skuname ?? null,
-            dimensions: sku?.dimensions ?? null,
-            available: typeof sku?.available === "boolean" ? sku.available : null,
-            availableQuantity: sku?.availablequantity ?? null,
-            price: sku?.bestPrice ?? null,
-            listPrice: sku?.listPrice ?? null,
-          })).slice(0, 20),
-        };
-      }
-    } catch (error) {
-      variationDiagnostics = {
-        status: "deferred",
-        error: String(error?.message ?? error),
-      };
+    if (!grey) {
+      console.log("SIMAN SKU variants: DEFERRED — exact grey 128GB SKU not exposed");
+      return;
     }
-
-    console.log("SIMAN SKU-level diagnostics: " + JSON.stringify({
-      productId: product.productId ?? null,
-      productName: product.productName ?? null,
-      productSpecifications: selectSpecifications(product),
-      itemCount: items.length,
-      items: items.slice(0, 20),
-      publicVariations: variationDiagnostics,
+    console.log("SIMAN SKU variants: PASS — " + JSON.stringify({
+      sku: grey.retailerSku,
+      color: grey.color,
+      capacity: grey.capacity,
+      price: grey.price,
+      availability: grey.availability,
+      manufacturerIdentifiers: grey.manufacturerIdentifiers,
     }));
   } catch (error) {
-    console.log("SIMAN SKU-level diagnostics: DEFERRED — " +
-      String(error?.message ?? error));
+    const message = String(error?.message ?? error);
+    console.log("SIMAN SKU variants: DEFERRED — " + message);
   }
 }
 
