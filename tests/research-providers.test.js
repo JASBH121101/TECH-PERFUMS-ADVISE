@@ -5,6 +5,7 @@ import {
   createDefaultResearchProviders,
   createScentoResearchProvider,
   createTenMlResearchProvider,
+  createOpenBeautyFactsResearchProvider,
   createWikidataResearchProvider,
   createTechApiResearchProvider,
   createCoreInfoResearchProvider,
@@ -179,6 +180,7 @@ test("default research provider registry contains isolated fragrance and technol
   assert.deepEqual(providers.map(provider => provider.id), [
     "scento-perfume-api",
     "10ml-fragrance-index",
+    "open-beauty-facts-cosmetics",
     "wikidata",
     "coreinfo-device-catalog",
     "sicsa-nicaragua-retail",
@@ -190,9 +192,10 @@ test("default research provider registry contains isolated fragrance and technol
   ]);
   assert.deepEqual(providers[0].domains, [DOMAINS.FRAGRANCE]);
   assert.deepEqual(providers[1].domains, [DOMAINS.FRAGRANCE]);
-  assert.deepEqual(providers[2].domains, [DOMAINS.TECHNOLOGY]);
+  assert.deepEqual(providers[2].domains, [DOMAINS.FRAGRANCE]);
   assert.deepEqual(providers[3].domains, [DOMAINS.TECHNOLOGY]);
   assert.deepEqual(providers[4].domains, [DOMAINS.TECHNOLOGY]);
+  assert.deepEqual(providers[5].domains, [DOMAINS.TECHNOLOGY]);
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("ram_capacity"));
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("storage_capacity"));
   assert.ok(WIKIDATA_RESEARCH_FIELDS.includes("cpu"));
@@ -307,6 +310,7 @@ test("TechAPI stays opt-in while the local Nicaragua retailer provider is enable
   assert.deepEqual(providers.map(provider => provider.id), [
     "scento-perfume-api",
     "10ml-fragrance-index",
+    "open-beauty-facts-cosmetics",
     "wikidata",
     "coreinfo-device-catalog",
     "sicsa-nicaragua-retail",
@@ -798,4 +802,84 @@ test("10ML provider rejects excessive query lengths and malformed upstream searc
     () => provider.search({ query: "Lattafa", field: "name" }),
     /missing results/u,
   );
+});
+
+
+test("Open Beauty Facts looks up one cosmetics GTIN and preserves ODbL attribution without importing images", async () => {
+  let requestedUrl;
+  let requestedHeaders;
+  const provider = createOpenBeautyFactsResearchProvider({
+    fetchImpl: async (url, init) => {
+      requestedUrl = String(url);
+      requestedHeaders = init.headers;
+      return response({
+        status: 1,
+        product: {
+          code: "3560070791460",
+          product_name: "Example Body Mist",
+          product_name_en: "Example Body Mist",
+          brands: "Example Brand",
+          categories: "Body mists",
+          categories_tags: ["en:body-mists"],
+          ingredients_text: "Aqua, parfum",
+          ingredients: [{ id: "aqua", text: "Aqua" }],
+          image_url: "https://images.example/product.jpg",
+          image_front_url: "https://images.example/front.jpg",
+        },
+      });
+    },
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+  const result = await provider.search({
+    domain: DOMAINS.FRAGRANCE,
+    query: "3560070791460",
+    field: "category_tags",
+  });
+  assert.equal(result.length, 1);
+  assert.deepEqual(result[0].value, ["en:body-mists"]);
+  assert.equal(result[0].source.name, "Open Beauty Facts");
+  assert.equal(result[0].source.attribution.includes("ODbL"), true);
+  assert.equal(result[0].source.references.includes("https://opendatacommons.org/licenses/odbl/1-0/"), true);
+  assert.equal(result[0].source.license.includes("individual contents"), true);
+  assert.match(result[0].note, /not an approved JBAE productType/u);
+  assert.match(requestedUrl, /api\/v3\/product\/3560070791460\.json/u);
+  assert.match(requestedUrl, /fields=/u);
+  assert.match(requestedHeaders["User-Agent"] ?? requestedHeaders["Api-User-Agent"], /^JB Advisor Engine/u);
+  assert.equal(Object.hasOwn(result[0], "image_url"), false);
+});
+
+test("Open Beauty Facts validates barcode lookups and treats absent products or fields as empty", async () => {
+  let calls = 0;
+  const provider = createOpenBeautyFactsResearchProvider({
+    fetchImpl: async () => {
+      calls += 1;
+      return response({ status: 0, product: null });
+    },
+    minRequestIntervalMs: 0,
+  });
+  await assert.rejects(
+    () => provider.search({ query: "not-a-barcode", field: "name" }),
+    /8-to-14 digit/u,
+  );
+  assert.deepEqual(
+    await provider.search({ query: "3560070791460", field: "name" }),
+    [],
+  );
+  assert.equal(calls, 1);
+});
+
+test("Open Beauty Facts exact barcode requests use a bounded response cache", async () => {
+  let calls = 0;
+  const provider = createOpenBeautyFactsResearchProvider({
+    fetchImpl: async () => {
+      calls += 1;
+      return response({ status: 1, product: { code: "3560070791460", product_name: "Example Body Mist" } });
+    },
+    minRequestIntervalMs: 0,
+  });
+  const request = { query: "3560070791460", field: "name" };
+  assert.equal((await provider.search(request))[0].value, "Example Body Mist");
+  assert.equal((await provider.search(request))[0].value, "Example Body Mist");
+  assert.equal(calls, 1);
 });
