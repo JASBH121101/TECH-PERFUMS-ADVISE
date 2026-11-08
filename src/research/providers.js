@@ -261,7 +261,7 @@ export function createOpenBeautyFactsResearchProvider({
     const sourceUrl = OPEN_BEAUTY_FACTS_BASE + "/product/" + barcode;
     const discoveryNote = mode === "category"
       ? "Bounded structured lookup for the body-mists source tag. Open Beauty Facts category tags are community taxonomy claims, not an approved JBAE productType; confirm the exact package and identity before import. This is not free-text search. This candidate remains unconfirmed."
-      : "Exact GTIN/EAN/UPC lookup accepted only when Open Beauty Facts supplies a body-mists source category tag. That tag is community taxonomy, not independent identity verification; confirm the exact package and product form. This candidate remains unconfirmed.";
+      : "Exact GTIN/EAN/UPC lookup accepted only when Open Beauty Facts supplies a body-mists source category tag. The category is not an approved JBAE productType until the exact package and identity are reviewed. This candidate remains unconfirmed.";
 
     return {
       id: barcode,
