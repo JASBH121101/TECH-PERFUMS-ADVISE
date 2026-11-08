@@ -57,3 +57,18 @@ Exact source pages:
 - RadioShack: https://www.radioshackla.com/nicaragua/celular-samsung-a17-128-gb-6-7-470890800019-gris/p
 - La Curacao: https://www.lacuracaonline.com/nicaragua/celular-samsung-a17-128-gb-6-7-470890800019-gris/p
 - SIMAN: https://ni.siman.com/celular-samsung-galaxy-a17-128gb-4gb-ram-pantalla-6-7---17-02-cm--octa-core-camara-trasera-triple-50mp-/p
+
+
+## El Gallo Más Gallo — live indexed evidence and adapter limitation
+
+A bounded public-web inspection on **2026-11-08** found the exact Nicaragua product detail for Samsung Galaxy A17, 4 GB RAM / 128 GB, grey:
+
+- Product URL: https://www.elgallomasgallo.com.ni/celular-4g-samsung-galaxy-a17-gris-4gb-ram-128gb-199205
+- Published retailer SKU: `199205`
+- Product identity: Samsung Galaxy A17, 4 GB RAM, 128 GB, grey
+- Displayed special price in the indexed detail: C$7,999
+- Published availability label: Disponible
+
+The retailer's indexed product detail supports these values as a public-web observation, but it does not provide a manufacturer GTIN/MPN in the inspected text. A direct page retrieval through the bounded provider smoke environment returned `fetch failed`; a separate page-open inspection returned a JavaScript-required interstitial rather than the product document. Therefore the production adapter remains **DEFERRED** for live automated extraction. Do not copy the indexed price or availability into a production adapter result, do not infer manufacturer identity from the retailer SKU, and do not rank this offer against another store until the adapter can retrieve and parse the exact product page through a stable, permitted method.
+
+This distinction is intentional: the product listing is publicly discoverable, while automated retrieval by the current adapter is not yet verified. The adapter must remain read-only and restricted to exact product URLs; no category crawling, private endpoints, authentication bypass, or checkout actions are permitted.
