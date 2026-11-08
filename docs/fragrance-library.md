@@ -40,6 +40,8 @@ The offline library also exposes a deterministic similarity search based on weig
 
 Supplemental intake decisions and licensing boundaries for future body products, additional perfume sources and wear-test evidence are tracked in [Supplemental source assessment](fragrance-supplemental-sources.md).
 
+The free 10ML Fragrance Index is also registered as a bounded research provider for additional perfume discovery and profile enrichment. Its current API terms allow free commercial use and caching of fetched responses, provided the visible credit **“Data: 10ML Fragrance Index”** links to [10ml.com/perfume-api](https://10ml.com/perfume-api). Search results enter JBAE as unconfirmed evidence candidates; the provider does not copy the full index into the local catalog. The index covers perfumes and fine fragrances, not an established body-mist/body-spray catalog. The source and usage conditions are documented in [Supplemental source assessment](fragrance-supplemental-sources.md).
+
 ## Evidence policy
 
 Each imported factual attribute is linked to its Scento perfume page and a dated dataset record. JBAE assigns these claims status `reported`, not `verified` or `cross_checked`, because JBAE has not independently revalidated each perfume page. The source's own curation claim is not treated as an independent JBAE verification.
