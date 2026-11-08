@@ -9,6 +9,7 @@ JBAE now includes the Scento Perfume Database snapshot dated **2026-10-29**:
 - 420 materials, accords and note-reference records.
 - 1,388 perfumes have a complete top/heart/base note pyramid in this snapshot.
 - 91 perfumes do not have all three pyramid tiers recorded.
+- The validated Knowledge Store seed contains 20,280 field-scoped evidence records for the available source attributes.
 - 251 perfume records have no concentration label.
 
 The source files are preserved under `data/fragrance/sources/scento-2026-10-29/`. Empty source fields remain empty. JBAE does not infer missing notes, concentration, year or perfumer.
