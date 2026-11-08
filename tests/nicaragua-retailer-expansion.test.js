@@ -423,3 +423,99 @@ test("retailer integration registry keeps CONICO manual and El Verdugo price/sto
   assert.match(elVerdugo.note, /Price and stock are deliberately unsupported/u);
   assert.equal(NICARAGUA_RETAILER_INTEGRATION_STATUS.length, 6);
 });
+
+
+test("SIMAN exposes exact public SKU variants without promoting internal SKU IDs to manufacturer identity", async () => {
+  const url = "https://ni.siman.com/example-phone/p";
+  const calls = [];
+  const provider = createSimanResearchProvider({
+    fetchImpl: async (requestUrl, init) => {
+      const request = String(requestUrl);
+      calls.push({ url: request, init });
+      if (request.includes("/search/")) {
+        return jsonResponse([{
+          productId: "300",
+          productName: "Example Phone 4GB 128GB",
+          linkText: "example-phone",
+          items: [
+            {
+              itemId: "3001",
+              ean: "",
+              sellers: [{ sellerId: "1", commertialOffer: {
+                Price: 7999.13, AvailableQuantity: 3, IsAvailable: true,
+              } }],
+            },
+            {
+              itemId: "3002",
+              ean: "",
+              sellers: [{ sellerId: "1", commertialOffer: {
+                Price: 8999.13, AvailableQuantity: 0, IsAvailable: false,
+              } }],
+            },
+          ],
+        }], request);
+      }
+      if (request.endsWith("/variations/300")) {
+        return jsonResponse({
+          dimensions: ["Capacidad (ROM)", "Color"],
+          skus: [
+            {
+              sku: 3001,
+              skuname: "Example Phone 4GB 128GB Grey",
+              dimensions: { "Capacidad (ROM)": "128GB", Color: "Gris" },
+              available: true,
+              availablequantity: 3,
+              bestPrice: 799913,
+            },
+            {
+              sku: 3002,
+              skuname: "Example Phone 4GB 128GB Blue",
+              dimensions: { "Capacidad (ROM)": "128GB", Color: "Azul" },
+              available: false,
+              availablequantity: 0,
+              bestPrice: 899913,
+            },
+          ],
+        }, request);
+      }
+      throw new Error("Unexpected SIMAN endpoint: " + request);
+    },
+    clock: fixedClock,
+    minRequestIntervalMs: 0,
+  });
+
+  const [record] = await provider.search({
+    domain: DOMAINS.TECHNOLOGY,
+    query: url,
+    field: "variants",
+    limit: 1,
+  });
+
+  assert.equal(record.value.length, 2);
+  assert.deepEqual(record.value[0], {
+    retailerSku: "3001",
+    name: "Example Phone 4GB 128GB Grey",
+    dimensions: { "Capacidad (ROM)": "128GB", Color: "Gris" },
+    color: "Gris",
+    capacity: "128GB",
+    price: {
+      amount: 7999.13,
+      currency: "NIO",
+      taxIncluded: null,
+      display: "C$7999.13",
+      basis: "vtex_public_sku_offer",
+    },
+    availability: { status: "in_stock", quantity: 3 },
+    manufacturerIdentifiers: { gtin: null, mpn: null },
+  });
+  assert.equal(record.value[1].availability.status, "out_of_stock");
+  assert.equal(record.value[1].price.amount, 8999.13);
+  assert.equal(record.source.market, "NI");
+  assert.equal(record.observedAt, fixedClock().toISOString());
+  assert.equal(calls.length, 2, "exact product response and its SKU-variations response are fetched once each");
+  assert.ok(calls.every(call => call.init.method === "GET"));
+  assert.ok(calls.every(call => call.init.headers.Accept === "application/json"));
+  assert.ok(calls.every(call => !Object.keys(call.init.headers).some(key => /authorization/iu.test(key))));
+  assert.match(calls[0].url, /\/api\/catalog_system\/pub\/products\/search\/example-phone\/p$/u);
+  assert.match(calls[1].url, /\/api\/catalog_system\/pub\/products\/variations\/300$/u);
+});
