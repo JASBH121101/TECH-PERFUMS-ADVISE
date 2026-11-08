@@ -192,7 +192,7 @@ async function run() {
     {
       id: "El Gallo Más Gallo Nicaragua",
       factory: createElGalloMasGalloResearchProvider,
-      url: "https://www.elgallomasgallo.com.ni/laptop-dell-core-i5-1334u-dc15250-x5nh3-201116",
+      url: "https://www.elgallomasgallo.com.ni/celular-4g-samsung-galaxy-a17-gris-4gb-ram-128gb-199205",
       fields: ["name", "sku", "price", "availability"],
     },
     {
