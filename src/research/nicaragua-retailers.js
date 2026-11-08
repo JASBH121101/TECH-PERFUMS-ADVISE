@@ -381,56 +381,7 @@ const RETAILER_CONFIGS = Object.freeze({
   }),
 });
 
-export const NICARAGUA_RETAILER_INTEGRATION_STATUS = Object.freeze([
-  Object.freeze({
-    id: "radioshack",
-    name: "RadioShack Nicaragua",
-    mode: "exact-product-page",
-    status: "page-adapter-implemented",
-    officialApi: false,
-    note: "Read-only product-page extraction; exact product URL required.",
-  }),
-  Object.freeze({
-    id: "la-curacao",
-    name: "La Curacao Nicaragua",
-    mode: "exact-product-page",
-    status: "adapter-implemented-live-smoke-pending",
-    officialApi: false,
-    note: "Read-only product-page extraction; exact Nicaragua product URL required.",
-  }),
-  Object.freeze({
-    id: "el-gallo-mas-gallo",
-    name: "El Gallo Más Gallo Nicaragua",
-    mode: "exact-product-page",
-    status: "adapter-implemented-live-smoke-pending",
-    officialApi: false,
-    note: "Read-only product-page extraction; exact product URL required.",
-  }),
-  Object.freeze({
-    id: "siman",
-    name: "Almacenes SIMAN Nicaragua",
-    mode: "exact-product-page",
-    status: "adapter-implemented-live-smoke-pending",
-    officialApi: false,
-    note: "VTEX storefront detected; this implementation reads the exact product page and does not assume an authenticated or stable public API.",
-  }),
-  Object.freeze({
-    id: "el-verdugo",
-    name: "El Verdugo Nicaragua",
-    mode: "catalog-product-page",
-    status: "identity-and-warranty-only",
-    officialApi: false,
-    note: "Catalog product pages expose identity/specification information, but current local price and stock were not verified. Price and stock fields are deliberately disabled.",
-  }),
-  Object.freeze({
-    id: "conico",
-    name: "CONICO Nicaragua",
-    mode: "manual-quote-pending",
-    status: "no-automated-catalog-verified",
-    officialApi: null,
-    note: "The company site could not be reached reliably and no public current product catalogue/API was verified. Use a vendor quote or proforma as a separately reviewed source.",
-  }),
-]);
+
 
 function retailerJsonLdProducts(html) {
   return collectJsonLdProducts(html);
