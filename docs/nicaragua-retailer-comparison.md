@@ -45,6 +45,8 @@ The engine returned `partial_exact_variant` and `partial_comparable`: RadioShack
 
 SIMAN's lower displayed price is **not** evidence of a lower price for the same exact variant until a stable manufacturer identifier or equivalent SKU-level identity is verified. Tax inclusion was not published consistently as an explicit fact, so these are displayed-price observations only—not final tax-inclusive or delivered totals. Stock and prices are snapshots and must be rechecked before purchase.
 
+A follow-up inspection of SIMAN's indexed product detail currently exposes the selected color as **Azul** and the manufacturer model as `SM-A175FZKFGTO`; RadioShack and La Curacao's compared listing is **Gris**, with MPN `SMA175FZAFGTO`. These model/color identifiers are not equivalent evidence for the same exact variant. The existing API smoke still does not return SIMAN's SKU/GTIN/MPN fields, so the A17 three-store comparison remains blocked; do not rank SIMAN's price against the grey listings. Re-check the exact SKU/colour before revisiting this case.
+
 Exact source pages:
 - RadioShack: https://www.radioshackla.com/nicaragua/celular-samsung-a17-128-gb-6-7-470890800019-gris/p
 - La Curacao: https://www.lacuracaonline.com/nicaragua/celular-samsung-a17-128-gb-6-7-470890800019-gris/p
