@@ -40,6 +40,102 @@ function uniqueVtexSpecification(product, labelPattern) {
   return unique.length === 1 ? unique[0] : null;
 }
 
+function normalizeVtexVariantDimensions(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.freeze(Object.fromEntries(
+    Object.entries(value)
+      .filter(([key, entry]) => typeof key === "string" &&
+        (typeof entry === "string" || typeof entry === "number" || typeof entry === "boolean"))
+      .map(([key, entry]) => [key.trim(), String(entry).trim()])
+      .filter(([key, entry]) => key && entry),
+  ));
+}
+
+function summarizeVtexVariantOffers(item, variation) {
+  const offers = (Array.isArray(item?.sellers) ? item.sellers : [])
+    .map(seller => seller?.commertialOffer ?? seller?.commercialOffer)
+    .filter(offer => offer && typeof offer === "object");
+
+  const prices = [...new Set(offers
+    .map(offer => Number(offer.Price))
+    .filter(value => Number.isFinite(value) && value > 0)
+    .map(value => value.toFixed(2)))];
+  const price = prices.length === 1 ? {
+    amount: Number(prices[0]),
+    currency: "NIO",
+    taxIncluded: null,
+    display: "C$" + Number(prices[0]).toFixed(2),
+    basis: "vtex_public_sku_offer",
+  } : null;
+
+  const quantities = offers.map(offer => Number(offer.AvailableQuantity))
+    .filter(value => Number.isFinite(value) && value >= 0);
+  const flags = offers.map(offer => offer.IsAvailable)
+    .filter(value => typeof value === "boolean");
+  const publishedQuantity = Number(variation?.availablequantity);
+  const hasPublishedQuantity = Number.isFinite(publishedQuantity) && publishedQuantity >= 0;
+  let availability = null;
+  if (quantities.some(value => value > 0) ||
+      (hasPublishedQuantity && publishedQuantity > 0) ||
+      flags.some(value => value === true) ||
+      variation?.available === true) {
+    availability = { status: "in_stock" };
+  } else if (offers.length > 0 &&
+      ((quantities.length === offers.length && quantities.every(value => value === 0)) ||
+       (flags.length === offers.length && flags.every(value => value === false)) ||
+       (hasPublishedQuantity && publishedQuantity === 0 && variation?.available === false))) {
+    availability = { status: "out_of_stock" };
+  }
+
+  const quantityCandidates = [
+    ...(hasPublishedQuantity ? [publishedQuantity] : []),
+    ...quantities,
+  ];
+  const uniqueQuantities = [...new Set(quantityCandidates)];
+  if (availability && uniqueQuantities.length === 1 && uniqueQuantities[0] >= 0) {
+    availability.quantity = uniqueQuantities[0];
+  }
+
+  return Object.freeze({ price, availability });
+}
+
+function buildVtexSkuVariants(product, variations) {
+  if (!Array.isArray(variations?.skus)) {
+    throw new TypeError("SIMAN VTEX variations response is missing skus");
+  }
+  const itemsById = new Map((Array.isArray(product?.items) ? product.items : [])
+    .filter(item => item?.itemId !== undefined && item?.itemId !== null)
+    .map(item => [String(item.itemId), item]));
+
+  return Object.freeze(variations.skus.map(variation => {
+    const skuId = variation?.sku;
+    if ((typeof skuId !== "string" && typeof skuId !== "number") ||
+        !String(skuId).trim()) return null;
+    const sku = String(skuId).trim();
+    const item = itemsById.get(sku) ?? null;
+    const dimensions = normalizeVtexVariantDimensions(variation.dimensions);
+    const colorEntry = Object.entries(dimensions)
+      .find(([key]) => /^(?:color|colour)$/iu.test(key.trim()));
+    const capacityEntry = Object.entries(dimensions)
+      .find(([key]) => /(?:capacidad|rom|storage)/iu.test(key));
+    const offerSummary = summarizeVtexVariantOffers(item, variation);
+    const name = typeof variation.skuname === "string" && variation.skuname.trim()
+      ? variation.skuname.trim() : null;
+
+    return Object.freeze({
+      retailerSku: sku,
+      name,
+      dimensions,
+      color: colorEntry?.[1] ?? null,
+      capacity: capacityEntry?.[1] ?? null,
+      price: offerSummary.price,
+      availability: offerSummary.availability,
+      // VTEX's SKU ID is a merchant-internal identifier, not a GTIN or MPN.
+      manufacturerIdentifiers: Object.freeze({ gtin: null, mpn: null }),
+    });
+  }).filter(Boolean));
+}
+
 /**
  * SIMAN uses a VTEX storefront. The public Legacy Search API documents
  * exact product-text-link lookup at /api/catalog_system/pub/products/search/{linkText}/p.
@@ -58,9 +154,13 @@ export function createSimanResearchProvider({
 
   const safeFetch = async (input, init) => {
     const requested = new URL(String(input));
+    const exactSearchPath =
+      /^\/api\/catalog_system\/pub\/products\/search\/[a-z0-9-]+\/p$/u.test(requested.pathname);
+    const exactVariantsPath =
+      /^\/api\/catalog_system\/pub\/products\/variations\/\d+$/u.test(requested.pathname);
     if (requested.origin !== "https://ni.siman.com" ||
-        !requested.pathname.startsWith("/api/catalog_system/pub/products/search/")) {
-      throw new TypeError("SIMAN VTEX reader rejected a non-public or non-storefront endpoint");
+        (!exactSearchPath && !exactVariantsPath)) {
+      throw new TypeError("SIMAN VTEX reader rejected a non-public or non-exact storefront endpoint");
     }
     const response = await fetchImpl(input, init);
     if (response?.url) {
@@ -107,7 +207,7 @@ export function createSimanResearchProvider({
 
       const field = requireText(request?.field, "field").toLowerCase();
       const supportedFields = new Set([
-        "name", "identity", "sku", "upc", "gtin", "mpn", "color",
+        "name", "identity", "sku", "upc", "gtin", "mpn", "color", "variants",
         "price", "local_price", "retail_price", "availability", "stock", "warranty",
       ]);
       if (!supportedFields.has(field)) throw new Error("SIMAN provider does not support field: " + field);
@@ -192,6 +292,20 @@ export function createSimanResearchProvider({
         }
       }
 
+      let variants = null;
+      if (field === "variants") {
+        const productId = String(product.productId ?? "");
+        if (!/^\\d+$/u.test(productId) || !Number.isSafeInteger(Number(productId)) ||
+            Number(productId) < 1) {
+          return [];
+        }
+        const variationsEndpoint =
+          "https://ni.siman.com/api/catalog_system/pub/products/variations/" +
+          encodeURIComponent(productId);
+        const variationData = await readJson(variationsEndpoint, "SIMAN VTEX public SKU variations");
+        variants = buildVtexSkuVariants(product, variationData);
+      }
+
       const values = {
         name: product.productName ?? null,
         identity: product.productName ?? null,
@@ -200,6 +314,7 @@ export function createSimanResearchProvider({
         gtin,
         mpn: typeof mpn === "string" ? mpn : null,
         color,
+        variants,
         price,
         local_price: price,
         retail_price: price,
@@ -236,7 +351,9 @@ export function createSimanResearchProvider({
                 ? "Manufacturer model number is included only when SIMAN explicitly publishes one unique Modelo/Model specification across the exact product record."
                 : field === "color"
                   ? "Color is included only when the exact VTEX product record exposes one unambiguous color value across its SKU variants."
-                  : "Product identity and identifiers are read from the exact SIMAN product text-link through the documented public VTEX Search API. Research output remains unconfirmed.",
+                  : field === "variants"
+                    ? "Variant records are read from SIMAN's documented public VTEX product-variations endpoint and joined only to exact SKU item IDs from the product response. Merchant SKU IDs are not treated as manufacturer identifiers; missing GTIN/MPN remains missing."
+                    : "Product identity and identifiers are read from the exact SIMAN product text-link through the documented public VTEX Search API. Research output remains unconfirmed.",
       }];
     },
   });
