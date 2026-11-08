@@ -155,7 +155,7 @@ async function run() {
           "; review-only, no import.");
       } else {
         console.log("Open Beauty Facts " + categoryTag +
-          ": NO MATCHES in this bounded query; this does not prove global absence.");
+          ": NO ELIGIBLE CANDIDATES in this bounded query; this does not prove global absence.");
       }
     } catch (error) {
       const message = String(error?.message ?? error);
