@@ -67,9 +67,13 @@ The latest successful bounded live-provider smoke ran on commit `a13645f8776d9f4
 
 These checks validate deterministic engine logic and bounded provider endpoints. They do not certify native Android behavior, overall source accuracy, or every Nicaragua-local price/availability listing. All retailer claims enter JBAE as unconfirmed research candidates and still require human approval.
 
+## Fragrance library seed
+
+A dated Scento dataset snapshot is included under `data/fragrance/sources/scento-2026-10-29/`: 1,479 perfumes, 160 houses and 420 materials under CC BY 4.0 with attribution. JBAE normalizes the records and imports field-level provenance as `reported`; it does not silently mark the claims verified. See [Fragrance Library](docs/fragrance-library.md). Run `npm run build:fragrance-library` to build the Knowledge Store seed snapshot and supporting reference file.
+
 ## Not yet implemented / device validation pending
 
-- A populated, curated local perfume/technology catalog. The Knowledge Store and catalog index exist, but no production seed library is shipped; provider results remain unconfirmed candidates until reviewed and approved.
+- Android user interface, local SQLite connection and device-level import/restore validation. The Scento fragrance reference seed and import path are now included; imported claims remain reported until independently reviewed.
 - Capacitor Android application shell and user interface.
 - Installation of the native `@capacitor-community/sqlite` plugin in the Android project.
 - Native SQLite testing on emulator/physical Android device, including process-kill/restart recovery.

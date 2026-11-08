@@ -95,3 +95,12 @@ export {
   RECOMMENDATION_PROFILES,
   recommendProducts,
 } from "./recommendation/recommend.js";
+
+export {
+  SCENTO_DATASET,
+  parseCsvRecords,
+  createScentoFragranceLibrary,
+  buildScentoFragranceBundle,
+  buildScentoKnowledgeSnapshot,
+  importScentoFragranceLibrary,
+} from "./domains/fragrance/library.js";
