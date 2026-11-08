@@ -16,7 +16,7 @@ permissions:
 
 concurrency:
   group: jbae-android-release
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-release:
@@ -119,19 +119,23 @@ jobs:
               }
               '''
               source = source.replace("android {", "android {\n" + block, 1)
-          release = re.search(r'release\s*\{', source)
+          build_types = re.search(r'buildTypes\\s*\\{', source)
+          if not build_types:
+              raise SystemExit("Gradle buildTypes block was not found.")
+          release = re.search(r'release\\s*\\{', source[build_types.end():])
           if not release:
               raise SystemExit("Gradle release build type was not found.")
-          start = release.end()
+          release_start = build_types.end() + release.start()
+          start = release_start + release.end()
           depth, end = 1, start
           while end < len(source) and depth:
               if source[end] == "{": depth += 1
               elif source[end] == "}": depth -= 1
               end += 1
-          block = source[release.start():end]
+          block = source[release_start:end]
           if "signingConfig" not in block:
-              block = block[:-1] + "\n            signingConfig signingConfigs.release\n        }"
-              source = source[:release.start()] + block + source[end:]
+              block = block[:-1] + "\\n            signingConfig signingConfigs.release\\n        }"
+              source = source[:release_start] + block + source[end:]
           path.write_text(source, encoding="utf-8")
           PY
       - name: Assemble signed release APK
