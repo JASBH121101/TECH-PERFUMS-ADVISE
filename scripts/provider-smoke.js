@@ -117,30 +117,55 @@ async function run() {
     arabicHouseTargets.length + " exact house matches; maximum two profiles per query; no bulk import.");
 
   const openBeautyFacts = createOpenBeautyFactsResearchProvider({
-    timeoutMs, minRequestIntervalMs: 1_000,
+    timeoutMs, minRequestIntervalMs: 6_500,
   });
-  try {
-    const cosmetics = await openBeautyFacts.search({
-      domain: DOMAINS.FRAGRANCE,
-      subjectId: "smoke-open-beauty-facts-barcode",
-      field: "category_tags",
-      query: "3560070791460",
-      limit: 1,
-    });
-    if (cosmetics.length) {
-      console.log("Open Beauty Facts: PASS — exact barcode lookup; raw categories=" +
-        JSON.stringify(cosmetics[0].value));
-      assert.match(cosmetics[0].source.attribution, /Open Beauty Facts/u);
-      assert.match(cosmetics[0].source.license, /ODbL 1\.0/u);
-    } else {
-      console.log("Open Beauty Facts: DEFERRED — reference barcode is not currently indexed");
-    }
-  } catch (error) {
-    const message = String(error?.message ?? error);
-    if (/HTTP (?:403|404|429|5\d\d)|timed out|fetch failed|ECONN|ENOTFOUND/i.test(message)) {
-      console.log("Open Beauty Facts: DEFERRED — public endpoint temporarily unavailable (" + message + ")");
-    } else {
-      throw error;
+  // Structured category filters only. This is not free-text search or a bulk crawl.
+  // The 6.5s pacing stays below the documented 10-search-requests/minute ceiling.
+  const beautyCategoryTargets = [
+    "body-mists",
+    "body-sprays",
+    "attars",
+    "attar",
+    "perfume-oils",
+    "body-oils",
+    "body-lotions",
+    "body-creams",
+    "deodorants",
+    "perfumes",
+    "decants",
+  ];
+  let beautySearchDeferred = false;
+  for (const categoryTag of beautyCategoryTargets) {
+    if (beautySearchDeferred) break;
+    try {
+      const candidates = await openBeautyFacts.search({
+        domain: DOMAINS.FRAGRANCE,
+        subjectId: "smoke-open-beauty-facts-" + categoryTag,
+        field: "name",
+        query: "category:" + categoryTag,
+        limit: 2,
+      });
+      if (candidates.length) {
+        for (const candidate of candidates) {
+          assert.match(candidate.source.attribution, /Open Beauty Facts/u);
+          assert.match(candidate.source.license, /ODbL 1\.0/u);
+        }
+        console.log("Open Beauty Facts " + categoryTag + ": CANDIDATES — " +
+          candidates.map(candidate => candidate.value + " [" + candidate.id + "]").join("; ") +
+          "; review-only, no import.");
+      } else {
+        console.log("Open Beauty Facts " + categoryTag +
+          ": NO MATCHES in this bounded query; this does not prove global absence.");
+      }
+    } catch (error) {
+      const message = String(error?.message ?? error);
+      console.log("Open Beauty Facts category discovery: DEFERRED — " + message);
+      // Stop after an upstream block/rate limit rather than retrying more categories.
+      if (/HTTP (?:403|404|429|5\d\d)|timed out|fetch failed|ECONN|ENOTFOUND/i.test(message)) {
+        beautySearchDeferred = true;
+      } else {
+        throw error;
+      }
     }
   }
 
