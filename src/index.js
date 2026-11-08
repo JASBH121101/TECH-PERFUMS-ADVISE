@@ -41,6 +41,7 @@ export { CatalogIndex, searchCatalog } from "./knowledge/catalog-index.js";
 export {
   createScentoResearchProvider,
   createTenMlResearchProvider,
+  createOpenBeautyFactsResearchProvider,
   createWikidataResearchProvider,
   createTechApiResearchProvider,
   createCoreInfoResearchProvider,
