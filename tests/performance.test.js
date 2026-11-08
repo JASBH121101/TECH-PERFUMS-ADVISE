@@ -168,3 +168,38 @@ test("rejects a malformed evidence policy option", () => {
     /must be a boolean/u,
   );
 });
+
+
+test("does not treat supporting reference URLs as independent performance sources", () => {
+  const store = new EvidenceStore();
+  for (const [id, field, value] of [
+    ["min", "longevityMinHours", 5],
+    ["max", "longevityMaxHours", 7],
+  ]) {
+    store.add({
+      id,
+      domain: "fragrance",
+      subjectId: "perfume-1",
+      field,
+      value,
+      status: "cross_checked",
+      confidence: 0.9,
+      source: {
+        name: "One consolidated test report",
+        url: "https://example.com/test-report",
+        type: "independent_test",
+        references: ["https://example.com/reference-a", "https://example.com/reference-b"],
+      },
+      observedAt: "2026-11-08T10:00:00.000Z",
+    });
+  }
+  const product = createProduct({
+    longevityMinHours: ["min"],
+    longevityMaxHours: ["max"],
+  });
+  const estimate = buildFragrancePerformanceProfile(product, store).longevity;
+  assert.equal(estimate.status, "estimated");
+  assert.equal(estimate.sourceCount, 1);
+  assert.equal(estimate.referenceCount, 2);
+  assert.equal(estimate.evidenceStrength, "good");
+});
