@@ -16,10 +16,11 @@ JBAE es una aplicación Android y una vista previa web independientes que consum
 
 - GitHub Pages: https://jasbh121101.github.io/TECH-PERFUMS-ADVISE/
 - Repositorio: https://github.com/JASBH121101/TECH-PERFUMS-ADVISE
+- Releases y versión más reciente: https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/latest
+- Descarga APK más reciente: https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/latest/download/JBAE.apk
 - Release inicial: [JBAE v0.4.0](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/tag/jbae-v0.4.0)
-- Descarga APK: https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/download/jbae-v0.4.0/JBAE.apk
 - Application ID: `com.jb.advisor.mobile`
-- Versión inicial publicada: `0.4.0`, `versionCode=21`.
+- Versión inicial publicada: `0.4.0`, `versionCode=21`. Las siguientes versiones usan el contador monotónico del workflow Android.
 
 La vista previa web usa memoria temporal: al recargar o cerrar el navegador se pierde el estado de la sesión. La instalación Android usa SQLite nativo.
 

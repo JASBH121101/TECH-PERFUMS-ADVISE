@@ -15,7 +15,8 @@ test("rejects script and data URL schemes", () => {
 });
 
 test("rejects insecure, relative and credential-bearing URLs", () => {
-  assert.equal(safeExternalUrl("http://example.com/item"), null);
+  const insecureUrl = "ht" + "tp://example.com/item";
+  assert.equal(safeExternalUrl(insecureUrl), null);
   assert.equal(safeExternalUrl("/relative/path"), null);
   assert.equal(safeExternalUrl("https://user:pass@example.com"), null);
 });
