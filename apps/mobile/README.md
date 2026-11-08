@@ -1,73 +1,69 @@
 # JBAE · Aplicación Android independiente
 
-Esta aplicación móvil independiente consume el motor del repositorio. No es un módulo de JB Manager ni de JB Collections.
+JBAE es una aplicación Android y una vista previa web independientes que consumen el motor de este repositorio. No es un módulo de JB Manager ni de JB Collections.
 
-## Funciones de esta revisión
+## Implementado
 
-- Inicio simplificado: el menú inferior es la única navegación principal; se eliminó la cuadrícula repetida de accesos.
-- Diseño edge-to-edge con insets del sistema para separar el encabezado del reloj, Wi-Fi, batería y barra de navegación de Android.
-- FRAGRANCE: búsqueda directa en la biblioteca offline y asesor personalizado en una pantalla separada.
-- El asesor interpreta frases en español y combina ocasión, familia, notas, carácter, clima e intensidad cuando la ficha tiene esos campos.
-- Las restricciones no verificables no se tratan como satisfechas. No se inventa duración ni proyección; las coincidencias del dataset se identifican como no verificadas independientemente.
-- TECH: consulta exacta por modelo/categoría a CoreInfo y TechAPI. Los resultados son candidatos de fuente, quedan sin guardar y requieren revisión.
-- SQLite en Android conserva la biblioteca y el estado de conocimiento local.
+- Aplicación Capacitor con navegación principal entre Inicio, FRAGRANCE, TECH y Biblioteca.
+- FRAGRANCE: búsqueda offline, fichas de perfumes y asesor personalizado en español.
+- Biblioteca inicial construida desde el snapshot Scento del repositorio; la procedencia permanece como reportada y no equivale a verificación sensorial.
+- TECH: consulta exacta por modelo a CoreInfo y TechAPI para smartphones, tablets, laptops, smartwatches y monitores. Los resultados se muestran como candidatos sujetos a revisión; no se guardan automáticamente.
+- SQLite nativo mediante `@capacitor-community/sqlite`, con importación inicial del seed y uso de `CapacitorSQLiteKnowledgeAdapter`.
+- Actualizador Android propio: GitHub Releases, DownloadManager en segundo plano, recuperación del estado de descarga y validación de paquete, versión, tamaño, estructura APK y continuidad del certificado.
+- Vista previa pública en GitHub Pages.
 
-## Requisitos
+## Vista previa y APK publicada
 
-- Node.js 22.12 o posterior.
-- Android Studio y Android SDK.
-- Java 21 recomendado para Gradle.
+- GitHub Pages: https://jasbh121101.github.io/TECH-PERFUMS-ADVISE/
+- Repositorio: https://github.com/JASBH121101/TECH-PERFUMS-ADVISE
+- Release inicial: [JBAE v0.4.0](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/tag/jbae-v0.4.0)
+- Descarga APK: https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/download/jbae-v0.4.0/JBAE.apk
+- Application ID: `com.jb.advisor.mobile`
+- Versión inicial publicada: `0.4.0`, `versionCode=21`.
 
-## Vista previa
+La vista previa web usa memoria temporal: al recargar o cerrar el navegador se pierde el estado de la sesión. La instalación Android usa SQLite nativo.
 
-\`\`\`bash
+## Desarrollo local
+
+Requisitos: Node.js 22.12 o posterior, Java 21 y Android SDK.
+
+```bash
 cd apps/mobile
 npm install
 npm run dev
-\`\`\`
+```
 
-La vista previa web utiliza memoria temporal. Recargar o cerrar el navegador elimina el estado de esa sesión.
+Pruebas y compilación web:
 
-## Generar APK Android
-
-\`\`\`bash
-cd apps/mobile
-npm install
+```bash
+npm test
 npm run build
+```
+
+Compilación Android local:
+
+```bash
 npx cap add android
 npx cap sync android
 cd android
 ./gradlew assembleDebug
-\`\`\`
+```
 
-APK debug: \`android/app/build/outputs/apk/debug/app-debug.apk\`.
+## Versionado y actualizaciones
 
-El workflow \`JBAE Android App\` repite los pasos en un runner limpio y publica el APK como artefacto.
+La versión base de la aplicación se mantiene en `apps/mobile/package.json`. El workflow Android deriva el número publicado como `MAJOR.MINOR.GITHUB_RUN_NUMBER`; por ejemplo, con la serie base `0.4.0` y el run 22, publica `0.4.22`. El mismo valor se usa en el bundle web, el `versionName`, el tag `jbae-v...` y el nombre del artefacto. `versionCode` sigue el número monotónico del workflow Android.
 
-## Límites actuales
+Cada Release usa el mismo `applicationId` y una identidad de firma JBAE persistente almacenada en la caché protegida de GitHub Actions. La clave establecida no debe regenerarse, eliminarse ni rotarse: una firma distinta impediría actualizar la aplicación instalada. Esta identidad procede de un keystore de tipo debug persistente; no es una clave de publicación de Google Play. Android siempre solicita confirmación antes de instalar y no se admite instalación silenciosa.
 
-- La asesoría de FRAGRANCE utiliza el catálogo local y atributos reportados; no equivale a validación sensorial ni garantiza rendimiento.
-- Los proveedores TECH consultan slugs exactos. No descargan el catálogo completo, y un modelo sin registro exacto puede no aparecer.
-- Los resultados TECH siguen sin verificar. Comparación de 2–4 dispositivos, normalización de variantes, persistencia con aprobación y cotejo entre fuentes siguen pendientes.
-- Todavía no hay prueba en dispositivo físico ni APK Release firmado.
-- La base SQLite local está configurada sin cifrado SQLCipher en esta fase.
+El workflow falla de forma cerrada si ya existe el marcador de identidad y la caché de firma no está disponible. No se debe eliminar ese control para forzar una compilación.
 
+## Pendiente / no certificado en dispositivo
 
-## Web preview on GitHub Pages
+- Comparador visual TECH para 2–4 equipos.
+- Normalización de variantes de hardware, cotejo de datos entre fuentes y guardado local solo después de aprobación explícita.
+- Pruebas en emulador y teléfono físico: primera importación SQLite, cierre/reapertura, recuperación tras terminación del proceso y restauración de backup.
+- SQLCipher no está habilitado en esta fase.
+- PWA: faltan iconos de instalación y service worker; la vista previa no conserva estado tras recargar.
+- Ampliar cobertura de FRAGRANCE a body mists, body sprays, aceites y lociones antes de afirmar que el dataset los cubre ampliamente.
 
-After the Pages deployment workflow is enabled, the standalone preview is published at:
-
-\`https://jasbh121101.github.io/TECH-PERFUMS-ADVISE/\`
-
-The web preview loads the same interface and fragrance seed. Browser preview storage is session-memory only; the installed Android app uses native SQLite.
-
-The header refresh icon checks the official GitHub Releases feed. In a browser it offers the published APK download. In Android it uses the native updater and Android's package installer.
-
-## Signed Android updates
-
-- Package ID remains \`com.jb.advisor.mobile\`.
-- Release builds use a persistent JBAE-specific Android signing key restored from the GitHub Actions cache.
-- The workflow fails closed if a previously established key cache is missing; it must never silently rotate the signing identity.
-- The native updater validates package ID, version, completed file size, APK structure and signing-certificate continuity before opening Android's installer.
-- Android still requires user confirmation. Silent installation is not supported.
-- The first transition from the earlier CI debug APK may require a one-time uninstall because that earlier workflow did not preserve its signing key. Subsequent releases retain the same signing identity.
+Los workflows actuales verifican pruebas automatizadas, compilación Android, identidad del paquete, versión, firma y publicación del APK. No certifican instalación real, comportamiento del actualizador ni persistencia después de reiniciar Android.

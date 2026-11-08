@@ -2,14 +2,14 @@
 
 **Independent product-advisory intelligence for fragrance and technology.**
 
-JB Advisor Engine (JBAE) is the deterministic intelligence core planned for the TECH-PERFUMS-ADVISE Android application. It combines domain-specific normalization, provenance-aware evidence, explainable product comparison, preference-based recommendations, and controlled research intake.
+JB Advisor Engine (JBAE) is the deterministic intelligence core used by the standalone TECH-PERFUMS-ADVISE Android application. It combines domain-specific normalization, provenance-aware evidence, explainable product comparison, preference-based recommendations, and controlled research intake.
 
 ## Product identity
 
 - **Engine:** JB Advisor Engine (JBAE)
 - **Tagline:** Understand. Compare. Recommend.
 - **Domains:** Fragrance and personal technology
-- **Planned app modules:** Fragrance Advisor and Tech Advisor
+- **App modules:** FRAGRANCE Advisor and TECH Advisor, delivered in the independent Capacitor Android application under `apps/mobile/`
 
 ## Architecture principles
 
@@ -47,7 +47,7 @@ No official API is assumed for these retailers. Category crawling, login, checko
 
 ## Repository workflow
 
-Active engine development takes place in `feature/jb-advisor-engine`. The `main` branch remains unchanged until integration is explicitly approved. The Android application shell and APK are not yet part of this repository's implemented deliverables. See [JB Manager integration contract](docs/jb-manager-integration.md) for the consumption boundary and device-validation gate.
+Engine development continues in `feature/jb-advisor-engine`; the standalone Android application is maintained in `feature/jbae-standalone-android-app`. The application consumes the existing engine from `src/` and adds its own UI, native SQLite lifecycle, Android updater and GitHub Pages preview in `apps/mobile/`. The app branch is currently 312 commits ahead of `main`; `main` remains unchanged pending explicit integration approval. JBAE is independent of JB Manager. See [mobile app documentation](apps/mobile/README.md) and [JB Manager integration contract](docs/jb-manager-integration.md).
 
 ## Development
 
@@ -66,28 +66,27 @@ The GitHub Actions validation workflow checks JavaScript syntax and runs the ful
 
 ## Current validation
 
-On 2026-11-08, the active feature branch passed **271/271 automated tests** with JavaScript syntax validation and the full fragrance-library build. The build produced **1,479 perfumes, 160 houses, 420 materials and 20,280 reported evidence records**; 1,388 perfumes have complete note pyramids (**93.8% coverage**). The current snapshot contains **0 independently verified/cross-checked evidence records and 0 independently supported longevity ranges**. Reported catalog observations are not promoted to verified facts.
+On 2026-11-08, the latest successful JBAE CI run passed **288/288 engine tests** and **17/17 mobile tests**, plus JavaScript syntax validation and the fragrance-library build. The mobile release workflow also completed the Android Release build, package/version check, APK signature verification and release-asset byte-for-byte verification. The published initial Android release is `jbae-v0.4.0` (`versionCode=21`; 12,834,636 bytes). The [successful Android Release run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337409) and [successful CI run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337414) are available in GitHub Actions.
 
-JB Expert QA passed with **99/100**, 27 rules executed and 0 rule-execution errors. One medium-severity finding remains: `code-quality.file-size — Large source file`. The workflow publishes a sanitized summary that does not expose the finding's file path. See the [passing CI run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42512824172), [JB Expert QA run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42512819641) and [fragrance coverage artifact](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42512824172/artifacts/13629594981).
+The Pages preview deployed successfully at [JBAE GitHub Pages](https://jasbh121101.github.io/TECH-PERFUMS-ADVISE/) (see [deployment run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524466802)). JB Expert QA passed with **97/100**, 27 rules executed and 0 rule-execution errors. It reported five findings: two medium-severity findings (`code-quality.file-size` and `security.dynamic-code`, the latter requiring manual review of an HTML sink) and three informational findings. The dynamic source-link destinations are being restricted to absolute HTTPS URLs and covered by dedicated tests; the large UI module remains a maintainability task. See the [latest QA run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337656).
 
-These checks validate deterministic engine logic, the public ESM entry point, local dataset transformation and the SQLite adapter's simulated contract. They do not certify native Android behavior, independently verify every perfume claim, or validate every Nicaragua-local price/availability listing.
+The workflow verifies compilation, signing metadata and publication integrity. It does **not** prove installation, SQLite persistence after process termination, updater behavior or responsive behavior on a physical Android device. Fragrance source records remain reported rather than independently verified; local retailer prices and availability also require fresh source checks.
 
 ## Fragrance library seed
 
 A dated Scento dataset snapshot is included under `data/fragrance/sources/scento-2026-10-29/`: 1,479 perfumes, 160 houses and 420 materials under CC BY 4.0 with attribution. It includes 331 records from 11 selected Middle Eastern / Arabic-fragrance houses. JBAE normalizes the records and imports field-level provenance as `reported`; it does not silently mark the claims verified. The seed currently covers perfumes, not a verified bulk catalog of body mists, body sprays, oils or lotions. See [Fragrance Library](docs/fragrance-library.md). Run `npm run build:fragrance-library` to build the Knowledge Store seed, supporting reference file and coverage report.
 
-## Not yet implemented / device validation pending
+## Remaining implementation and device-validation work
 
-- Capacitor Android application shell and user interface.
-- Native SQLite connection, first-run seed import and device-level import/restore validation.
-- Installation of the native `@capacitor-community/sqlite` plugin in the Android project.
-- Native SQLite testing on emulator/physical Android device, including process-kill/restart recovery.
+- Complete the mobile TECH comparison flow for 2–4 devices, including variant normalization, source cross-checking and explicit approval before local persistence. The current mobile screen performs exact-model lookups and labels source results as review-required candidates; it does not yet expose the engine's full comparison workflow.
+- Validate native SQLite seed import, reopen, process-kill/restart recovery and backup/restore on an Android emulator and physical device. SQLCipher encryption is not enabled in this phase.
+- Complete PWA installability: provide app icons, add a service worker and decide whether browser preview data should persist beyond the current session-memory adapter.
+- Expand the fragrance seed beyond its current perfume-only snapshot before claiming broad body-mist, body-spray, oil or lotion coverage.
 - Resolve SIMAN's selected-variant GTIN/MPN for the Galaxy A17 page before including it in the exact-identity price subset.
 - El Gallo Más Gallo remains deferred pending diagnosis of runner transport behavior; wider Nicaragua retailer coverage and exact-SKU matching across additional stores remain pending.
-- OCR intake, APK packaging and distribution.
-- A representative, independently reviewed benchmark dataset and certification thresholds for recommendation quality.
+- OCR intake and a representative, independently reviewed benchmark dataset with certification thresholds for recommendation quality remain pending.
 
-The SQLite adapter requires an already opened `SQLiteDBConnection`; the repository does not yet include the Android shell that creates and manages that connection.
+The mobile application supplies the native SQLite connection lifecycle and consumes the engine's `CapacitorSQLiteKnowledgeAdapter`. Passing CI and APK-signature checks does not substitute for emulator or physical-device certification.
 
 ## Security
 

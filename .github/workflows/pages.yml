@@ -40,7 +40,7 @@ jobs:
         working-directory: apps/mobile
         env:
           GITHUB_PAGES: "true"
-          VITE_APP_VERSION: "0.4.0"
+          VITE_APP_VERSION: "WEB PREVIEW"
         run: npm run build
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

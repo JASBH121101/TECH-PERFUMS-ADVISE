@@ -1,4 +1,5 @@
 import "./styles.css";
+import { safeExternalUrl } from "./safe-external-url.js";
 import { DOMAINS } from "../../../src/index.js";
 import { closeStorage, initializeStorage } from "./storage.js";
 import { initializeUpdateManager } from "./update-manager.js";
@@ -57,7 +58,7 @@ function renderHome() {
       <div class="eyebrow"><span class="eyebrow-dot"></span> TU CENTRO DE DECISIONES</div>
       <h1>Elegir mejor.<br><span>Con información.</span></h1>
       <p>Asesoría especializada en fragancias y tecnología, con datos identificados y criterios transparentes.</p>
-      <div class="hero-footer"><span class="hero-status"><i></i> BIBLIOTECA LOCAL DISPONIBLE</span><span class="hero-version">JBAE · 0.2</span></div>
+      <div class="hero-footer"><span class="hero-status"><i></i> BIBLIOTECA LOCAL DISPONIBLE</span><span class="hero-version">JBAE · ${escapeHtml(import.meta.env.VITE_APP_VERSION || "PREVIEW")}</span></div>
     </section>
     <section class="home-stats">
       <div class="home-stat"><small>FRAGANCIAS OFFLINE</small><strong>${fragranceCount.toLocaleString("es-NI")}</strong><span>Fichas listas para consulta en el dispositivo</span></div>
@@ -238,7 +239,7 @@ function renderFragranceDetail(product) {
     </section>
     <aside class="evidence-note"><strong>Nota de evidencia</strong>
       <p>La información procede de la fuente identificada en el dataset. No demuestra por sí sola duración, proyección, rendimiento ni autenticidad. No mostramos horas de duración sin evidencia elegible.</p>
-      <a href="${escapeHtml(attributes.sourceUrl ?? "https://www.scento.com/perfume-database")}" target="_blank" rel="noopener noreferrer">Consultar fuente ↗</a>
+      <a href="${escapeHtml(safeExternalUrl(attributes.sourceUrl, "https://www.scento.com/perfume-database"))}" target="_blank" rel="noopener noreferrer">Consultar fuente ↗</a>
     </aside>`;
 }
 
@@ -252,7 +253,7 @@ function renderTechSource(source) {
   const facts = source.facts.length
     ? `<dl class="tech-fact-list">${source.facts.map(fact => `<div class="tech-fact"><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(renderValue(fact.value))}</dd></div>`).join("")}</dl>`
     : `<p class="field-hint">${escapeHtml(source.error ?? "La fuente no devolvió campos para este identificador exacto.")}</p>`;
-  const url = source.source?.url;
+  const url = safeExternalUrl(source.source?.url);
   const attribution = source.source?.attribution;
   return `
     <section class="tech-result-source">

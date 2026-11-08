@@ -24,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      APP_VERSION: "0.4.0"
       VERSION_CODE: ${{ github.run_number }}
     steps:
       - name: Checkout
@@ -33,6 +32,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Resolve release version
+        id: release-version
+        working-directory: apps/mobile
+        run: node scripts/resolve-release-version.mjs
       - name: Install mobile dependencies
         working-directory: apps/mobile
         run: npm install --no-audit --no-fund
@@ -44,7 +47,7 @@ jobs:
       - name: Build web bundle and offline seed
         working-directory: apps/mobile
         env:
-          VITE_APP_VERSION: "0.4.0"
+          VITE_APP_VERSION: ${{ steps.release-version.outputs.app_version }}
         run: npm run build
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -95,7 +98,7 @@ jobs:
           fi
       - name: Set Android version and persistent signing configuration
         env:
-          APP_VERSION: ${{ env.APP_VERSION }}
+          APP_VERSION: ${{ steps.release-version.outputs.app_version }}
           VERSION_CODE: ${{ env.VERSION_CODE }}
         run: |
           python3 - <<'PY'
@@ -145,13 +148,14 @@ jobs:
           ./gradlew assembleRelease --no-daemon
       - name: Verify APK signature and package
         env:
+          APP_VERSION: ${{ steps.release-version.outputs.app_version }}
           VERSION_CODE: ${{ env.VERSION_CODE }}
         run: |
           set -euo pipefail
           APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.jb.advisor.mobile' versionCode='$VERSION_CODE' versionName='0.4.0'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.jb.advisor.mobile' versionCode='$VERSION_CODE' versionName='$APP_VERSION'"
           sha256sum "$APK"
       - name: Save persistent JBAE signing key cache
         if: steps.signing-cache.outputs.cache-hit != 'true'
@@ -173,6 +177,8 @@ jobs:
           git push origin "HEAD:$GITHUB_REF_NAME"
       - name: Publish installable APK release
         env:
+          APP_VERSION: ${{ steps.release-version.outputs.app_version }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -187,6 +193,7 @@ jobs:
           fi
       - name: Verify published APK asset
         env:
+          APP_VERSION: ${{ steps.release-version.outputs.app_version }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -197,6 +204,6 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: JBAE-Android-v0.4.0
+          name: JBAE-Android-v${{ steps.release-version.outputs.app_version }}
           path: JBAE.apk
           retention-days: 14
