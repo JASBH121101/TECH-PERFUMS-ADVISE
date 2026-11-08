@@ -343,7 +343,7 @@ export function matchFragrances({
       maxIntensity: "La intensidad registrada está dentro del límite solicitado.",
       maxProjection: "La proyección registrada está dentro del límite solicitado.",
       maxSillage: "La estela registrada está dentro del límite solicitado.",
-    }[item.key]).filter(Boolean);
+    }[item.key])).filter(Boolean);
     const statuses = [...new Set(scored.map(item => item.evidenceStatus ?? "not_assessed"))];
     const evidenceStatus = !evidenceStore ? "not_assessed" : statuses.includes("reported") ? "reported"
       : statuses.includes("cross_checked") ? "cross_checked" : "verified";
