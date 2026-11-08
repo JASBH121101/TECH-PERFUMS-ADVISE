@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { buildScentoFragranceBundle } from "../src/domains/fragrance/library.js";
+import { buildScentoFragranceBundle, renderScentoCoverageMarkdown } from "../src/domains/fragrance/library.js";
 
 const sourceDirectory = resolve("data/fragrance/sources/scento-2026-10-29");
 const outputDirectory = resolve("dist/fragrance-library");
@@ -16,6 +16,7 @@ const bundle = buildScentoFragranceBundle({
   materialsCsv,
 });
 await mkdir(outputDirectory, { recursive: true });
+const coverageReport = bundle.library.coverageReport;
 await Promise.all([
   writeFile(
     resolve(outputDirectory, "scento-knowledge-snapshot.json"),
@@ -29,6 +30,16 @@ await Promise.all([
       houses: bundle.library.houses,
       materials: bundle.library.materials,
     }),
+    "utf8",
+  ),
+  writeFile(
+    resolve(outputDirectory, "scento-library-coverage.json"),
+    JSON.stringify(coverageReport, null, 2),
+    "utf8",
+  ),
+  writeFile(
+    resolve(outputDirectory, "scento-library-coverage.md"),
+    renderScentoCoverageMarkdown(coverageReport),
     "utf8",
   ),
 ]);
