@@ -30,6 +30,15 @@ export function buildFragranceCustomerExplanation({ preferenceMatch, performance
       disclaimer: "No se ha seleccionado un perfume.",
     });
   }
+  if (preferenceMatch.decision === "tie") {
+    return Object.freeze({
+      decision: "tie",
+      text: "Hay dos o más perfumes con una compatibilidad similar con tus preferencias. Prefiero mostrarte las alternativas y explicarte sus diferencias antes que elegir uno sin una ventaja clara.",
+      reasons: Object.freeze([]),
+      performance: Object.freeze([]),
+      disclaimer: "No se ha seleccionado un ganador único.",
+    });
+  }
   const winner = preferenceMatch.ranking.find(item => item.eligibility === "eligible");
   if (!winner) {
     return Object.freeze({
