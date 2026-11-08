@@ -512,10 +512,43 @@ test("SIMAN exposes exact public SKU variants without promoting internal SKU IDs
   assert.equal(record.value[1].price.amount, 8999.13);
   assert.equal(record.source.market, "NI");
   assert.equal(record.observedAt, fixedClock().toISOString());
+  assert.ok(record.source.references.some(reference => reference.endsWith("/search/example-phone/p")));
+  assert.ok(record.source.references.some(reference => reference.endsWith("/variations/300")));
   assert.equal(calls.length, 2, "exact product response and its SKU-variations response are fetched once each");
   assert.ok(calls.every(call => call.init.method === "GET"));
   assert.ok(calls.every(call => call.init.headers.Accept === "application/json"));
   assert.ok(calls.every(call => !Object.keys(call.init.headers).some(key => /authorization/iu.test(key))));
   assert.match(calls[0].url, /\/api\/catalog_system\/pub\/products\/search\/example-phone\/p$/u);
   assert.match(calls[1].url, /\/api\/catalog_system\/pub\/products\/variations\/300$/u);
+});
+
+
+test("SIMAN SKU-variations request rejects redirects to non-allowlisted paths on the same host", async () => {
+  const url = "https://ni.siman.com/example-phone/p";
+  const provider = createSimanResearchProvider({
+    fetchImpl: async requestUrl => {
+      const request = String(requestUrl);
+      if (request.includes("/search/")) {
+        return jsonResponse([{
+          productId: "300",
+          productName: "Example Phone",
+          linkText: "example-phone",
+          items: [{ itemId: "3001", sellers: [] }],
+        }], request);
+      }
+      return jsonResponse(
+        { skus: [] },
+        "https://ni.siman.com/api/catalog_system/private/products/300",
+      );
+    },
+    minRequestIntervalMs: 0,
+  });
+  await assert.rejects(
+    () => provider.search({
+      domain: DOMAINS.TECHNOLOGY,
+      query: url,
+      field: "variants",
+    }),
+    /redirected outside its exact public endpoint allowlist/u,
+  );
 });
