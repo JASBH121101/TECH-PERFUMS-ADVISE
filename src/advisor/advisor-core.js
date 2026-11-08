@@ -1,6 +1,7 @@
 import { DOMAINS } from "../core/domains.js";
 import { normalizeFragranceProduct } from "../domains/fragrance/adapter.js";
 import { buildFragrancePerformanceProfile } from "../domains/fragrance/performance.js";
+import { matchFragrances } from "../domains/fragrance/matching.js";
 import { normalizeTechnologyProduct } from "../domains/technology/adapter.js";
 import { recommendProducts } from "../recommendation/recommend.js";
 
@@ -96,6 +97,13 @@ export class AdvisorCore {
           { allowReported: evidencePolicy.allowReported === true },
         )))
       : null;
+    const preferenceMatch = request.domain === DOMAINS.FRAGRANCE && request.preferences
+      ? matchFragrances({
+          products,
+          preferences: request.preferences,
+          minimumMatchCoverage: request.minimumMatchCoverage ?? 60,
+        })
+      : null;
 
     return Object.freeze({
       engineId: "JBAE",
@@ -108,6 +116,7 @@ export class AdvisorCore {
         reportedClaimsAllowed: request.evidencePolicy?.allowReported === true,
       }),
       recommendation,
+      preferenceMatch,
       performance,
       limitations: Object.freeze([
         "Recommendations rank only the supplied candidates; the advisor does not discover or fetch products in this operation.",
