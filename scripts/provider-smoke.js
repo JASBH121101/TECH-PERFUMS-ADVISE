@@ -81,6 +81,41 @@ async function run() {
   console.log("10ML Fragrance Index: PASS — " + tenMlFragrance.length +
     " Lattafa records; visible attribution required");
 
+  // Bounded, read-only discovery: at most two profiles for each target house.
+  // The second field lookup reuses the five-minute response cache; no records are imported.
+  const arabicHouseTargets = [
+    "Lattafa", "Armaf", "Afnan", "Rasasi", "Ajmal", "Al Haramain",
+    "Swiss Arabian", "Amouage", "Arabian Oud", "Nabeel", "Khadlaj", "Maison Alhambra",
+  ];
+  const normalizeHouseName = value => String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\\u0300-\\u036f]/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, " ")
+    .trim();
+  let exactHouseMatches = 0;
+  for (const [index, houseName] of arabicHouseTargets.entries()) {
+    const request = {
+      domain: DOMAINS.FRAGRANCE,
+      subjectId: "smoke-10ml-house-" + index,
+      query: houseName,
+      limit: 2,
+    };
+    const names = await tenMl.search({ ...request, field: "name" });
+    const houses = await tenMl.search({ ...request, field: "house" });
+    const houseById = new Map(houses.map(item => [item.id, item.value]));
+    const exactMatches = names.filter(item =>
+      normalizeHouseName(houseById.get(item.id)) === normalizeHouseName(houseName));
+    if (exactMatches.length) exactHouseMatches += 1;
+    const candidates = names.map(item =>
+      item.value + " — " + (houseById.get(item.id) ?? "house unavailable"));
+    const status = exactMatches.length ? "EXACT HOUSE MATCH" : names.length ? "REVIEW ONLY" : "NO RESULTS";
+    console.log("10ML house " + houseName + ": " + status + " — " +
+      (candidates.join("; ") || "no candidate returned"));
+  }
+  console.log("10ML Arabic-house discovery: " + exactHouseMatches + "/" +
+    arabicHouseTargets.length + " exact house matches; maximum two profiles per query; no bulk import.");
+
   const openBeautyFacts = createOpenBeautyFactsResearchProvider({
     timeoutMs, minRequestIntervalMs: 1_000,
   });
