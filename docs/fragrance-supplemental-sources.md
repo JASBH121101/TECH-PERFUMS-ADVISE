@@ -49,10 +49,11 @@ Do not mix ODbL-derived records into the existing CC BY 4.0 seed without decidin
 
 ## Recommended intake order
 
-1. Run bounded Open Beauty Facts structured category-tag probes for body mists, body sprays, attars, perfume oils, body oils, body lotions, deodorants, perfumes and decants. Do not treat an empty result as proof of absence. The category endpoint is API v2 (deprecated but still supported), not full-text search, and must stay below 10 search requests/minute. Exact barcode lookup is optional, not a user prerequisite. Inspect identity, tag quality and per-record rights before considering an importer.
-2. Use the free 10ML API for bounded Arabic perfume discovery and note/profile enrichment; do not bulk crawl the index or infer body-product coverage from it.
-3. Keep SMELLIONAIRE outside generic scoring. Revisit only as a separate bottle-specific wear-evidence adapter after record-level review and exact identity mapping.
-4. Continue to use manufacturer-authorized sources or individually reviewed, traceable product pages for missing Arabic perfumes and attars. Do not bulk-copy retailer catalog pages without an explicit reuse grant.
+1. Run bounded Open Beauty Facts structured category-tag probes for body mists, body sprays, attars, perfume oils, body oils, body lotions, deodorants, perfumes and decants. Do not treat an empty candidate result as proof of absence. The category endpoint is API v2 (deprecated but still supported), not full-text search, and must stay below 10 search requests/minute. Respect the API usage-form request. Exact barcode lookup is optional, not a user prerequisite. Inspect identity, tag quality and per-record rights before considering an importer.
+2. Revisit the public CompoAtlas cosmetics CSV download as a separate ODbL data partition. Do not import until the file can be downloaded, its schema and coverage are inspected, and the share-alike/keep-open obligations are designed into distribution. Do not use the keyed daily-quota API or protected CompoAtlas page data.
+3. Use the free 10ML API for bounded Arabic perfume discovery and note/profile enrichment; do not bulk crawl the index or infer body-product coverage from it.
+4. Keep SMELLIONAIRE outside generic scoring. Revisit only as a separate bottle-specific wear-evidence adapter after record-level review and exact identity mapping.
+5. Continue to use manufacturer-authorized sources or individually reviewed, traceable product pages for missing Arabic perfumes and attars. Do not bulk-copy retailer catalog pages without an explicit reuse grant.
 
 ## Primary references
 
