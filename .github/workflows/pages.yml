@@ -32,7 +32,7 @@ jobs:
           node-version: 22
       - name: Install app dependencies
         working-directory: apps/mobile
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Test app
         working-directory: apps/mobile
         run: npm test
@@ -41,7 +41,14 @@ jobs:
         env:
           GITHUB_PAGES: "true"
           VITE_APP_VERSION: "WEB PREVIEW"
-        run: npm run build
+        run: |
+          npm run build
+          test -s dist/index.html
+          test -s dist/manifest.webmanifest
+          test -s dist/sw.js
+          test -s dist/icons/jbae-192.svg
+          test -s dist/icons/jbae-512.svg
+          touch dist/.nojekyll
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
