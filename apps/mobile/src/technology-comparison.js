@@ -156,8 +156,8 @@ export function buildTechnologyApprovalCandidate({
       const observedAt = hasSourceTimestamp ? new Date(entry.observedAt).toISOString() : retrievedAt;
       const id = idPrefix + ":" + field.attribute + ":" + (++sequence);
       const note = hasSourceTimestamp
-        ? "Dato reportado por la fuente; JBAE normalizó la unidad cuando fue necesario. No verificado independientemente."
-        : "Dato reportado por la fuente; no publicó fecha de observación. Se registra la fecha de recuperación de JBAE. No verificado independientemente.";
+        ? "Dato reportado por la fuente; JBAE normalizó la unidad cuando fue necesario. Confianza 0.5 es un valor de intake no calibrado, no una probabilidad. No verificado independientemente."
+        : "Dato reportado por la fuente; no publicó fecha de observación. Se registra la fecha de recuperación de JBAE. Confianza 0.5 es un valor de intake no calibrado, no una probabilidad. No verificado independientemente.";
       const record = createEvidenceRecord({
         id,
         domain: "technology",

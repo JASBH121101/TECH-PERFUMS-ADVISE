@@ -283,6 +283,7 @@ function renderTechResults() {
   const result = state.techLookupResult;
   if (!result) return "";
   const found = result.sources.some(source => source.status === "found" || source.status === "partial");
+  const currentLookup = state.techModel.trim() === result.model && state.techResource === result.resource;
   return `
     <section class="tech-results">
       <div class="result-section-title"><strong>${escapeHtml(result.model)}</strong><small>Slug: ${escapeHtml(result.slug)}</small></div>
@@ -290,9 +291,9 @@ function renderTechResults() {
       <div class="result-disclaimer">${found ? "Estos datos son candidatos recuperados de fuentes públicas. No están verificados independientemente." : "No se obtuvo una ficha coincidente con este slug. Confirma el nombre/identificador e inténtalo con la categoría correcta."} La búsqueda es exacta y no descarga catálogos completos.</div>
       ${found && state.techSavedProductId === result.slug
         ? '<div class="save-confirmation">Guardado en la biblioteca como información reportada. No está verificada.</div>'
-        : found ? `<button type="button" class="primary-action tech-action save-candidate-button" data-action="save-tech-candidate" ${state.techSaveStatus === "saving" ? "disabled" : ""}>${state.techSaveStatus === "saving" ? "Guardando candidato..." : "Guardar como dato reportado"}</button>` : ""}
+        : found && currentLookup ? `<button type="button" class="primary-action tech-action save-candidate-button" data-action="save-tech-candidate" ${state.techSaveStatus === "saving" ? "disabled" : ""}>${state.techSaveStatus === "saving" ? "Guardando candidato..." : "Guardar como dato reportado"}</button>` : ""}
       ${state.techSaveMessage ? `<div class="${state.techSaveStatus === "error" ? "warning-panel" : "field-hint"}">${escapeHtml(state.techSaveMessage)}</div>` : ""}
-      ${found ? '<p class="field-hint">Al guardar, JBAE conserva la procedencia por campo y mantiene el estado «reportado». No se sobrescriben fichas existentes.</p>' : ""}
+      ${found && currentLookup ? '<p class="field-hint">Al guardar, JBAE conserva la procedencia por campo y mantiene el estado «reportado». No se sobrescriben fichas existentes.</p>' : ""}
     </section>`;
 }
 
@@ -440,7 +441,7 @@ app.addEventListener("click", async event => {
     try {
       const candidate = buildTechnologyApprovalCandidate({
         lookup: state.techLookupResult,
-        resource: state.techResource,
+        resource: state.techLookupResult.resource,
       });
       const result = await saveTechnologyCandidate(state.runtime.knowledgeStore, candidate);
       state.techSavedProductId = state.techLookupResult.slug;
@@ -487,6 +488,8 @@ app.addEventListener("input", event => {
   } else if (event.target.id === "tech-model") {
     state.techModel = event.target.value;
     state.techSaveStatus = "idle"; state.techSaveMessage = ""; state.techSavedProductId = null;
+    state.techLookupResult = null; state.techLookupStatus = "idle";
+    document.querySelector(".tech-results")?.remove();
     const preview = document.querySelector(".slug-preview");
     if (preview) preview.textContent = "Identificador de búsqueda: " + (slugifyTechnologyModel(state.techModel) || "—");
   } else if (event.target.id.startsWith("tech-compare-model-")) {
@@ -506,8 +509,18 @@ app.addEventListener("change", event => {
     state.fragranceForm[preferenceKey] = event.target.value;
     return;
   }
-  if (event.target.id === "tech-resource") state.techResource = event.target.value;
-  if (event.target.id === "tech-compare-metric") state.techCompareMetric = event.target.value;
+  if (event.target.id === "tech-resource") {
+    state.techResource = event.target.value;
+    state.techLookupResult = null; state.techLookupStatus = "idle";
+    state.techComparisonResult = null; state.techComparisonStatus = "idle";
+    state.techSaveStatus = "idle"; state.techSaveMessage = ""; state.techSavedProductId = null;
+    render();
+  }
+  if (event.target.id === "tech-compare-metric") {
+    state.techCompareMetric = event.target.value;
+    state.techComparisonResult = null; state.techComparisonStatus = "idle";
+    render();
+  }
 });
 
 app.addEventListener("submit", async event => {

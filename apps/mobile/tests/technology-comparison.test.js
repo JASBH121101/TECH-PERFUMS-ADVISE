@@ -41,7 +41,8 @@ test("does not persist conflicting or untraceable provider fields",()=>{
  const candidate=buildTechnologyApprovalCandidate({lookup:input,resource:"smartphones",idPrefix:"conflict-test"});
  assert.equal(candidate.product.attributes.ramGB,undefined);
  assert.equal(candidate.product.evidenceIds.ramGB,undefined);
- assert.equal(candidate.product.attributes.storageGB,undefined);
+ assert.equal(candidate.product.attributes.storageGB,256);
+ assert.equal(candidate.product.evidenceIds.storageGB.length,1);
 });
 
 test("saves product and evidence in one knowledge snapshot and refuses overwrite",async()=>{
