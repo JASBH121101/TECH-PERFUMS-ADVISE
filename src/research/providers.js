@@ -170,6 +170,100 @@ export function createTenMlResearchProvider({
   });
 }
 
+const OPEN_BEAUTY_FACTS_BASE = "https://world.openbeautyfacts.org";
+const OPEN_BEAUTY_FACTS_ODBL = "https://opendatacommons.org/licenses/odbl/1-0/";
+
+function pickOpenBeautyFactsValue(product, field) {
+  const map = {
+    name: product.product_name || product.product_name_en,
+    identity: product.product_name || product.product_name_en,
+    product_name: product.product_name || product.product_name_en,
+    brand: product.brands,
+    brands: product.brands,
+    category: product.categories,
+    categories: product.categories,
+    category_tags: product.categories_tags,
+    categories_tags: product.categories_tags,
+    barcode: product.code,
+    gtin: product.code,
+    ingredients: product.ingredients,
+    ingredients_text: product.ingredients_text,
+    last_modified: product.last_modified_t,
+  };
+  return map[field] ?? map[field.replace(/[A-Z]/gu, letter => "_" + letter.toLowerCase())];
+}
+
+/**
+ * Open Beauty Facts exact-barcode lookup for cosmetics.
+ * This deliberately avoids catalogue crawling and never imports product images.
+ * Category values remain source taxonomy claims and must be reviewed before product typing.
+ */
+export function createOpenBeautyFactsResearchProvider({
+  fetchImpl = globalThis.fetch,
+  clock = () => new Date(),
+  timeoutMs = 12_000,
+  cacheTtlMs = 30 * 60_000,
+  minRequestIntervalMs = 1_000,
+} = {}) {
+  assertFetch(fetchImpl);
+  if (typeof clock !== "function") throw new TypeError("clock must be a function");
+  const clientIdentification = "JB Advisor Engine/0.1 (https://github.com/JASBH121101/TECH-PERFUMS-ADVISE)";
+  const requestHeaders = typeof window === "undefined"
+    ? { "User-Agent": clientIdentification }
+    : { "Api-User-Agent": clientIdentification };
+  const readJson = createJsonReader(fetchImpl, {
+    timeoutMs,
+    cacheTtlMs,
+    maxCacheEntries: 100,
+    minRequestIntervalMs,
+    requestHeaders,
+  });
+
+  return Object.freeze({
+    id: "open-beauty-facts-cosmetics",
+    domains: Object.freeze([DOMAINS.FRAGRANCE]),
+    async search(request) {
+      const barcode = requireText(request.query, "query");
+      if (!/^\d{8,14}$/u.test(barcode)) {
+        throw new TypeError("query must be an 8-to-14 digit GTIN/EAN/UPC barcode");
+      }
+      const field = requireText(request.field, "field");
+      const url = new URL(OPEN_BEAUTY_FACTS_BASE + "/api/v3/product/" + barcode + ".json");
+      url.searchParams.set(
+        "fields",
+        "code,product_name,product_name_en,brands,categories,categories_tags,ingredients_text,ingredients,last_modified_t",
+      );
+      const response = await readJson(url, "Open Beauty Facts product lookup");
+      const product = response.product;
+      if (response.status === 0 || !product || typeof product !== "object" || Array.isArray(product)) {
+        return [];
+      }
+      const value = pickOpenBeautyFactsValue(product, field);
+      if (value === undefined || value === null || value === "" ||
+          (Array.isArray(value) && value.length === 0)) return [];
+      const sourceUrl = OPEN_BEAUTY_FACTS_BASE + "/product/" + barcode;
+      return [{
+        id: barcode,
+        value,
+        confidence: 0.72,
+        source: {
+          name: "Open Beauty Facts",
+          url: sourceUrl,
+          type: SOURCE_TYPES.DATABASE,
+          attribution: "Contains information from Open Beauty Facts, made available under the Open Database License (ODbL) 1.0.",
+          references: [
+            "https://world.openbeautyfacts.org/",
+            OPEN_BEAUTY_FACTS_ODBL,
+          ],
+          license: "ODbL 1.0 for the database; individual contents and product images may have separate rights. Images are not imported.",
+        },
+        observedAt: isoNow(clock),
+        note: "Exact cosmetics barcode lookup only. Open Beauty Facts records are community-contributed; verify the package, exact item and category. categories/categories_tags are raw source taxonomy, not an approved JBAE productType. Product images are deliberately excluded because their rights are separate. ODbL attribution and share-alike conditions must be preserved if a derivative database is distributed. This candidate remains unconfirmed.",
+      }];
+    },
+  });
+}
+
 /** Scento's read-only perfume API. Requires no account or API key. */
 export function createScentoResearchProvider({
   fetchImpl = globalThis.fetch,
@@ -413,6 +507,7 @@ export function createDefaultResearchProviders(options = {}) {
   return Object.freeze([
     createScentoResearchProvider(options.scento),
     createTenMlResearchProvider(options.tenMl),
+    createOpenBeautyFactsResearchProvider(options.openBeautyFacts),
     createWikidataResearchProvider(options.wikidata),
     createCoreInfoResearchProvider(options.coreInfo),
     createSicsaResearchProvider(options.sicsa),
@@ -425,6 +520,7 @@ export function createDefaultResearchProviders(options = {}) {
 }
 
 export {
+  createOpenBeautyFactsResearchProvider,
   createTenMlResearchProvider,
   createSicsaResearchProvider,
   createRadioShackResearchProvider,
