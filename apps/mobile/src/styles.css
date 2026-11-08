@@ -233,3 +233,19 @@ button { color: inherit; }
 .loading-inline { padding: 18px; text-align: center; color: var(--muted); font-size: 10px; }
 .loading-inline::before { content: ""; display: block; width: 19px; height: 19px; margin: 0 auto 9px; border: 2px solid rgba(117,225,209,.2); border-top-color: var(--cyan); border-radius: 50%; animation: spin .8s linear infinite; }
 @media (max-width: 370px) { .advisor-form,.tech-lookup-form { padding: 12px; } .home-stat { padding: 12px; } }
+
+
+/* Update button and native/web update status. */
+.topbar-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.update-button { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border: 1px solid rgba(117,225,209,.2); border-radius: 50%; color: var(--cyan); background: rgba(117,225,209,.06); font-size: 19px; line-height: 1; cursor: pointer; }
+.update-button:disabled { opacity: .55; }
+.update-button[aria-busy="true"] { animation: jbae-update-spin .9s linear infinite; }
+@keyframes jbae-update-spin { to { transform: rotate(360deg); } }
+.update-notice { position: fixed; z-index: 40; left: 14px; right: 14px; bottom: calc(90px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; padding: 15px; border: 1px solid rgba(117,225,209,.24); border-radius: 17px; background: rgba(17,25,35,.97); box-shadow: 0 18px 55px rgba(0,0,0,.45); backdrop-filter: blur(20px); }
+.update-notice-copy strong { display: block; color: var(--text); font-size: 12px; }
+.update-notice-copy p { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.update-notice-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.update-notice-primary,.update-notice-close { min-height: 35px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 9px; font-weight: 800; }
+.update-notice-primary { border-color: rgba(117,225,209,.28); color: #eafffb; background: rgba(54,133,124,.24); }
+.update-notice-close { color: var(--muted); background: transparent; }
+@media (max-width: 370px) { .topbar { padding-left: 15px; padding-right: 15px; } .topbar-actions { gap: 5px; } .runtime-pill { padding: 6px 7px; font-size: 7px; } }
