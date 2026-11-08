@@ -295,7 +295,7 @@ export function createSimanResearchProvider({
       let variants = null;
       if (field === "variants") {
         const productId = String(product.productId ?? "");
-        if (!/^\\d+$/u.test(productId) || !Number.isSafeInteger(Number(productId)) ||
+        if (!/^\d+$/u.test(productId) || !Number.isSafeInteger(Number(productId)) ||
             Number(productId) < 1) {
           return [];
         }
