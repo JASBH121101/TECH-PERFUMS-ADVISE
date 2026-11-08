@@ -42,6 +42,8 @@ Supplemental intake decisions and licensing boundaries for future body products,
 
 The free 10ML Fragrance Index is also registered as a bounded research provider for additional perfume discovery and profile enrichment. Its current API terms allow free commercial use and caching of fetched responses, provided the visible credit **“Data: 10ML Fragrance Index”** links to [10ml.com/perfume-api](https://10ml.com/perfume-api). Search results enter JBAE as unconfirmed evidence candidates; the provider does not copy the full index into the local catalog. The index covers perfumes and fine fragrances, not an established body-mist/body-spray catalog. The source and usage conditions are documented in [Supplemental source assessment](fragrance-supplemental-sources.md).
 
+Open Beauty Facts is integrated separately as a **barcode-only cosmetics lookup** against its API v3 product endpoint. It returns source-provided product name, brand, categories and ingredient fields when present, but leaves categories unnormalized for human review. It does not search or mirror the catalog, infer that a product is a perfume/body mist, or retrieve product images. Its database is ODbL 1.0; individual contents and images have separate rights. Any later derivative database must preserve the applicable ODbL share-alike conditions. No Open Beauty Facts product records have been imported into the local seed yet.
+
 ## Evidence policy
 
 Each imported factual attribute is linked to its Scento perfume page and a dated dataset record. JBAE assigns these claims status `reported`, not `verified` or `cross_checked`, because JBAE has not independently revalidated each perfume page. The source's own curation claim is not treated as an independent JBAE verification.
