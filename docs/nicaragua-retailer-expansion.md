@@ -38,7 +38,7 @@ Call a provider with:
 - \`query\`: exact HTTPS product URL from its allowlisted hostname and product path
 - \`field\`: one supported field such as \`name\`, \`sku\`, \`price\`, \`availability\` or \`warranty\`
 
-The reader uses GET only, bounded timeouts, a short in-memory page cache and sequential request pacing. Redirects outside the approved merchant hostname are rejected. Do not use these readers to crawl category listings or enumerate an entire retailer catalogue.
+The retailer readers use GET only, bounded timeouts, short in-memory caches and sequential request pacing. Redirects outside the approved merchant hostname are rejected. The SIMAN lookup uses the documented VTEX Legacy Search route `/api/catalog_system/pub/products/search/{product-text-link}/p`; see https://developers.vtex.com/docs/api-reference/search-api. Do not use these readers to crawl category listings or enumerate an entire retailer catalogue.
 
 ## Live smoke samples
 

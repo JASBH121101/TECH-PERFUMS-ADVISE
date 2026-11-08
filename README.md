@@ -35,7 +35,7 @@ JB Advisor Engine (JBAE) is the deterministic intelligence core planned for the 
 
 ## Nicaragua retailer coverage
 
-Read-only product-page adapters are implemented for RadioShack, La Curacao, El Gallo Más Gallo and Almacenes SIMAN. They extract only fields explicitly published on the exact product page and preserve the original URL, market, currency, tax signal and observation time. The El Verdugo catalog adapter is limited to product identity, SKU and explicitly published warranty; price and stock remain disabled pending current local evidence. CONICO remains a manual quotation/proforma source because no stable public current catalogue or API has been verified.
+Read-only exact-product adapters are implemented for RadioShack, La Curacao, El Gallo Más Gallo and Almacenes SIMAN. SIMAN uses the documented public VTEX Legacy Search endpoint; the other three read the retailer's exact product page. They preserve original source URLs, market, currency, tax signal and observation time. The El Verdugo catalog adapter is limited to product identity, SKU and explicitly published warranty; price and stock remain disabled pending current local evidence. CONICO remains a manual quotation/proforma source because no stable public current catalogue or API has been verified.
 
 No official API is assumed for these retailers. Category crawling, login, checkout, order placement, inferred stock, currency conversion and landed-price calculation are out of scope. See [Nicaragua retailer expansion](docs/nicaragua-retailer-expansion.md) for the exact request contract and limitations.
 
