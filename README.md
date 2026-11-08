@@ -60,16 +60,16 @@ The GitHub Actions validation workflow checks JavaScript syntax and runs the ful
 
 ## Current validation
 
-Validation is run on every branch update through GitHub Actions. The previous certified baseline passed 176/176 tests and JB Expert QA passed at 100/100 (19 rules, 0 rule execution errors, 0 findings). The retailer expansion adds automated coverage for exact-URL validation, product identity, local currency, promotional prices, tax signals, explicit stock, warranty, redirects and provider timeouts. The latest complete test attempt ran 189 tests; one obsolete expected-provider-list assertion remained to be updated, while the new retailer parser tests passed. The live smoke harness completed successfully: RadioShack and La Curacao yielded identity, price and stock; El Verdugo yielded identity and warranty; El Gallo was deferred on a runner connection failure; SIMAN identity extraction remains pending; CONICO is manual-quote only. The same smoke passed ten TechAPI resources, eight CoreInfo samples and SICSA's exact local laptop SKU. Wikidata was deferred by upstream maxlag.
+Validation is run on every branch update through GitHub Actions. Latest validation on commit `57e698d20a3c778cc0bff6a79a21bd66ff50176e` passed **191/191 tests** with 0 failures. JB Expert QA passed **100/100** (27 rules, 0 rule execution errors, 0 findings). The live smoke passed RadioShack and La Curacao (identity, NIO price and stock), SIMAN (identity, NIO price and stock through the public VTEX endpoint), and El Verdugo (identity and explicit warranty). El Gallo Más Gallo was deferred because the runner could not connect; CONICO remains manual-quote only. The same smoke passed Scento, Wikidata, ten TechAPI resources, eight CoreInfo samples and SICSA's exact local laptop SKU with NIO price and explicit stock.
 
-These checks validate deterministic engine logic and bounded provider endpoints. They do not certify native Android behavior, overall source accuracy, or Nicaragua-local price/availability coverage.
+These checks validate deterministic engine logic and bounded provider endpoints. They do not certify native Android behavior, overall source accuracy, or every Nicaragua-local price/availability listing. All retailer claims enter JBAE as unconfirmed research candidates and still require human approval.
 
 ## Not yet implemented / device validation pending
 
 - Capacitor Android application shell and UI.
 - Installation of the native `@capacitor-community/sqlite` plugin in the Android project.
 - Native SQLite testing on emulator/physical Android device, including process-kill/restart recovery.
-- Live certification of the five new retailer page adapters remains dependent on the provider smoke run; WAF/rate limits or page-markup changes may defer individual sources. Wider Nicaragua retailer coverage and cross-retailer exact-SKU matching remain pending.
+- El Gallo Más Gallo remains deferred pending diagnosis of intermittent runner connectivity; wider Nicaragua retailer coverage and cross-retailer exact-SKU comparison remain pending.
 - OCR intake, APK packaging and distribution.
 
 The SQLite adapter requires an already opened `SQLiteDBConnection`; the repository does not yet include the Android shell that creates and manages that connection.
