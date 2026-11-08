@@ -13,6 +13,7 @@ on:
       - "package-lock.json"
       - ".github/workflows/jb-expert-qa-audit.yml"
       - "scripts/summarize-qa-report.mjs"
+      - "scripts/provider-smoke.js"
 
 permissions:
   contents: read
