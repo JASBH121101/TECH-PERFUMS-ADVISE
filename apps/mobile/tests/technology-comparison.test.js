@@ -219,3 +219,60 @@ test("un error de cobertura se muestra antes de cualquier tabla de comparación"
  assert.ok(renderer.indexOf("if(result.error)") < renderer.indexOf("tech-comparison-table"));
  assert.match(renderer,/No hay datos suficientes para comparar estos modelos/u);
 });
+
+
+test("muestra todas las configuraciones de RAM y almacenamiento separadas por slash",()=>{
+ const result=buildTechnologyComparison({
+  resource:"smartphones",
+  metric:"ramGB",
+  lookups:[
+   lookup("Phone A","phone-a",
+    [["brand","Acme"],["ram",["8 GB","12 GB","16 GB"]],["storage","128 GB"],["storageOptions",["128 GB","256 GB","512 GB"]]],
+    [["brand","Acme"],["ram","16/8/12 GB"],["storageOptions","512 GB / 256 GB / 128 GB"]]),
+   lookup("Phone B","phone-b",
+    [["brand","Beta"],["ram",[8,12]],["storage",["256 GB","512 GB"]]],
+    [["brand","Beta"],["ram","8 GB / 12 GB"],["storageOptions",[256,512]]]),
+  ],
+ });
+ const phoneA=result.products[0];
+ const ram=result.rows.find(row=>row.key==="ram").values[0];
+ const storage=result.rows.find(row=>row.key==="storage").values[0];
+ assert.equal(ram.display,"8 GB / 12 GB / 16 GB · 2 fuentes coinciden");
+ assert.equal(storage.display,"128 GB / 256 GB / 512 GB · 2 fuentes coinciden");
+ assert.equal(ram.conflict,false);
+ assert.equal(storage.conflict,false);
+ assert.equal(phoneA.attributes.ramGB,8);
+ assert.equal(phoneA.attributes.storageGB,128);
+ assert.deepEqual(phoneA.product.variant,{ramGB:8,storageGB:128});
+});
+
+test("combina listas parciales cuando una fuente solo informa la configuración base",()=>{
+ const result=buildTechnologyComparison({
+  resource:"smartphones",
+  metric:"ramGB",
+  lookups:[
+   lookup("Phone A","phone-a",[["ram","8 GB"]],[["ram",["8 GB","12 GB","16 GB"]]]),
+   lookup("Phone B","phone-b",[["ram","8 GB"]],[["ram","8 GB / 12 GB / 16 GB"]]),
+  ],
+ });
+ const row=result.rows.find(item=>item.key==="ram");
+ assert.equal(row.values[0].display,"8 GB / 12 GB / 16 GB · opciones complementarias de 2 fuentes");
+ assert.equal(row.values[0].conflict,false);
+ assert.equal(result.products[0].attributes.ramGB,8);
+});
+
+test("mantiene separados los conjuntos de configuraciones realmente discrepantes",()=>{
+ const result=buildTechnologyComparison({
+  resource:"smartphones",
+  metric:"ramGB",
+  lookups:[
+   lookup("Phone A","phone-a",[["ram",["8 GB","12 GB"]]], [["ram",["8 GB","16 GB"]]]),
+   lookup("Phone B","phone-b",[["ram",["8 GB","12 GB"]]], [["ram",["8 GB","12 GB"]]]),
+  ],
+ });
+ const row=result.rows.find(item=>item.key==="ram");
+ assert.equal(row.values[0].conflict,true);
+ assert.match(row.values[0].display,/CoreInfo: 8 GB \/ 12 GB/u);
+ assert.match(row.values[0].display,/TechAPI: 8 GB \/ 16 GB/u);
+ assert.equal(result.products[0].attributes.ramGB,undefined);
+});
