@@ -57,6 +57,46 @@ export function buildPrimarySpecSourceLinks(model) {
   }));
 }
 
+const TECH_SOURCES_WORKER = "https://jbae-specs-api.jaredblancoh19.workers.dev";
+
+async function fetchPrimarySource(path, params, id, name) {
+  const url = new URL(TECH_SOURCES_WORKER + path);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(18000),
+    });
+    if (!response.ok) throw new Error(`${name} respondió HTTP ${response.status}.`);
+    const payload = await response.json();
+    return Object.freeze({
+      id,
+      name,
+      status: payload.status ?? "not_found",
+      query: params.q ?? params.slug,
+      source: payload.source ?? null,
+      observedAt: payload.retrievedAt ?? null,
+      facts: Object.freeze(Array.isArray(payload.facts) ? payload.facts.map(fact => Object.freeze({
+        key: fact.key,
+        label: fact.label,
+        value: fact.value,
+        source: payload.source ?? null,
+        observedAt: payload.retrievedAt ?? null,
+        note: null,
+      })) : []),
+      variants: Object.freeze(Array.isArray(payload.variants) ? payload.variants : []),
+      error: payload.error ?? null,
+    });
+  } catch (error) {
+    return Object.freeze({
+      id, name, status: "error", query: params.q ?? params.slug,
+      source: null, observedAt: null, facts: Object.freeze([]),
+      variants: Object.freeze([]),
+      error: error instanceof Error ? error.message : "No se pudo consultar la fuente.",
+    });
+  }
+}
+
 const AUXILIARY_IDENTITY_FIELDS = Object.freeze(["name", "brand"]);
 
 const BRAND_PREFIXES = Object.freeze([
@@ -222,7 +262,9 @@ export async function lookupTechnology({
   const techSlugs = buildTechApiSlugCandidates(model, coreInfoSlug, techApiSlugCandidates);
   const techQueries = techSlugs.map(slug => resource + ":" + slug);
 
-  const [coreInfo, techApi] = await Promise.all([
+  const [gsmarena, xataka, coreInfo, techApi] = await Promise.all([
+    fetchPrimarySource("/gsmarena/phone", { q: model.trim() }, "gsmarena", "GSMArena"),
+    fetchPrimarySource("/xataka", { slug: coreInfoSlug }, "xataka", "Xataka · La Cacharrería"),
     collectSource(coreInfoProvider, "coreinfo", [coreInfoSlug], coreFields),
     collectSource(techApiProvider, "techapi", techQueries, techFields),
   ]);
@@ -233,7 +275,7 @@ export async function lookupTechnology({
     catalogSlug: coreInfoSlug,
     techApiSlug: techApi.query?.slice(resource.length + 1) ?? null,
     resource,
-    sources: Object.freeze([coreInfo, techApi]),
+    sources: Object.freeze([gsmarena, xataka, coreInfo, techApi]),
     hasResults: coreInfo.facts.length + techApi.facts.length > 0,
     reviewRequired: true,
     saved: false,
