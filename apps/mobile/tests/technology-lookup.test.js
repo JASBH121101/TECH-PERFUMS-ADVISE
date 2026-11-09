@@ -88,3 +88,38 @@ test("reintenta TechAPI con el alias canonical cuando el slug CoreInfo no existe
  assert.equal(result.techApiSlug,"galaxy-s26-ultra");
  assert.equal(result.sources[1].status,"found");
 });
+
+
+test("incluye variantes de slug para Samsung y Apple cuando las fuentes las separan",()=>{
+ assert.deepEqual(buildTechApiSlugCandidates("Samsung Galaxy S26 Ultra","samsung-galaxy-s26-ultra"),[
+  "samsung-galaxy-s26-ultra","galaxy-s26-ultra"
+ ]);
+ assert.deepEqual(buildTechApiSlugCandidates("Apple iPhone 18 Pro Max","apple-iphone-18-pro-max"),[
+  "apple-iphone-18-pro-max","iphone-18-pro-max"
+ ]);
+});
+
+test("reintenta TechAPI con el slug sin marca después de un 404",async()=>{
+ const coreQueries=[],techQueries=[];
+ const coreInfoProvider={async search(request){
+  coreQueries.push(request.query);
+  return request.field==="name"?[{value:"Samsung Galaxy S26 Ultra",source:{name:"CoreInfo",url:"https://example.test/core"}}]:[];
+ }};
+ const techApiProvider={async search(request){
+  techQueries.push(request.query);
+  if(request.query==="smartphones:samsung-galaxy-s26-ultra") throw new Error("404 record not found");
+  return request.field==="name"?[{value:"Galaxy S26 Ultra",source:{name:"TechAPI",url:"https://example.test/tech"}}]:[];
+ }};
+ const result=await lookupTechnology({
+  model:"Samsung Galaxy S26 Ultra",
+  catalogSlug:"samsung-galaxy-s26-ultra",
+  resource:"smartphones",
+  fields:["name","brand"],
+  coreInfoProvider,
+  techApiProvider,
+ });
+ assert.equal(result.slug,"samsung-galaxy-s26-ultra");
+ assert.equal(result.techApiSlug,"galaxy-s26-ultra");
+ assert.ok(coreQueries.every(query=>query==="samsung-galaxy-s26-ultra"));
+ assert.ok(techQueries.includes("smartphones:galaxy-s26-ultra"));
+});

@@ -165,3 +165,57 @@ test("el formulario TECH limpia los cuatro modelos al enviarlos",async()=>{
  const submit=main.slice(start,end);
  assert.match(submit,/state\.techCompareModels=\["","","",""\]/u);
 });
+
+
+test("el comparador bloquea resultados parciales y conserva el detalle de cobertura",()=>{
+ const result=buildTechnologyComparison({
+  resource:"smartphones",
+  lookups:[
+   lookup("Samsung Galaxy S26 Ultra","samsung-galaxy-s26-ultra",[["brand","Samsung"],["ram","12 GB"],["storage","256 GB"],["chipset","Snapdragon 8 Elite Gen 5"]]),
+   lookup("Apple iPhone 18 Pro Max","apple-iphone-18-pro-max",[["brand","Apple"],["chipset","A20 Pro"]]),
+  ],
+ });
+ assert.ok(result.error);
+ assert.equal(result.qualityGate.valid,false);
+ assert.ok(result.qualityGate.devices.some(device=>device.availableDimensionCount<3));
+ assert.equal(result.ranking,undefined);
+});
+
+test("extrae la cámara principal desde datos estructurados y texto en MP",()=>{
+ const result=buildTechnologyComparison({
+  resource:"smartphones",
+  lookups:[
+   lookup("Phone A","camera-a",[["ram","12 GB"],["storage","512 GB"],["battery","5000 mAh"],["camera",[{type:"main",mp:200},{type:"ultrawide",mp:50}]],["weight","210 g"]]),
+   lookup("Phone B","camera-b",[["ram","12 GB"],["storage","512 GB"],["battery","5000 mAh"],["camera","48 MP + 12 MP"],["weight","215 g"]]),
+  ],
+ });
+ assert.equal(result.products[0].attributes.cameraMegapixels,200);
+ assert.equal(result.products[1].attributes.cameraMegapixels,48);
+});
+
+test("la UI de TECH usa autocompletado en ficha y comparación y deja los campos vacíos",async()=>{
+ const {readFile}=await import("node:fs/promises");
+ const {fileURLToPath}=await import("node:url");
+ const {dirname,join}=await import("node:path");
+ const main=await readFile(join(dirname(fileURLToPath(import.meta.url)),"../src/main.js"),"utf8");
+ assert.match(main,/searchTechnologyCatalog\(normalized, \{ resource, limit: 8 \}\)/u);
+ assert.match(main,/role="combobox" aria-autocomplete="list"/u);
+ assert.match(main,/id="tech-model-suggestions"/u);
+ assert.match(main,/id="tech-compare-suggestions-/u);
+ assert.match(main,/catalogSlug: selected\.slug/u);
+ assert.match(main,/catalogSlug: item\.slug/u);
+ assert.doesNotMatch(main,/placeholder="Ej\.: Samsung Galaxy S24 Ultra"/u);
+ assert.doesNotMatch(main,/OBLIGATORIO|OPCIONAL/u);
+});
+
+test("un error de cobertura se muestra antes de cualquier tabla de comparación",async()=>{
+ const {readFile}=await import("node:fs/promises");
+ const {fileURLToPath}=await import("node:url");
+ const {dirname,join}=await import("node:path");
+ const main=await readFile(join(dirname(fileURLToPath(import.meta.url)),"../src/main.js"),"utf8");
+ const start=main.indexOf("function renderTechComparisonResults()");
+ const end=main.indexOf("function renderTech()",start);
+ const renderer=main.slice(start,end);
+ assert.ok(renderer.indexOf("if(result.error)") < renderer.indexOf("tech-comparison-table"));
+ assert.match(renderer,/No hay datos suficientes para comparar estos modelos/u);
+});
