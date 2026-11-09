@@ -1,8 +1,7 @@
 import { compareProducts, matchProducts, normalizeTechnologyProduct, createEvidenceRecord, EVIDENCE_STATUSES, SOURCE_TYPES } from "../../../src/index.js";
 
 export const TECHNOLOGY_COMPARISON_LOOKUP_FIELDS = Object.freeze([
-  "name", "brand", "chipset", "gpu", "ram", "storage", "displaySize",
-  "displayResolution", "refreshRate", "battery", "batteryWh", "storageOptions", "camera", "weight", "connectivity",
+  "name", "brand",
 ]);
 export const TECHNOLOGY_COMPARISON_PROFILES = Object.freeze([
   Object.freeze({
