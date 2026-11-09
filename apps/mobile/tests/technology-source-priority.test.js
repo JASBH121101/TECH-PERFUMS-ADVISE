@@ -11,7 +11,7 @@ test("Xataka is the primary public device detail source and has a dedicated rout
  assert.match(worker,/\/la-cacharreria\//u);
  assert.match(worker,/function parseXataka/u);
  assert.match(worker,/Xataka La Cacharrería/u);
- assert.match(worker,/RAM \/ Almacenamiento en cada versión/u);
+ assert.match(worker,/RAM\\s\\*\\\\\/\\\\s\\*Almacenamiento en cada versión/u);
 });
 
 test("GSMArena queries stay server-side and require a secret API.SH key",()=>{
