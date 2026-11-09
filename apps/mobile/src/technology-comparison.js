@@ -27,7 +27,6 @@ const FIELDS = Object.freeze([
   {key:"gpu",label:"Gráficos",attribute:"gpu"},
   {key:"ram",label:"Memoria RAM",attribute:"ramGB",unit:"capacity"},
   {key:"storage",label:"Almacenamiento",attribute:"storageGB",unit:"capacity"},
-  {key:"storageOptions",label:"Opciones de almacenamiento"},
   {key:"displaySize",label:"Pantalla",attribute:"displaySizeInches",unit:"display"},
   {key:"displayResolution",label:"Resolución",attribute:"displayResolution"},
   {key:"refreshRate",label:"Frecuencia",attribute:"refreshRateHz",unit:"frequency"},
@@ -98,11 +97,115 @@ function normalizeConnectivity(value) {
   return [...new Set(values.map(item => printable(item).trim()).filter(Boolean))];
 }
 
+function flattenCapacityValues(value, output = []) {
+  if (value === null || value === undefined || value === "") return output;
+  if (Array.isArray(value)) {
+    for (const item of value) flattenCapacityValues(item, output);
+    return output;
+  }
+  if (typeof value === "object") {
+    const keys = [
+      "value", "capacity", "capacity_gb", "size", "size_gb", "amount",
+      "ram", "ram_gb", "storage", "storage_gb", "memory_gb", "gb",
+    ];
+    for (const key of keys) {
+      if (Object.hasOwn(value, key)) {
+        flattenCapacityValues(value[key], output);
+        return output;
+      }
+    }
+    return output;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return output;
+  const parts = raw.split(/[\\/,;|]+/u).map(part => part.trim()).filter(Boolean);
+  for (const part of parts.length ? parts : [raw]) {
+    let parsed = numeric(part, "capacity");
+    if (parsed === null) {
+      const match = /(\\d+(?:[.,]\\d+)?)\\s*(TB|GB|MB)\\b/iu.exec(part);
+      if (match) parsed = numeric(match[1] + match[2], "capacity");
+    }
+    if (parsed !== null && Number.isFinite(parsed) && parsed > 0) output.push(parsed);
+  }
+  return output;
+}
+
+function formatCapacity(value, rowKey) {
+  const rounded = Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
+  if (rowKey === "storage" && value >= 1024 && value % 1024 === 0) {
+    const tb = value / 1024;
+    return (Number.isInteger(tb) ? String(tb) : String(Number(tb.toFixed(2)))) + " TB";
+  }
+  return rounded + " GB";
+}
+
+function buildCapacityDisplay(entries, rowKey) {
+  const grouped = new Map();
+  for (const entry of entries) {
+    if (!grouped.has(entry.source)) grouped.set(entry.source, []);
+    grouped.get(entry.source).push(...flattenCapacityValues(entry.value));
+  }
+
+  const sourceOptions = [...grouped.entries()]
+    .map(([source, values]) => ({
+      source,
+      values: [...new Set(values)].sort((a, b) => a - b),
+    }))
+    .filter(group => group.values.length);
+
+  if (!sourceOptions.length) {
+    return Object.freeze({ display: "Sin dato en las fuentes consultadas", conflict: false, values: [] });
+  }
+
+  const signatures = new Set(sourceOptions.map(group => group.values.join("|")));
+  if (signatures.size > 1) {
+    return Object.freeze({
+      display: sourceOptions.map(group =>
+        group.source + ": " + group.values.map(value => formatCapacity(value, rowKey)).join(" / "),
+      ).join(" · "),
+      conflict: true,
+      values: [],
+    });
+  }
+
+  const values = sourceOptions[0].values;
+  return Object.freeze({
+    display: values.map(value => formatCapacity(value, rowKey)).join(" / ") +
+      (sourceOptions.length > 1 ? " · " + sourceOptions.length + " fuentes coinciden" : " · " + sourceOptions[0].source),
+    conflict: false,
+    values,
+  });
+}
+
 function buildDevice(lookup, resource, index) {
   const facts = groupFacts(lookup), attributes = {};
   const rows = FIELDS.map(field => {
-    const entries = facts.get(field.key) ?? [], distinct = new Map();
-    for (const entry of entries) { const key=canonical(entry.value,field.unit); if(!distinct.has(key)) distinct.set(key,entry); }
+    let entries = facts.get(field.key) ?? [];
+    if (field.key === "storage") {
+      entries = [...entries, ...(facts.get("storageOptions") ?? [])];
+    }
+
+    if (field.unit === "capacity") {
+      const capacity = buildCapacityDisplay(entries, field.key);
+      if (field.attribute && capacity.values.length && !capacity.conflict) {
+        // The lowest published configuration is the conservative baseline for scoring.
+        attributes[field.attribute] = Math.min(...capacity.values);
+      }
+      return Object.freeze({
+        key:field.key,
+        label:field.label,
+        display:capacity.display,
+        conflict:capacity.conflict,
+        options:Object.freeze(capacity.values),
+      });
+    }
+
+    const distinct = new Map();
+    for (const entry of entries) {
+      const key=canonical(entry.value,field.unit);
+      if(!distinct.has(key)) distinct.set(key,entry);
+    }
     const conflict = distinct.size > 1, first = entries[0] ?? null;
     const firstDisplay = first
       ? (field.attribute === "connectivity" ? normalizeConnectivity(first.value).join(", ") : printable(first.value))
