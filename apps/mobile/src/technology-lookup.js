@@ -230,6 +230,7 @@ export async function lookupTechnology({
   techApiSlugCandidates,
   coreInfoProvider = createCoreInfoResearchProvider(),
   techApiProvider = createTechApiResearchProvider(),
+  primarySourceFetcher = fetchPrimarySource,
   fields,
 } = {}) {
   if (typeof model !== "string" || !model.trim()) {
@@ -263,8 +264,8 @@ export async function lookupTechnology({
   const techQueries = techSlugs.map(slug => resource + ":" + slug);
 
   const [gsmarena, xataka, coreInfo, techApi] = await Promise.all([
-    fetchPrimarySource("/gsmarena/phone", { q: model.trim() }, "gsmarena", "GSMArena"),
-    fetchPrimarySource("/xataka", { slug: coreInfoSlug }, "xataka", "Xataka · La Cacharrería"),
+    primarySourceFetcher("/gsmarena/phone", { q: model.trim() }, "gsmarena", "GSMArena"),
+    primarySourceFetcher("/xataka", { slug: coreInfoSlug }, "xataka", "Xataka · La Cacharrería"),
     collectSource(coreInfoProvider, "coreinfo", [coreInfoSlug], coreFields),
     collectSource(techApiProvider, "techapi", techQueries, techFields),
   ]);
@@ -276,7 +277,7 @@ export async function lookupTechnology({
     techApiSlug: techApi.query?.slice(resource.length + 1) ?? null,
     resource,
     sources: Object.freeze([gsmarena, xataka, coreInfo, techApi]),
-    hasResults: coreInfo.facts.length + techApi.facts.length > 0,
+    hasResults: gsmarena.facts.length + xataka.facts.length + coreInfo.facts.length + techApi.facts.length > 0,
     reviewRequired: true,
     saved: false,
   });

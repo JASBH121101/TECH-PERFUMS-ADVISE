@@ -1,21 +1,27 @@
 # JBAE TECH Sources Worker
 
-A server-side source adapter for the TECH module.
+Server-side adapter for the TECH module. It uses public web pages and the existing Cloudflare Worker runtime only. It does not call paid device-data APIs and does not require API keys, subscriptions, or billing credentials.
 
-- Xataka La Cacharrería is queried first through its public device detail page.
-- GSMArena is queried through API.SH's structured GSMArena endpoint when the Cloudflare Worker secret `APISH_KEY` is configured.
-- Neither API key is shipped in GitHub Pages, the browser bundle, or the Android APK.
-- The app calls this Worker; CoreInfo and TechAPI are retained as field-level fallbacks only.
-- Xataka results are cached at the edge for six hours. GSMArena lookups are server-side.
+- GSMArena is queried first by model using its public search page, then its device specification page when freely accessible.
+- Xataka La Cacharrería is queried second using the model slug from the selected catalogue record.
+- CoreInfo and TechAPI remain auxiliary identity-only providers (model and brand), never full specification providers.
+- Source attribution, URLs, retrieval time, and RAM/storage combinations are retained in the result.
+- Successful Xataka responses are cached at the edge for six hours.
+
+## Important access behavior
+
+Some automated requests to GSMArena may be rejected with HTTP 402, 403, or 429. When that happens, JBAE reports the limitation and keeps the GSMArena link available for manual opening. It does not use API.SH, another paid API, a proxy subscription, or a paywall bypass.
+
+Xataka public device pages are queried directly. Example: https://www.xataka.com/la-cacharreria/samsung/galaxy-a32-5g
 
 ## Deploy
 
-The Worker script name is `jbae-tech-sources`; enable its `workers.dev` subdomain.
-
-Set the secret `APISH_KEY` on the Worker after creating an API.SH account and key. Without it, the Worker reports GSMArena as `not_configured` and does not pretend to have retrieved GSMArena data.
+Worker script name: jbae-specs-api
+Public URL: https://jbae-specs-api.jaredblancoh19.workers.dev
+No Worker secret or paid provider key is required.
 
 ## Routes
 
-- `GET /health`
-- `GET /xataka?slug=samsung-galaxy-s24-ultra`
-- `GET /gsmarena/phone?q=Samsung%20Galaxy%20S24%20Ultra`
+- GET /health
+- GET /xataka?slug=samsung-galaxy-a32-5g
+- GET /gsmarena/phone?q=Samsung%20Galaxy%20A17
