@@ -56,14 +56,26 @@ function cleanHtml(fragment) {
     .trim();
 }
 
+function normalizeLabel(value) {
+  return cleanHtml(value).normalize("NFD").replace(/[\u0300-\u036f]/gu, "").toLowerCase().trim();
+}
+
 function parseRows(html) {
   const rows = new Map();
+  let section = "";
   for (const rowMatch of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/giu)) {
+    const header = rowMatch[1].match(/<th\b[^>]*>([\s\S]*?)<\/th>/iu);
     const cells = [...rowMatch[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/giu)]
       .map(match => cleanHtml(match[1]).replace(/\s+/gu, " ").trim())
       .filter(Boolean);
+    if (header && cells.length <= 1) {
+      section = normalizeLabel(header[1]);
+      continue;
+    }
     if (cells.length >= 2) {
-      rows.set(cells[0].normalize("NFD").replace(/[\u0300-\u036f]/gu, "").toLowerCase(), cells[1]);
+      const label = normalizeLabel(cells[0]);
+      rows.set(section + "|" + label, cells[1]);
+      rows.set(label, cells[1]);
     }
   }
   return rows;
@@ -218,62 +230,101 @@ async function getXataka(slug) {
   };
 }
 
-function mapGsmaFacts(record) {
-  const facts = [];
-  const add = (key, label, value) => {
-    if (value !== undefined && value !== null && value !== "") facts.push({ key, label, value });
-  };
-  add("name", "Modelo", record.name);
-  add("brand", "Fabricante", record.brand);
-  add("releaseDate", "Lanzamiento", record.announced ?? record.released);
-  add("chipset", "Procesador / chipset", record.chipset ?? record.highlights?.chipset ?? record.specs?.Platform?.Chipset);
-  add("gpu", "Gráficos", record.specs?.Platform?.GPU ?? record.gpu);
-  add("ram", "Memoria RAM", record.ram_options_gb?.length ? record.ram_options_gb.map(value => value + " GB").join(" / ") : record.highlights?.ram ? record.highlights.ram + " GB" : null);
-  add("storage", "Almacenamiento", record.storage_options_gb?.length ? record.storage_options_gb.map(value => value + " GB").join(" / ") : record.highlights?.storage);
-  add("storageOptions", "Opciones de almacenamiento", record.storage_options_gb);
-  add("displaySize", "Tamaño de pantalla", record.display_inches ?? record.highlights?.display_size ?? record.specs?.Display?.Size);
-  add("displayResolution", "Resolución", record.display_resolution ?? record.highlights?.display_resolution ?? record.specs?.Display?.Resolution);
-  add("refreshRate", "Frecuencia de pantalla", record.specs?.Display?.Type?.match?.(/\d{2,3}\s*Hz/iu)?.[0] ?? null);
-  add("battery", "Batería", record.battery_mah ?? record.highlights?.battery);
-  add("camera", "Cámara", record.main_camera_mp ?? record.highlights?.camera_mp);
-  add("weight", "Peso", record.weight_g ?? record.highlights?.body);
-  const os = record.specs?.Platform?.OS ?? record.highlights?.os;
-  add("operatingSystem", "Sistema operativo", os);
-  const connectivity = record.specs?.Network?.Technology ?? record.specs?.Comms?.WLAN;
-  add("connectivity", "Conectividad", connectivity);
-  return facts;
+function extractVariantPairs(value) {
+  const pattern = /(\d+(?:\.\d+)?\s*(?:GB|TB))\s*(\d+(?:\.\d+)?\s*GB)\s*RAM/giu;
+  const values = [...String(value ?? "").matchAll(pattern)].map(match => ({
+    storage: match[1].replace(/\s+/gu, "").toUpperCase(),
+    ram: match[2].replace(/\s+/gu, "").toUpperCase(),
+  }));
+  return [...new Map(values.map(item => [item.storage + "|" + item.ram, item])).values()];
 }
 
-async function getGsma(query, env) {
-  if (!env.APISH_KEY) return {
-    status: "not_configured",
-    source: null,
-    facts: [],
-    error: "GSMArena API no está conectada: falta configurar la clave API.SH como secreto APISH_KEY en Cloudflare.",
+function uniqueJoined(values) {
+  return [...new Set(values.filter(Boolean))].join(" / ");
+}
+
+function parseGsmaPage(html, url, fallbackName) {
+  const rows = parseRows(html);
+  const row = (section, ...labels) => {
+    for (const label of labels) {
+      const key = normalizeLabel(label);
+      const value = rows.get(normalizeLabel(section) + "|" + key) ?? rows.get(key);
+      if (value) return value;
+    }
+    return null;
   };
-  const endpoint = new URL("https://api.api.sh/gsmarena/v1/phone");
-  endpoint.searchParams.set("q", query);
-  const response = await fetch(endpoint, {
-    headers: { "x-api-key": env.APISH_KEY, "Accept": "application/json" },
-  });
-  if (response.status === 404) return { status: "not_found", source: null, facts: [] };
-  if (!response.ok) throw new Error("API.SH GSMArena respondió HTTP " + response.status);
-  const payload = await response.json();
-  const record = payload?.data ?? payload?.result ?? payload;
-  if (!record || typeof record !== "object" || !record.name) {
-    return { status: "not_found", source: null, facts: [] };
-  }
-  const facts = mapGsmaFacts(record);
+  const title = firstMatch(html, [/<h1\b[^>]*>([\s\S]*?)<\/h1>/iu]);
+  const name = title ? cleanHtml(title) : fallbackName;
+  const facts = [];
+  const add = (key, label, value) => {
+    if (value !== null && value !== undefined && value !== "") facts.push({ key, label, value });
+  };
+  add("name", "Modelo", name);
+  add("releaseDate", "Lanzamiento", [row("Launch", "Announced"), row("Launch", "Status")].filter(Boolean).join(" · ") || null);
+  add("dimensions", "Dimensiones", row("Body", "Dimensions"));
+  add("weight", "Peso", row("Body", "Weight"));
+  add("build", "Construcción", row("Body", "Build"));
+  add("displayTechnology", "Tecnología de pantalla", row("Display", "Type"));
+  add("displaySize", "Tamaño de pantalla", row("Display", "Size"));
+  add("displayResolution", "Resolución", row("Display", "Resolution"));
+  add("operatingSystem", "Sistema operativo", row("Platform", "OS"));
+  add("chipset", "Procesador / chipset", row("Platform", "Chipset"));
+  add("cpu", "CPU", row("Platform", "CPU"));
+  add("gpu", "GPU", row("Platform", "GPU"));
+  const internal = row("Memory", "Internal");
+  const variants = extractVariantPairs(internal);
+  add("ram", "Memoria RAM", variants.length ? uniqueJoined(variants.map(item => item.ram.replace("GB", " GB"))) : null);
+  add("storage", "Almacenamiento", variants.length ? uniqueJoined(variants.map(item => item.storage.replace("GB", " GB"))) : internal);
+  add("storageOptions", "Opciones de almacenamiento", variants.length ? uniqueJoined(variants.map(item => item.storage.replace("GB", " GB"))) : null);
+  add("memoryCard", "Tarjeta de memoria", row("Memory", "Card slot"));
+  add("camera", "Cámaras traseras", uniqueJoined([...rows.entries()].filter(([key]) => key.startsWith("main camera|")).map(([, value]) => value)));
+  add("frontCamera", "Cámara frontal", uniqueJoined([...rows.entries()].filter(([key]) => key.startsWith("selfie camera|")).map(([, value]) => value)));
+  add("battery", "Batería", row("Battery", "Type"));
+  add("charging", "Carga", row("Battery", "Charging"));
+  add("connectivity", "Conectividad", uniqueJoined([
+    row("Network", "Technology"), row("Comms", "WLAN"), row("Comms", "Bluetooth"),
+    row("Comms", "NFC"), row("Comms", "USB"),
+  ]));
+  add("sensors", "Sensores", row("Features", "Sensors"));
+  add("colors", "Colores", row("Misc", "Colors"));
+  return { status: facts.length >= 6 ? "found" : facts.length ? "partial" : "not_found",
+    source: { name: "GSMArena", url }, facts, variants, retrievedAt: new Date().toISOString() };
+}
+
+function gsmaBlocked(status, url) {
   return {
-    status: facts.length >= 4 ? "found" : "partial",
-    source: {
-      name: "GSMArena",
-      url: typeof record.url === "string" && record.url.startsWith("https://www.gsmarena.com/") ? record.url : "https://www.gsmarena.com/",
-      provider: "API.SH",
-    },
-    facts,
-    retrievedAt: new Date().toISOString(),
+    status: "error", source: { name: "GSMArena", url }, facts: [], variants: [],
+    error: status === 402 || status === 403 || status === 429
+      ? "GSMArena no permitió esta consulta automatizada gratuita (HTTP " + status + "). No se usa ningún servicio de pago; abrí la ficha de GSMArena para verificarla manualmente."
+      : "GSMArena respondió HTTP " + status + ".",
   };
+}
+
+async function getGsma(query) {
+  const searchUrl = new URL("https://www.gsmarena.com/results.php3");
+  searchUrl.searchParams.set("sQuickSearch", query);
+  const headers = { "Accept": "text/html,application/xhtml+xml", "Accept-Language": "en-US,en;q=0.9" };
+  const searchResponse = await fetch(searchUrl, { headers, redirect: "follow", signal: AbortSignal.timeout(14000) });
+  if (!searchResponse.ok) return gsmaBlocked(searchResponse.status, searchUrl.toString());
+  const searchHtml = await searchResponse.text();
+  const tokens = query.toLowerCase().split(/[^a-z0-9]+/u).filter(token => token.length > 1);
+  const candidates = [];
+  for (const match of searchHtml.matchAll(/<a\b[^>]*href=["']([^"']+\.php(?:\?[^"']*)?)["'][^>]*>([\s\S]*?)<\/a>/giu)) {
+    const href = match[1];
+    if (!/[a-z0-9_]+-\d+\.php$/iu.test(href) || /-review-\d+\.php$/iu.test(href)) continue;
+    const title = cleanHtml(match[2]) || href.split("/").pop().replace(/-\d+\.php.*$/iu, "").replace(/_/gu, " ");
+    const score = tokens.filter(token => title.toLowerCase().includes(token)).length;
+    if (score) candidates.push({ href: new URL(href, "https://www.gsmarena.com/").toString(), title, score });
+  }
+  candidates.sort((a, b) => b.score - a.score);
+  const candidate = candidates[0];
+  if (!candidate || candidate.score < Math.min(2, tokens.length)) {
+    return { status: "not_found", source: { name: "GSMArena", url: searchUrl.toString() },
+      facts: [], variants: [], error: "No se encontró una coincidencia en los resultados de GSMArena." };
+  }
+  const detailResponse = await fetch(candidate.href, { headers, redirect: "follow", signal: AbortSignal.timeout(14000) });
+  if (!detailResponse.ok) return gsmaBlocked(detailResponse.status, candidate.href);
+  return parseGsmaPage(await detailResponse.text(), detailResponse.url || candidate.href, candidate.title);
 }
 
 export default {
@@ -289,8 +340,7 @@ export default {
         ok: true,
         sources: {
           xataka: true,
-          gsmarena: Boolean(env.APISH_KEY),
-          gsmarenaProvider: env.APISH_KEY ? "API.SH" : "not_configured",
+          gsmarena: true,\n          gsmarenaProvider: "public_html_no_paid_api",
         },
       }, 200, origin);
     }
@@ -316,7 +366,7 @@ export default {
       if (url.pathname === "/gsmarena/phone") {
         const query = (url.searchParams.get("q") ?? "").trim();
         if (query.length < 2 || query.length > 120) return json({ error: "El nombre del dispositivo no es válido." }, 400, origin);
-        const result = await getGsma(query, env);
+        const result = await getGsma(query);
         return json(result, 200, origin);
       }
       return json({ error: "Ruta no encontrada." }, 404, origin);
