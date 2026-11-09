@@ -18,6 +18,7 @@ import {
   TECHNOLOGY_COMPARISON_PROFILES,
   buildTechnologyApprovalCandidate,
   saveTechnologyCandidate,
+  formatTechnologyFactValue,
 } from "./technology-comparison.js";
 
 const app = document.querySelector("#app");
@@ -271,7 +272,11 @@ function renderTechSource(source) {
     error: "Fuente no disponible",
   }[source.status] ?? source.status;
   const facts = source.facts.length
-    ? `<dl class="tech-fact-list">${source.facts.map(fact => `<div class="tech-fact"><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(renderValue(fact.value))}</dd></div>`).join("")}</dl>`
+    ? `<dl class="tech-fact-list">${source.facts.map(fact => {
+      const formattedCapacity = formatTechnologyFactValue(fact.value, fact.key);
+      const value = formattedCapacity ?? renderValue(fact.value);
+      return `<div class="tech-fact"><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(value)}</dd></div>`;
+    }).join("")}</dl>`
     : `<p class="field-hint">${escapeHtml(source.error ?? "La fuente no devolvió campos para este identificador exacto.")}</p>`;
   const url = safeExternalUrl(source.source?.url);
   const attribution = source.source?.attribution;
