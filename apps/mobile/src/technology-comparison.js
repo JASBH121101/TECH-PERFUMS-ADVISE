@@ -140,6 +140,14 @@ function formatCapacity(value, rowKey) {
   return rounded + " GB";
 }
 
+export function formatTechnologyFactValue(value, fieldKey) {
+  if (!["ram", "storage", "storageOptions"].includes(fieldKey)) return null;
+  const values = [...new Set(flattenCapacityValues(value))].sort((a, b) => a - b);
+  if (!values.length) return null;
+  const unitKey = fieldKey === "storageOptions" ? "storage" : fieldKey;
+  return values.map(item => formatCapacity(item, unitKey)).join(" / ");
+}
+
 function buildCapacityDisplay(entries, rowKey) {
   const grouped = new Map();
   for (const entry of entries) {
