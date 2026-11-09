@@ -380,3 +380,15 @@ button { color: inherit; }
   .tech-compare-form .field-group input,.tech-lookup-form .field-group input { font-size: 14px; }
   .tech-comparison-table { min-width: 585px; }
 }
+
+
+/* Primary specification sources: GSMArena first, Xataka second. */
+.primary-spec-sources { display: grid; gap: 12px; margin: 16px 0; padding: 15px; border: 1px solid rgba(117,225,209,.22); border-radius: 15px; background: rgba(117,225,209,.035); }
+.primary-spec-sources .result-section-title { margin: 0; }
+.primary-spec-source-grid { display: grid; gap: 9px; }
+.primary-spec-source-model { display: grid; gap: 8px; padding: 12px; border-radius: 11px; background: rgba(0,0,0,.16); }
+.primary-spec-source-model > strong { color: var(--text); font-size: 13px; }
+.primary-spec-source-links { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.primary-spec-source-links a { display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 42px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--cyan); font-size: 11px; line-height: 1.35; text-decoration: none; }
+.primary-spec-source-links a span { flex: 0 0 auto; }
+@media(max-width:370px) { .primary-spec-source-links { grid-template-columns: 1fr; } }
