@@ -455,7 +455,7 @@ export default {
             signal: AbortSignal.timeout(10000),
           });
           const html = await response.text();
-          const titleHtml = firstMatch(html, [/<title\\b[^>]*>([\\s\\S]*?)<\\/title>/iu]);
+          const titleHtml = firstMatch(html, [/<title\b[^>]*>([\s\S]*?)<\/title>/iu]);
           results.push({
             requestedUrl: target,
             finalUrl: response.url || target,
