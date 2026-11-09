@@ -178,7 +178,7 @@ test("el comparador bloquea resultados parciales y conserva el detalle de cobert
  assert.ok(result.error);
  assert.equal(result.qualityGate.valid,false);
  assert.ok(result.qualityGate.devices.some(device=>device.availableDimensionCount<3));
- assert.equal(result.ranking,undefined);
+ assert.equal(result.ranking,null);
 });
 
 test("extrae la cámara principal desde datos estructurados y texto en MP",()=>{
