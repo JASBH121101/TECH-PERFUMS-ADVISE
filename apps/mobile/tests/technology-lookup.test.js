@@ -37,8 +37,10 @@ test("consulta dos fuentes exactas y conserva el estado pendiente de revisión",
   assert.equal(result.hasResults, true);
   assert.equal(result.reviewRequired, true);
   assert.equal(result.saved, false);
-  assert.equal(result.sources.length, 2);
-  assert.equal(result.sources[0].facts[0].value, "Galaxy A17");
+  assert.equal(result.sources.length, 4);
+  assert.deepEqual(result.sources.slice(0, 2).map(source => source.id), ["gsmarena", "xataka"]);
+  assert.deepEqual(result.sources.slice(2).map(source => source.id), ["coreinfo", "techapi"]);
+  assert.equal(result.sources[2].facts[0].value, "Galaxy A17");
 });
 
 test("rechaza categorías no soportadas", async () => {
