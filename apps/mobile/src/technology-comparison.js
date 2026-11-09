@@ -45,6 +45,20 @@ function printable(value) {
 }
 function numeric(value, kind) {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+  if (kind === "camera" && value && typeof value === "object") {
+    if (Array.isArray(value)) {
+      const primary = value.find(item => /main|primary|wide|principal/iu.test(String(item?.type ?? item?.name ?? item?.label ?? ""))) ?? value[0];
+      if (primary) {
+        const candidate = primary.megapixels ?? primary.mp ?? primary.resolutionMP ?? primary.resolution ?? primary.value;
+        const parsed = numeric(candidate, "camera");
+        if (parsed !== null) return parsed;
+      }
+    } else {
+      const candidate = value.megapixels ?? value.mp ?? value.resolutionMP ?? value.main ?? value.primary ?? value.value;
+      const parsed = numeric(candidate, "camera");
+      if (parsed !== null) return parsed;
+    }
+  }
   if (kind === "camera") {
     const raw = printable(value);
     const match = /(\d+(?:[.,]\d+)?)\s*(?:mp|megapixels?)(?:\b|$)/iu.exec(raw);
