@@ -36,6 +36,9 @@ jobs:
       - name: Test app
         working-directory: apps/mobile
         run: npm test
+      - name: Build searchable CoreInfo technology catalogue
+        working-directory: apps/mobile
+        run: node scripts/build-technology-catalog.mjs
       - name: Build Pages bundle and fragrance seed
         working-directory: apps/mobile
         env:

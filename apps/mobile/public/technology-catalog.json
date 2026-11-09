@@ -1,0 +1,92 @@
+{
+  "source": "CoreInfo",
+  "attribution": "Device names and canonical links from CoreInfo; specifications are retrieved separately for each selected model.",
+  "generatedAt": "2026-11-08T00:00:00.000Z",
+  "count": 12,
+  "devices": [
+    {
+      "slug": "samsung-galaxy-s26-ultra",
+      "name": "Samsung Galaxy S26 Ultra",
+      "resource": "smartphones",
+      "url": "https://www.coreinfos.in/samsung-galaxy-s26-ultra",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "apple-iphone-18-pro-max",
+      "name": "Apple iPhone 18 Pro Max",
+      "resource": "smartphones",
+      "url": "https://www.coreinfos.in/apple-iphone-18-pro-max",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "apple-iphone-18-pro",
+      "name": "Apple iPhone 18 Pro",
+      "resource": "smartphones",
+      "url": "https://www.coreinfos.in/apple-iphone-18-pro",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "samsung-galaxy-s26",
+      "name": "Samsung Galaxy S26",
+      "resource": "smartphones",
+      "url": "https://www.coreinfos.in/samsung-galaxy-s26",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "google-pixel-10-pro",
+      "name": "Google Pixel 10 Pro",
+      "resource": "smartphones",
+      "url": "https://www.coreinfos.in/google-pixel-10-pro",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "xiaomi-17-ultra",
+      "name": "Xiaomi 17 Ultra",
+      "resource": "smartphones",
+      "url": "https://www.coreinfos.in/xiaomi-17-ultra",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "motorola-razr-ultra-2026",
+      "name": "Motorola Razr Ultra 2026",
+      "resource": "smartphones",
+      "url": "https://www.coreinfos.in/motorola-razr-ultra-2026",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "samsung-galaxy-tab-s11-ultra",
+      "name": "Samsung Galaxy Tab S11 Ultra",
+      "resource": "tablets",
+      "url": "https://www.coreinfos.in/samsung-galaxy-tab-s11-ultra",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "apple-ipad-pro-13-m5",
+      "name": "Apple iPad Pro 13 M5",
+      "resource": "tablets",
+      "url": "https://www.coreinfos.in/apple-ipad-pro-13-m5",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "apple-macbook-pro-16-m5-pro",
+      "name": "Apple MacBook Pro 16 M5 Pro",
+      "resource": "laptops",
+      "url": "https://www.coreinfos.in/apple-macbook-pro-16-m5-pro",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "samsung-galaxy-watch-8-ultra",
+      "name": "Samsung Galaxy Watch 8 Ultra",
+      "resource": "watches",
+      "url": "https://www.coreinfos.in/samsung-galaxy-watch-8-ultra",
+      "source": "CoreInfo"
+    },
+    {
+      "slug": "lg-ultragear-oled-monitor-32gs95ue",
+      "name": "LG UltraGear OLED Monitor 32GS95UE",
+      "resource": "monitors",
+      "url": "https://www.coreinfos.in/lg-ultragear-oled-monitor-32gs95ue",
+      "source": "CoreInfo"
+    }
+  ]
+}
