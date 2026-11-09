@@ -27,6 +27,38 @@ const FIELD_DEFINITIONS = Object.freeze([
   { key: "connectivity", label: "Conectividad", core: "connectivity", tech: "connectivity" },
 ]);
 
+const PRIMARY_SPEC_SOURCES = Object.freeze([
+  Object.freeze({
+    id: "gsmarena",
+    name: "GSMArena",
+    priority: 1,
+    url: model => "https://www.gsmarena.com/results.php3?sQuickSearch=" + encodeURIComponent(model),
+    role: "Fuente principal de especificaciones",
+  }),
+  Object.freeze({
+    id: "xataka",
+    name: "Xataka · La Cacharrería",
+    priority: 2,
+    url: () => "https://www.xataka.com/la-cacharreria/search",
+    role: "Fuente principal de fichas y análisis",
+  }),
+]);
+
+export function buildPrimarySpecSourceLinks(model) {
+  if (typeof model !== "string" || !model.trim()) {
+    throw new TypeError("Se requiere un modelo para preparar las fuentes principales.");
+  }
+  return PRIMARY_SPEC_SOURCES.map(source => Object.freeze({
+    id: source.id,
+    name: source.name,
+    priority: source.priority,
+    url: source.url(model.trim()),
+    role: source.role,
+  }));
+}
+
+const AUXILIARY_IDENTITY_FIELDS = Object.freeze(["name", "brand"]);
+
 const BRAND_PREFIXES = Object.freeze([
   "samsung", "apple", "google", "xiaomi", "motorola", "oneplus",
   "oppo", "vivo", "honor", "huawei", "realme", "sony", "asus",
@@ -173,12 +205,14 @@ export async function lookupTechnology({
     throw new TypeError("El catálogo no proporcionó un identificador válido para el dispositivo.");
   }
 
-  let selectedFields = FIELD_DEFINITIONS;
+  let selectedFields = FIELD_DEFINITIONS.filter(field =>
+    AUXILIARY_IDENTITY_FIELDS.includes(field.key),
+  );
   if (fields !== undefined) {
     if (!Array.isArray(fields) || fields.length === 0 ||
-        fields.some(field => typeof field !== "string" || !FIELD_DEFINITIONS.some(item => item.key === field)) ||
+        fields.some(field => typeof field !== "string" || !AUXILIARY_IDENTITY_FIELDS.includes(field)) ||
         new Set(fields).size !== fields.length) {
-      throw new TypeError("Los campos solicitados para la consulta no son válidos.");
+      throw new TypeError("CoreInfo y TechAPI solo pueden aportar identidad básica; las especificaciones se consultan en GSMArena y Xataka.");
     }
     const requested = new Set(fields);
     selectedFields = FIELD_DEFINITIONS.filter(field => requested.has(field.key));
