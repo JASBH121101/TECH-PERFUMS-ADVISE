@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildTechnologyComparison, buildTechnologyApprovalCandidate, saveTechnologyCandidate } from "../src/technology-comparison.js";
+import { buildTechnologyComparison, buildTechnologyApprovalCandidate, saveTechnologyCandidate, formatTechnologyFactValue } from "../src/technology-comparison.js";
 import { KnowledgeStore, MemoryKnowledgeAdapter } from "../../../src/index.js";
 function lookup(model,slug,core=[],tech=[]) {
  const facts=(items,name)=>items.map(([key,value])=>({key,value,source:{name,url:"https://example.test/"+name},observedAt:"2026-11-08T00:00:00.000Z"}));
@@ -275,4 +275,21 @@ test("mantiene separados los conjuntos de configuraciones realmente discrepantes
  assert.match(row.values[0].display,/CoreInfo: 8 GB \/ 12 GB/u);
  assert.match(row.values[0].display,/TechAPI: 8 GB \/ 16 GB/u);
  assert.equal(result.products[0].attributes.ramGB,undefined);
+});
+
+
+test("formatea las variantes de RAM y almacenamiento con separadores slash en las fichas",()=>{
+ assert.equal(formatTechnologyFactValue(["8 GB","12 GB","16 GB"],"ram"),"8 GB / 12 GB / 16 GB");
+ assert.equal(formatTechnologyFactValue("512 GB, 128 GB, 256 GB","storage"),"128 GB / 256 GB / 512 GB");
+ assert.equal(formatTechnologyFactValue([128,256,512],"storageOptions"),"128 GB / 256 GB / 512 GB");
+ assert.equal(formatTechnologyFactValue("12 GB","ram"),"12 GB");
+ assert.equal(formatTechnologyFactValue("LPDDR5X","ram"),null);
+});
+
+test("la ficha técnica aplica el formato slash a RAM y almacenamiento sin alterar otros campos",async()=>{
+ const {readFile}=await import("node:fs/promises");
+ const {fileURLToPath}=await import("node:url");
+ const {dirname,join}=await import("node:path");
+ const main=await readFile(join(dirname(fileURLToPath(import.meta.url)),"../src/main.js"),"utf8");
+ assert.match(main,/formatTechnologyFactValue\(fact\.value, fact\.key\)/u);
 });
