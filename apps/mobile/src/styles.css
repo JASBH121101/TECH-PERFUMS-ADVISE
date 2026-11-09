@@ -289,3 +289,16 @@ button { color: inherit; }
 .profile-dimensions b{flex:0 0 auto;color:var(--cyan);font-size:9px}
 @media(max-width:370px){.profile-dimensions{grid-template-columns:1fr}}
 
+
+
+/* Fragrance detail readability: approximately +10% for notes and supporting copy. */
+.detail-brand { font-size: 13px; }
+.tag-row span { font-size: 10px; }
+.detail-block > p { font-size: 12px; }
+.note-grid small { font-size: 9px; }
+.note-grid strong { font-size: 11px; line-height: 1.6; }
+.fact-list dt,
+.fact-list dd { font-size: 11px; }
+.evidence-note strong { font-size: 12px; }
+.evidence-note p { font-size: 11px; }
+.evidence-note a { font-size: 10px; }
