@@ -386,6 +386,15 @@ async function getGsma(query) {
   const searchResponse = await fetch(searchUrl, { headers, redirect: "follow", signal: AbortSignal.timeout(14000) });
   if (!searchResponse.ok) return gsmaBlocked(searchResponse.status, searchUrl.toString());
   const searchHtml = await searchResponse.text();
+  if (/turnstile check|cf-chl-|challenge-platform|verify you are human/iu.test(searchHtml)) {
+    return {
+      status: "blocked",
+      source: { name: "GSMArena", url: searchUrl.toString() },
+      facts: [],
+      variants: [],
+      error: "GSMArena devolvió una verificación Turnstile. JBAE no intenta eludirla; abrí el enlace de GSMArena para consultar la ficha.",
+    };
+  }
   const tokens = query.toLowerCase().split(/[^a-z0-9]+/u).filter(token => token.length > 1);
   const candidates = [];
   for (const match of searchHtml.matchAll(/<a\b[^>]*href=["']([^"']+\.php(?:\?[^"']*)?)["'][^>]*>([\s\S]*?)<\/a>/giu)) {
@@ -474,6 +483,26 @@ export default {
             error: error instanceof Error ? error.message : "No se pudo consultar la página.",
           });
         }
+      }
+      const sourceChecks = await Promise.all([
+        getGsma("Samsung Galaxy A17"),
+        getXataka("samsung-galaxy-a32-5g"),
+      ]);
+      for (let index = 0; index < sourceChecks.length; index += 1) {
+        const source = sourceChecks[index];
+        const fallbackUrl = index === 0
+          ? "https://www.gsmarena.com/results.php3?sQuickSearch=Samsung%20Galaxy%20A17"
+          : "https://www.xataka.com/la-cacharreria/samsung/galaxy-a32-5g";
+        results.push({
+          requestedUrl: source.source?.url ?? fallbackUrl,
+          finalUrl: source.source?.url ?? null,
+          status: source.status === "found" || source.status === "partial" ? 200 : source.status === "blocked" ? 403 : source.status === "error" ? 502 : 404,
+          title: source.name ?? (index === 0 ? "GSMArena" : "Xataka"),
+          bytes: source.facts?.length ?? 0,
+          error: source.error ?? null,
+          facts: source.facts?.length ?? 0,
+          variants: source.variants?.length ?? 0,
+        });
       }
       return json({ ok: true, results }, 200, origin);
     }
