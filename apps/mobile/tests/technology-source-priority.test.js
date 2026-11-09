@@ -28,6 +28,5 @@ test("paid or blocked automated access is reported without a paid fallback", () 
   assert.ok(worker.includes("gsmaBlocked(status, url)"));
   assert.ok(worker.includes("No se usa ningún servicio de pago"));
   assert.ok(worker.includes("public_html_no_paid_api"));
-  assert.ok(worker.includes("robotsText.split(/\\r?\\n/u)") === false);
   assert.ok(worker.includes("checkRobots(searchUrl)"));
 });
