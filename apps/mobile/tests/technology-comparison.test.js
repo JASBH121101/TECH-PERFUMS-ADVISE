@@ -114,3 +114,54 @@ test("el perfil no mezcla capacidades de batería en mAh y Wh",()=>{
  assert.equal(result.profile.coveragePercent,55);
  assert.equal(result.profile.available,false);
 });
+
+
+test("normaliza conectividad y descarta entradas vacías de los proveedores",()=>{
+ const devices=[
+  lookup("Samsung S26 Ultra","s26-ultra",[
+   ["ram","12 GB"],["storage","256 GB"],["connectivity",["5G","",null,"Wi-Fi 7","  ", "5G"]],
+  ]),
+  lookup("iPhone 18 Pro Max","iphone-18-pro-max",[
+   ["ram","12 GB"],["storage","512 GB"],["connectivity",["5G","Wi-Fi 7",""]],
+  ]),
+ ];
+ const result=buildTechnologyComparison({lookups:devices,resource:"smartphones"});
+ assert.deepEqual(result.products[0].attributes.connectivity,["5G","Wi-Fi 7"]);
+ assert.deepEqual(result.products[1].attributes.connectivity,["5G","Wi-Fi 7"]);
+ assert.match(result.rows.find(row=>row.key==="connectivity").values[0].display,/5G, Wi-Fi 7/u);
+});
+
+test("omite conectividad vacía sin abortar la comparación",()=>{
+ const devices=[
+  lookup("Device A","device-a",[["ram","8 GB"],["storage","128 GB"],["connectivity",["",null,"  "]]]),
+  lookup("Device B","device-b",[["ram","12 GB"],["storage","256 GB"],["connectivity",[]]]),
+ ];
+ const result=buildTechnologyComparison({lookups:devices,resource:"smartphones"});
+ assert.equal(Object.hasOwn(result.products[0].attributes,"connectivity"),false);
+ assert.equal(Object.hasOwn(result.products[1].attributes,"connectivity"),false);
+ assert.equal(result.rows.find(row=>row.key==="connectivity").values[0].display,"Sin dato en las fuentes consultadas");
+});
+
+test("la interfaz TECH no muestra texto de ejemplo ni marcas de opcionalidad",async()=>{
+ const {readFile}=await import("node:fs/promises");
+ const {fileURLToPath}=await import("node:url");
+ const {dirname,join}=await import("node:path");
+ const main=await readFile(join(dirname(fileURLToPath(import.meta.url)),"../src/main.js"),"utf8");
+ const start=main.indexOf("function renderTechComparisonForm()");
+ const end=main.indexOf("function renderTechComparisonResults()",start);
+ const form=main.slice(start,end);
+ assert.ok(form.includes("required-marker"));
+ assert.ok(form.includes('i<2?"required":""'));
+ assert.doesNotMatch(form,/OBLIGATORIO|OPCIONAL|placeholder=/u);
+});
+
+test("el formulario TECH limpia los cuatro modelos al enviarlos",async()=>{
+ const {readFile}=await import("node:fs/promises");
+ const {fileURLToPath}=await import("node:url");
+ const {dirname,join}=await import("node:path");
+ const main=await readFile(join(dirname(fileURLToPath(import.meta.url)),"../src/main.js"),"utf8");
+ const start=main.indexOf('if (event.target.id === "tech-compare-form")');
+ const end=main.indexOf('if (event.target.id === "tech-lookup-form")',start);
+ const submit=main.slice(start,end);
+ assert.match(submit,/state\.techCompareModels=\["","","",""\]/u);
+});

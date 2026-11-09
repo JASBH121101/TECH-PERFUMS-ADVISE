@@ -302,3 +302,15 @@ button { color: inherit; }
 .evidence-note strong { font-size: 12px; }
 .evidence-note p { font-size: 11px; }
 .evidence-note a { font-size: 10px; }
+
+
+/* TECH comparison: required fields use a clear red marker, never label clutter. */
+.required-marker {
+  display: inline-block;
+  margin-left: 4px;
+  color: #ff6677;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  vertical-align: top;
+}

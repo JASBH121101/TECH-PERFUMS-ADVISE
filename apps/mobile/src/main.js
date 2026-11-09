@@ -302,7 +302,7 @@ function renderTechComparisonForm() {
     `<option value="${profile.value}" ${state.techCompareMetric===profile.value?"selected":""}>${escapeHtml(profile.label)}</option>`);
   const metricOptions=TECHNOLOGY_COMPARISON_METRICS.map(metric=>
     `<option value="${metric.value}" ${state.techCompareMetric===metric.value?"selected":""}>${escapeHtml(metric.label)}</option>`);
-  const inputs=state.techCompareModels.map((model,i)=>`<div class="field-group"><label for="tech-compare-model-${i+1}">DISPOSITIVO ${i+1} ${i<2?"· OBLIGATORIO":"· OPCIONAL"}</label><input id="tech-compare-model-${i+1}" autocomplete="off" maxlength="120" placeholder="${i===0?"Ej.: Samsung Galaxy S24 Ultra":i===1?"Ej.: Xiaomi 14T Pro":"Añadir otro modelo"}" value="${escapeHtml(model)}" ${i<2?"required":""}></div>`).join("");
+  const inputs=state.techCompareModels.map((model,i)=>`<div class="field-group"><label for="tech-compare-model-${i+1}">DISPOSITIVO ${i+1}${i<2?" <span class=\"required-marker\" aria-label=\"requerido\">*</span>":""}</label><input id="tech-compare-model-${i+1}" autocomplete="off" maxlength="120" value="${escapeHtml(model)}" ${i<2?"required":""}></div>`).join("");
   const generalSelected=state.techCompareMetric==="general";
   return `<form id="tech-compare-form" class="tech-compare-form">
     <div class="form-heading"><strong>Comparar de 2 a 4 dispositivos</strong><p>Consulta las mismas especificaciones en CoreInfo y TechAPI. Los conflictos entre fuentes se mostrarán, no se corregirán por suposición.</p></div>
@@ -568,15 +568,37 @@ app.addEventListener("submit", async event => {
   }
 
   if (event.target.id === "tech-compare-form") {
-    state.techCompareModels=[1,2,3,4].map(i=>document.querySelector("#tech-compare-model-"+i)?.value.trim()??"");
-    const models=state.techCompareModels.filter(Boolean);
-    if(models.length<2||new Set(models.map(slugifyTechnologyModel)).size!==models.length){state.techComparisonStatus="complete";state.techComparisonResult={error:"Escribe entre dos y cuatro modelos distintos."};render();return;}
+    const submittedModels=[1,2,3,4].map(i=>document.querySelector("#tech-compare-model-"+i)?.value.trim()??"");
+    const models=submittedModels.filter(Boolean);
+    state.techCompareModels=["","","",""];
+    if(models.length<2||new Set(models.map(slugifyTechnologyModel)).size!==models.length){
+      state.techComparisonStatus="complete";
+      state.techComparisonResult={error:"Escribe al menos dos modelos distintos y no repitas dispositivos."};
+      render();
+      return;
+    }
     state.techResource=document.querySelector("#tech-resource")?.value??state.techResource;
     state.techCompareMetric=document.querySelector("#tech-compare-metric")?.value??state.techCompareMetric;
-    state.techComparisonStatus="loading";state.techComparisonResult=null;render();
-    try {const lookups=await Promise.all(models.map(model=>lookupTechnology({model,resource:state.techResource,fields:TECHNOLOGY_COMPARISON_LOOKUP_FIELDS})));state.techComparisonResult=buildTechnologyComparison({lookups,resource:state.techResource,metric:state.techCompareMetric});}
-    catch(error){state.techComparisonResult={error:error instanceof Error?error.message:"No se pudo completar la comparación."};}
-    state.techComparisonStatus="complete";render();return;
+    state.techComparisonStatus="loading";
+    state.techComparisonResult=null;
+    render();
+    try {
+      const lookups=await Promise.all(models.map(model=>lookupTechnology({
+        model,
+        resource:state.techResource,
+        fields:TECHNOLOGY_COMPARISON_LOOKUP_FIELDS,
+      })));
+      state.techComparisonResult=buildTechnologyComparison({
+        lookups,
+        resource:state.techResource,
+        metric:state.techCompareMetric,
+      });
+    } catch(error) {
+      state.techComparisonResult={error:error instanceof Error?error.message:"No se pudo completar la comparación."};
+    }
+    state.techComparisonStatus="complete";
+    render();
+    return;
   }
 
   if (event.target.id === "tech-lookup-form") {

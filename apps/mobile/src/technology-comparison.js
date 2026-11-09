@@ -70,19 +70,31 @@ function groupFacts(lookup) {
   }
   return grouped;
 }
+function normalizeConnectivity(value) {
+  const values = Array.isArray(value) ? value : [value];
+  return [...new Set(values.map(item => printable(item).trim()).filter(Boolean))];
+}
+
 function buildDevice(lookup, resource, index) {
   const facts = groupFacts(lookup), attributes = {};
   const rows = FIELDS.map(field => {
     const entries = facts.get(field.key) ?? [], distinct = new Map();
     for (const entry of entries) { const key=canonical(entry.value,field.unit); if(!distinct.has(key)) distinct.set(key,entry); }
     const conflict = distinct.size > 1, first = entries[0] ?? null;
+    const firstDisplay = first
+      ? (field.attribute === "connectivity" ? normalizeConnectivity(first.value).join(", ") : printable(first.value))
+      : "";
     const display = conflict
       ? [...distinct.values()].map(x=>x.source+": "+printable(x.value)).join(" · ")
-      : first ? printable(first.value)+(entries.length>1?" · "+entries.length+" fuentes coinciden":" · "+first.source)
-      : "Sin dato en las fuentes consultadas";
+      : firstDisplay
+        ? firstDisplay+(entries.length>1?" · "+entries.length+" fuentes coinciden":" · "+first.source)
+        : "Sin dato en las fuentes consultadas";
     if (field.attribute && first && !conflict) {
       if (field.unit) { const n=numeric(first.value,field.unit); if(n!==null) attributes[field.attribute]=n; }
-      else if(field.attribute==="connectivity") attributes.connectivity=Array.isArray(first.value)?first.value.map(printable):[printable(first.value)];
+      else if(field.attribute==="connectivity") {
+        const connectivity = normalizeConnectivity(first.value);
+        if (connectivity.length) attributes.connectivity = connectivity;
+      }
       else if(typeof first.value==="string" && first.value.trim()) attributes[field.attribute]=first.value.trim();
     }
     return Object.freeze({key:field.key,label:field.label,display,conflict});
@@ -237,7 +249,8 @@ export function buildTechnologyComparison({lookups,resource,metric="general"}={}
 function normalizedEvidenceValue(field, rawValue) {
   if (field.unit) return numeric(rawValue, field.unit);
   if (field.attribute === "connectivity") {
-    return Array.isArray(rawValue) ? rawValue.map(printable).filter(Boolean) : [printable(rawValue)].filter(Boolean);
+    const values = normalizeConnectivity(rawValue);
+    return values.length ? values : null;
   }
   return typeof rawValue === "string" && rawValue.trim() ? rawValue.trim() : null;
 }
