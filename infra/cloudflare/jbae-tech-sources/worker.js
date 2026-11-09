@@ -31,6 +31,64 @@ function json(data, status = 200, origin = "") {
   });
 }
 
+async function readRobots(origin) {
+  try {
+    const response = await fetch(new URL("/robots.txt", origin), {
+      headers: { "Accept": "text/plain", "User-Agent": "JBAE-Research/1.0" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) return { ok: false, status: response.status, text: "" };
+    return { ok: true, status: response.status, text: await response.text() };
+  } catch {
+    return { ok: false, status: 0, text: "" };
+  }
+}
+
+function isAllowedByRobots(robotsText, pathname) {
+  const rules = [];
+  let active = false;
+  let groupHasDirectives = false;
+  for (const rawLine of robotsText.split(/\\r?\\n/u)) {
+    const line = rawLine.split("#", 1)[0].trim();
+    if (!line) continue;
+    const separator = line.indexOf(":");
+    if (separator < 0) continue;
+    const key = line.slice(0, separator).trim().toLowerCase();
+    const value = line.slice(separator + 1).trim();
+    if (key === "user-agent") {
+      if (groupHasDirectives) {
+        active = false;
+        groupHasDirectives = false;
+      }
+      if (value === "*") active = true;
+      continue;
+    }
+    if (!active || (key !== "allow" && key !== "disallow")) continue;
+    groupHasDirectives = true;
+    if (value) rules.push({ allow: key === "allow", path: value });
+  }
+  const matches = rules.filter(rule => {
+    const escaped = [...rule.path]
+      .map(character => ".+?^()|[]\\".includes(character) ? "\\\\" + character : character)
+      .join("")
+      .replaceAll("*", ".*");
+    return new RegExp("^" + escaped).test(pathname);
+  }).sort((a, b) => b.path.length - a.path.length || Number(b.allow) - Number(a.allow));
+  return matches.length === 0 || matches[0].allow;
+}
+
+async function checkRobots(url) {
+  const robots = await readRobots(url.origin);
+  if (!robots.ok) {
+    return { allowed: false, status: robots.status, reason: "No se pudo confirmar robots.txt de " + url.hostname + "; se evita consultar automáticamente." };
+  }
+  if (!isAllowedByRobots(robots.text, url.pathname + url.search)) {
+    return { allowed: false, status: 403, reason: "robots.txt no permite la consulta automática de esta ruta." };
+  }
+  return { allowed: true, status: 200 };
+}
+
 function decodeEntities(value) {
   return value
     .replace(/&nbsp;|&#160;/giu, " ")
@@ -197,6 +255,17 @@ async function getXataka(slug) {
   }
   const urls = xatakaCandidateUrls(slug);
   if (!urls.length) return { status: "not_found", source: null, facts: [] };
+  const policy = await checkRobots(new URL(urls[0]));
+  if (!policy.allowed) {
+    return {
+      status: "blocked",
+      source: { name: "Xataka La Cacharrería", url: urls[0] },
+      facts: [],
+      variants: [],
+      error: policy.reason,
+    };
+  }
+  if (!urls.length) return { status: "not_found", source: null, facts: [] };
   let lastError = null;
   for (const url of urls) {
     try {
@@ -303,6 +372,16 @@ function gsmaBlocked(status, url) {
 async function getGsma(query) {
   const searchUrl = new URL("https://www.gsmarena.com/results.php3");
   searchUrl.searchParams.set("sQuickSearch", query);
+  const policy = await checkRobots(searchUrl);
+  if (!policy.allowed) {
+    return {
+      status: "blocked",
+      source: { name: "GSMArena", url: searchUrl.toString() },
+      facts: [],
+      variants: [],
+      error: policy.reason,
+    };
+  }
   const headers = { "Accept": "text/html,application/xhtml+xml", "Accept-Language": "en-US,en;q=0.9" };
   const searchResponse = await fetch(searchUrl, { headers, redirect: "follow", signal: AbortSignal.timeout(14000) });
   if (!searchResponse.ok) return gsmaBlocked(searchResponse.status, searchUrl.toString());
