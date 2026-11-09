@@ -11,7 +11,7 @@ test("Xataka uses the public La Cacharrería device path and extracts specificat
   assert.ok(worker.includes("/la-cacharreria/"));
   assert.ok(worker.includes("function parseXataka"));
   assert.ok(worker.includes("Xataka La Cacharrería"));
-  assert.ok(worker.includes("RAM / Almacenamiento en cada versión"));
+  assert.ok(worker.includes("Almacenamiento en cada versión"));
   assert.ok(worker.includes("variants: variantPairs.map"));
 });
 

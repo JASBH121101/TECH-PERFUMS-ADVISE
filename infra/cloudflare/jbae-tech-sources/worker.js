@@ -340,7 +340,8 @@ export default {
         ok: true,
         sources: {
           xataka: true,
-          gsmarena: true,\n          gsmarenaProvider: "public_html_no_paid_api",
+          gsmarena: true,
+          gsmarenaProvider: "public_html_no_paid_api",
         },
       }, 200, origin);
     }
