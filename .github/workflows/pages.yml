@@ -8,6 +8,7 @@ on:
       - "apps/mobile/**"
       - "src/**"
       - "data/fragrance/**"
+      - "infra/cloudflare/jbae-tech-sources/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 

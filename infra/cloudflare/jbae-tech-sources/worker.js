@@ -414,6 +414,69 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
     if (request.method !== "GET") return json({ error: "Método no permitido." }, 405, origin);
+    if (url.pathname === "/probe") {
+      const targets = [
+        "https://www.gsmarena.com/robots.txt",
+        "https://www.xataka.com/robots.txt",
+        "https://www.gsmarena.com/results.php3?sQuickSearch=Samsung%20Galaxy%20A17",
+        "https://www.xataka.com/la-cacharreria/samsung/galaxy-a32-5g",
+      ];
+      const results = [];
+      for (const target of targets) {
+        const targetUrl = new URL(target);
+        if (targetUrl.pathname === "/robots.txt") {
+          const robots = await readRobots(targetUrl.origin);
+          results.push({
+            requestedUrl: target,
+            finalUrl: robots.ok ? target : null,
+            status: robots.ok ? 200 : robots.status || 403,
+            title: "robots.txt",
+            bytes: robots.text.length,
+            error: robots.ok ? null : "No se pudo verificar robots.txt sin redirección externa.",
+          });
+          continue;
+        }
+        const policy = await checkRobots(targetUrl);
+        if (!policy.allowed) {
+          results.push({
+            requestedUrl: target,
+            finalUrl: null,
+            status: policy.status || 403,
+            title: null,
+            bytes: 0,
+            error: policy.reason,
+          });
+          continue;
+        }
+        try {
+          const response = await fetch(targetUrl, {
+            headers: { "Accept": "text/html,application/xhtml+xml" },
+            redirect: "follow",
+            signal: AbortSignal.timeout(10000),
+          });
+          const html = await response.text();
+          const titleHtml = firstMatch(html, [/<title\\b[^>]*>([\\s\\S]*?)<\\/title>/iu]);
+          results.push({
+            requestedUrl: target,
+            finalUrl: response.url || target,
+            status: response.status,
+            title: titleHtml ? cleanHtml(titleHtml) : null,
+            bytes: html.length,
+            error: response.ok ? null : "La página respondió HTTP " + response.status,
+          });
+        } catch (error) {
+          results.push({
+            requestedUrl: target,
+            finalUrl: null,
+            status: 0,
+            title: null,
+            bytes: 0,
+            error: error instanceof Error ? error.message : "No se pudo consultar la página.",
+          });
+        }
+      }
+      return json({ ok: true, results }, 200, origin);
+    }
     if (url.pathname === "/health") {
       return json({
         ok: true,
