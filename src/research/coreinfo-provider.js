@@ -62,6 +62,7 @@ const COREINFO_FIELD_ALIASES = Object.freeze({
   ram_gb: ["ram_gb", "ram", "ram_size"],
   storage: ["storage", "internal_storage", "storage_capacity", "rom"],
   storage_gb: ["storage_gb", "storage", "internal_storage"],
+  storage_options: ["storage_options", "storage_options_gb", "storage_variants", "storage_options_gb_list"],
   display_size: ["display_size", "display_size_inches", "screen_size", "screen_size_inches", "screen_diagonal", "diagonal", "diagonal_size", "size"],
   display_resolution: ["display_resolution", "display_resolution_px", "resolution", "resolution_px", "resolution_pixels", "screen_resolution"],
   display_type: ["display_type", "screen_type", "panel_type"],
