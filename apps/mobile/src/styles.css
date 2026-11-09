@@ -314,3 +314,69 @@ button { color: inherit; }
   line-height: 1;
   vertical-align: top;
 }
+
+
+/* TECH readability: visibly larger mobile text and accessible model suggestions. */
+.tech-intro > p { font-size: 15px; line-height: 1.7; }
+.tech-intro .catalog-chip { font-size: 11px; padding: 10px 13px; }
+#app:has(.tech-intro) .mode-tabs { gap: 8px; padding: 7px; }
+#app:has(.tech-intro) .mode-tab { min-height: 48px; font-size: 12px; }
+.tech-compare-form,.tech-lookup-form { padding: 18px; }
+.tech-compare-form .form-heading strong,
+.tech-lookup-form .form-heading strong { font-size: 16px; }
+.tech-compare-form .form-heading p,
+.tech-lookup-form .form-heading p { font-size: 13px; line-height: 1.65; }
+.tech-compare-form .field-group label,
+.tech-lookup-form .field-group label { font-size: 10px; letter-spacing: .12em; }
+.tech-compare-form .field-group input,
+.tech-lookup-form .field-group input,
+.tech-compare-form .field-group select,
+.tech-lookup-form .field-group select { min-height: 52px; padding: 13px 14px; font-size: 14px; }
+.tech-compare-form .field-hint,
+.tech-lookup-form .field-hint { font-size: 12px; line-height: 1.6; }
+.primary-action.tech-action { min-height: 54px; font-size: 13px; }
+.tech-result-source { padding: 17px; }
+.tech-source-head strong { font-size: 14px; }
+.source-state { font-size: 9px; }
+.tech-fact { padding: 11px 0; gap: 12px; }
+.tech-fact dt { flex-basis: 40%; font-size: 11px; line-height: 1.5; }
+.tech-fact dd { font-size: 12px; line-height: 1.6; }
+.tech-results .result-section-title strong { font-size: 15px; }
+.tech-results .result-section-title small { font-size: 10px; }
+.tech-results .result-disclaimer,
+.tech-results .field-hint { font-size: 11px; line-height: 1.65; }
+.tech-comparison-table { min-width: 610px; font-size: 11px; }
+.tech-comparison-table th,.tech-comparison-table td { min-width: 125px; padding: 13px 11px; font-size: 11px; line-height: 1.65; }
+.tech-comparison-table thead th strong { font-size: 12px; }
+.tech-comparison-table thead th small { font-size: 10px; }
+.comparison-rank > strong,.comparison-sources > strong { font-size: 13px; }
+.comparison-rank li { font-size: 11px; line-height: 1.65; }
+.comparison-rank > small,.comparison-rank .field-hint { font-size: 11px; }
+.comparison-source-card strong { font-size: 12px; }
+.comparison-source-card span,.comparison-source-card a { font-size: 10px; }
+.comparison-incomplete { margin-top: 15px; padding: 18px; border: 1px solid rgba(217,189,142,.28); border-radius: 16px; color: var(--muted); background: rgba(217,189,142,.055); font-size: 12px; line-height: 1.65; }
+.comparison-incomplete > strong { display: block; margin-bottom: 8px; color: var(--amber); font-size: 15px; }
+.comparison-incomplete p { margin: 7px 0; }
+.comparison-coverage { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 7px; padding: 11px 13px; border-radius: 10px; background: rgba(0,0,0,.18); font-size: 12px; }
+.comparison-coverage b { color: var(--amber); font-size: 15px; }
+.comparison-incomplete ul { margin: 0; padding-left: 18px; }
+.comparison-incomplete li { padding: 7px 0; font-size: 11px; }
+.comparison-incomplete li span { display: block; color: var(--text); font-weight: 700; }
+.comparison-incomplete li b { float: right; color: var(--amber); }
+.comparison-incomplete li small { display: block; margin-top: 3px; color: var(--dim); font-size: 10px; }
+.technology-suggestions { display: grid; gap: 4px; max-height: 265px; margin-top: 5px; overflow-y: auto; border: 1px solid rgba(117,225,209,.18); border-radius: 12px; background: #0b121a; }
+.technology-suggestions:empty { display: none; }
+.technology-suggestion { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 54px; padding: 10px 13px; border: 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--text); background: transparent; cursor: pointer; }
+.technology-suggestion:last-child { border-bottom: 0; }
+.technology-suggestion:active { background: rgba(117,225,209,.12); }
+.technology-suggestion-copy { display: grid; gap: 4px; min-width: 0; }
+.technology-suggestion-copy strong { font-size: 13px; line-height: 1.4; }
+.technology-suggestion-copy small { color: var(--dim); font-size: 10px; }
+.technology-suggestion-arrow { flex: 0 0 auto; color: var(--cyan); font-size: 15px; }
+.technology-suggestion-status { padding: 12px 13px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+@media(max-width:370px) {
+  .tech-compare-form,.tech-lookup-form { padding: 15px; }
+  .tech-compare-inputs { grid-template-columns: 1fr; }
+  .tech-compare-form .field-group input,.tech-lookup-form .field-group input { font-size: 14px; }
+  .tech-comparison-table { min-width: 585px; }
+}
