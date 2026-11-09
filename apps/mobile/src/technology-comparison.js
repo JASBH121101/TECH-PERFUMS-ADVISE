@@ -123,7 +123,7 @@ function flattenCapacityValues(value, output = []) {
   for (const part of parts.length ? parts : [raw]) {
     let parsed = numeric(part, "capacity");
     if (parsed === null) {
-      const match = /(\\d+(?:[.,]\\d+)?)\\s*(TB|GB|MB)\\b/iu.exec(part);
+      const match = /(\d+(?:[.,]\d+)?)\s*(TB|GB|MB)\b/iu.exec(part);
       if (match) parsed = numeric(match[1] + match[2], "capacity");
     }
     if (parsed !== null && Number.isFinite(parsed) && parsed > 0) output.push(parsed);
@@ -160,19 +160,32 @@ function buildCapacityDisplay(entries, rowKey) {
 
   const signatures = new Set(sourceOptions.map(group => group.values.join("|")));
   if (signatures.size > 1) {
-    return Object.freeze({
-      display: sourceOptions.map(group =>
-        group.source + ": " + group.values.map(value => formatCapacity(value, rowKey)).join(" / "),
-      ).join(" · "),
-      conflict: true,
-      values: [],
+    const ordered = [...sourceOptions].sort((a, b) => a.values.length - b.values.length);
+    const complementary = ordered.every((group, index) => {
+      if (index === ordered.length - 1) return true;
+      const next = new Set(ordered[index + 1].values);
+      return group.values.every(value => next.has(value));
     });
+    if (!complementary) {
+      return Object.freeze({
+        display: sourceOptions.map(group =>
+          group.source + ": " + group.values.map(value => formatCapacity(value, rowKey)).join(" / "),
+        ).join(" · "),
+        conflict: true,
+        values: [],
+      });
+    }
   }
 
-  const values = sourceOptions[0].values;
+  const values = [...new Set(sourceOptions.flatMap(group => group.values))].sort((a, b) => a - b);
+  const sameOptions = new Set(sourceOptions.map(group => group.values.join("|"))).size === 1;
+  const suffix = sourceOptions.length === 1
+    ? " · " + sourceOptions[0].source
+    : sameOptions
+      ? " · " + sourceOptions.length + " fuentes coinciden"
+      : " · opciones complementarias de " + sourceOptions.length + " fuentes";
   return Object.freeze({
-    display: values.map(value => formatCapacity(value, rowKey)).join(" / ") +
-      (sourceOptions.length > 1 ? " · " + sourceOptions.length + " fuentes coinciden" : " · " + sourceOptions[0].source),
+    display: values.map(value => formatCapacity(value, rowKey)).join(" / ") + suffix,
     conflict: false,
     values,
   });
