@@ -4,6 +4,7 @@ import {
   lookupTechnology,
   slugifyTechnologyModel,
   buildTechApiSlugCandidates,
+  buildPrimarySpecSourceLinks,
 } from "../src/technology-lookup.js";
 
 test("convierte el nombre del modelo en slug sin acentos", () => {
@@ -49,9 +50,10 @@ test("rechaza categorías no soportadas", async () => {
 
 test("limita la consulta a campos solicitados y rechaza campos desconocidos",async()=>{
  const requests=[],provider={async search(request){requests.push(request.field);return[];}};
- await lookupTechnology({model:"Galaxy A17",resource:"smartphones",fields:["name","ram"],coreInfoProvider:provider,techApiProvider:provider});
- assert.deepEqual(requests,["name","name","ram_gb","ram_gb"]);
- await assert.rejects(lookupTechnology({model:"Galaxy A17",fields:["imei"]}),/campos solicitados/);
+ await lookupTechnology({model:"Galaxy A17",resource:"smartphones",fields:["name","brand"],coreInfoProvider:provider,techApiProvider:provider});
+ assert.deepEqual(requests,["name","name","brand","brand"]);
+ await assert.rejects(lookupTechnology({model:"Galaxy A17",fields:["ram"]}),/solo pueden aportar identidad básica/);
+ await assert.rejects(lookupTechnology({model:"Galaxy A17",fields:["imei"]}),/solo pueden aportar identidad básica/);
 });
 
 
@@ -122,4 +124,18 @@ test("reintenta TechAPI con el slug sin marca después de un 404",async()=>{
  assert.equal(result.techApiSlug,"galaxy-s26-ultra");
  assert.ok(coreQueries.every(query=>query==="samsung-galaxy-s26-ultra"));
  assert.ok(techQueries.includes("smartphones:galaxy-s26-ultra"));
+});
+
+
+test("GSMArena y Xataka son las fuentes principales en orden de prioridad",()=>{
+ const links=buildPrimarySpecSourceLinks("Samsung Galaxy S26 Ultra");
+ assert.deepEqual(links.map(item=>item.id),["gsmarena","xataka"]);
+ assert.equal(links[0].priority,1);
+ assert.match(links[0].url,/gsmarena\.com\/results\.php3\?sQuickSearch=/u);
+ assert.equal(links[1].url,"https://www.xataka.com/la-cacharreria/search");
+ assert.equal(links[0].role,"Fuente principal de especificaciones");
+});
+
+test("rechaza modelos vacíos al preparar los enlaces de fuentes principales",()=>{
+ assert.throws(()=>buildPrimarySpecSourceLinks(" "),/modelo/);
 });
