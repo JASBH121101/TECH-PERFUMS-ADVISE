@@ -2,26 +2,27 @@
 
 Server-side adapter for the TECH module. It uses public web pages and the existing Cloudflare Worker runtime only. It does not call paid device-data APIs and does not require API keys, subscriptions, or billing credentials.
 
-- GSMArena is queried first by model using its public search page, then its device specification page when freely accessible.
-- Xataka La Cacharrería is queried second using the model slug from the selected catalogue record.
-- CoreInfo and TechAPI remain auxiliary identity-only providers (model and brand), never full specification providers.
-- Source attribution, URLs, retrieval time, and RAM/storage combinations are retained in the result.
-- Successful Xataka responses are cached at the edge for six hours.
+- GSMArena is the first-priority reference. The Worker attempts its public HTML search/detail pages only when its robots.txt can be fetched without cross-domain redirection and the requested path is permitted.
+- Xataka La Cacharrería is the second-priority technical source. Public device detail pages are queried only when robots.txt permits the path; its restricted search/API routes are not used.
+- CoreInfo and TechAPI are auxiliary identity providers only (model and brand); they do not provide complete specifications.
+- Source attribution, URLs, retrieval time, and RAM/storage configurations are preserved.
+- Successful Xataka results are cached at the edge for six hours.
 
-## Important access behavior
+## No-cost policy
 
-Some automated requests to GSMArena may be rejected with HTTP 402, 403, or 429. When that happens, JBAE reports the limitation and keeps the GSMArena link available for manual opening. It does not use API.SH, another paid API, a proxy subscription, or a paywall bypass.
+There is no API.SH, paid data API, paid proxy, subscription key, billing binding, or automatic purchase in this integration.
 
-Xataka public device pages are queried directly. Example: https://www.xataka.com/la-cacharreria/samsung/galaxy-a32-5g
+If a site blocks automated access, redirects robots.txt to another domain, or disallows a route, JBAE reports that source as blocked and preserves its public link for manual verification. It does not bypass access controls.
 
 ## Deploy
 
-Worker script name: jbae-specs-api
-Public URL: https://jbae-specs-api.jaredblancoh19.workers.dev
-No Worker secret or paid provider key is required.
+Worker: `jbae-specs-api`
+URL: https://jbae-specs-api.jaredblancoh19.workers.dev
+
+No secret or paid provider key is required.
 
 ## Routes
 
-- GET /health
-- GET /xataka?slug=samsung-galaxy-a32-5g
-- GET /gsmarena/phone?q=Samsung%20Galaxy%20A17
+- `GET /health`
+- `GET /xataka?slug=samsung-galaxy-a32-5g`
+- `GET /gsmarena/phone?q=Samsung%20Galaxy%20A17`

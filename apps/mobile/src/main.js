@@ -271,6 +271,7 @@ function renderTechSource(source) {
     partial: "Datos parciales",
     not_found: "Sin coincidencias",
     error: "Fuente no disponible",
+    blocked: "Acceso automático no permitido",
   }[source.status] ?? source.status;
   const facts = source.facts.length
     ? `<dl class="tech-fact-list">${source.facts.map(fact => {

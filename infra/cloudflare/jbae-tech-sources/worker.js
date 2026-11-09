@@ -39,6 +39,7 @@ async function readRobots(origin) {
       signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) return { ok: false, status: response.status, text: "" };
+    if (new URL(response.url).origin !== origin) return { ok: false, status: 403, text: "" };
     return { ok: true, status: response.status, text: await response.text() };
   } catch {
     return { ok: false, status: 0, text: "" };
@@ -49,7 +50,7 @@ function isAllowedByRobots(robotsText, pathname) {
   const rules = [];
   let active = false;
   let groupHasDirectives = false;
-  for (const rawLine of robotsText.split(/\\r?\\n/u)) {
+  for (const rawLine of robotsText.split(/\r?\n/u)) {
     const line = rawLine.split("#", 1)[0].trim();
     if (!line) continue;
     const separator = line.indexOf(":");
@@ -70,7 +71,7 @@ function isAllowedByRobots(robotsText, pathname) {
   }
   const matches = rules.filter(rule => {
     const escaped = [...rule.path]
-      .map(character => ".+?^()|[]\\".includes(character) ? "\\\\" + character : character)
+      .map(character => ".+?^()|[]\\".includes(character) ? "\\" + character : character)
       .join("")
       .replaceAll("*", ".*");
     return new RegExp("^" + escaped).test(pathname);
@@ -265,7 +266,6 @@ async function getXataka(slug) {
       error: policy.reason,
     };
   }
-  if (!urls.length) return { status: "not_found", source: null, facts: [] };
   let lastError = null;
   for (const url of urls) {
     try {
