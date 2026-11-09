@@ -1,6 +1,5 @@
 import "./styles.css";
-import { Capacitor } from "@capacitor/core";
-import { localizeFragranceList, localizeFragranceTerm } from "./fragrance-localization.js";
+import { formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
 import { safeExternalUrl } from "./safe-external-url.js";
 import { DOMAINS } from "../../../src/index.js";
 import { closeStorage, initializeStorage } from "./storage.js";
@@ -235,7 +234,7 @@ function renderFragranceDetail(product) {
     <section class="detail-top"><button type="button" class="back-link" data-action="back-to-fragrance">← Volver a fragancias</button>
       <span class="kicker">FICHA DE FRAGANCIA</span><div class="detail-monogram">F</div>
       <h1>${escapeHtml(product.name)}</h1><p class="detail-brand">${escapeHtml(product.brand)}</p>
-      <div class="tag-row"><span>${escapeHtml(attributes.concentrationLabel ?? "Concentración no indicada")}</span><span>${escapeHtml(attributes.releaseYear ?? "Año no indicado")}</span></div>
+      <div class="tag-row"><span>${escapeHtml(formatFragranceConcentration(attributes.concentrationLabel))}</span><span>${escapeHtml(attributes.releaseYear ?? "Año no indicado")}</span></div>
     </section>
     <section class="detail-block"><span class="kicker">PERFIL OLFATIVO</span><h2>Familias y carácter</h2>
       <p>${displayList(attributes.scentFamilies, "family")}</p>
@@ -627,7 +626,6 @@ function registerPagesServiceWorker() {
 }
 
 async function boot() {
-  if (Capacitor.isNativePlatform()) document.body.classList.add("jbae-native");
   registerPagesServiceWorker();
   try {
     state.runtime = await initializeStorage();

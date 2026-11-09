@@ -4,6 +4,8 @@ const TRANSLATIONS = Object.freeze({
     "lavender": "Lavanda",
     "cinnamon": "Canela",
     "apple": "Manzana",
+    "birch": "Abedul",
+    "amber gris": "Ámbar gris",
     "lily of the valley": "Muguete (lirio de los valles)",
     "lily-of-the-valley": "Muguete (lirio de los valles)",
     "orange blossom": "Flor de azahar",
@@ -119,6 +121,8 @@ const TRANSLATIONS = Object.freeze({
     "floral fruity": "Floral frutal",
     "fruity floral": "Frutal floral",
     "floral woody": "Floral amaderada",
+    "orchard fruit": "Frutas de huerto",
+    "sunlit citrus": "Cítricos soleados",
   }),
   season: Object.freeze({
     "spring": "Primavera",
@@ -126,6 +130,16 @@ const TRANSLATIONS = Object.freeze({
     "autumn": "Otoño",
     "fall": "Otoño",
     "winter": "Invierno",
+  }),
+  concentration: Object.freeze({
+    "eau de parfum": "Agua de perfume (EDP)",
+    "edp": "Agua de perfume (EDP)",
+    "eau de toilette": "Agua de tocador (EDT)",
+    "edt": "Agua de tocador (EDT)",
+    "eau de cologne": "Agua de colonia (EDC)",
+    "edc": "Agua de colonia (EDC)",
+    "parfum": "Perfume",
+    "extrait": "Extracto de perfume",
   }),
   time: Object.freeze({
     "day": "Día",
@@ -155,4 +169,10 @@ export function localizeFragranceTerm(value, type = "note") {
 export function localizeFragranceList(values, type = "note") {
   if (!Array.isArray(values) || values.length === 0) return "Sin dato en la ficha";
   return values.map(value => localizeFragranceTerm(value, type)).join(", ");
+}
+
+
+export function formatFragranceConcentration(value) {
+  if (typeof value !== "string" || !value.trim()) return "Concentración no indicada";
+  return localizeFragranceTerm(value, "concentration");
 }

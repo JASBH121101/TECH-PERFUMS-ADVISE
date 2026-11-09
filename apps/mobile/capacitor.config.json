@@ -9,13 +9,6 @@
   "plugins": {
     "CapacitorSQLite": {
       "androidIsEncryption": false
-    },
-    "SystemBars": {
-      "insetsHandling": "css",
-      "initialViewportFitValueHint": "cover",
-      "style": "DARK",
-      "hidden": false,
-      "animation": "NONE"
     }
   }
 }

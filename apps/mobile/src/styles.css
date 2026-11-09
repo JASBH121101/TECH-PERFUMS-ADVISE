@@ -289,8 +289,3 @@ button { color: inherit; }
 .profile-dimensions b{flex:0 0 auto;color:var(--cyan);font-size:9px}
 @media(max-width:370px){.profile-dimensions{grid-template-columns:1fr}}
 
-
-/* Keep Android edge-to-edge status icons outside the JBAE header content. */
-.jbae-native .app-frame {
-  --safe-area-inset-top: max(30px, env(safe-area-inset-top, 0px));
-}

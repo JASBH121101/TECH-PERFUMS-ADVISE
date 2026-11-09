@@ -70,6 +70,17 @@ jobs:
       - name: Install native updater plugin
         working-directory: apps/mobile
         run: node scripts/install-android-updater.mjs
+      - name: Verify native Android system-bar insets
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN_ACTIVITY="$(find apps/mobile/android/app/src/main/java -name MainActivity.java -print -quit)"
+          test -n "$MAIN_ACTIVITY"
+          grep -Fq "WindowCompat.setDecorFitsSystemWindows(window, false)" "$MAIN_ACTIVITY"
+          grep -Fq "ViewCompat.setOnApplyWindowInsetsListener(content" "$MAIN_ACTIVITY"
+          grep -Fq "ViewCompat.requestApplyInsets(content)" "$MAIN_ACTIVITY"
+          grep -Fq "WindowInsetsCompat.Type.systemBars()" "$MAIN_ACTIVITY"
+          echo "Verified native system-bar insets handler in $MAIN_ACTIVITY"
       - name: Restore persistent JBAE signing key
         id: signing-cache
         uses: actions/cache/restore@v4
