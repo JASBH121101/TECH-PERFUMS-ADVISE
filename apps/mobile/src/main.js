@@ -10,6 +10,7 @@ import { buildFragranceAdvice } from "./personalization.js";
 import {
   lookupTechnology,
   slugifyTechnologyModel,
+  buildPrimarySpecSourceLinks,
 } from "./technology-lookup.js";
 import {
   buildTechnologyComparison,
@@ -289,6 +290,23 @@ function renderTechSource(source) {
     </section>`;
 }
 
+function renderPrimarySpecSources(models) {
+  const unique = [...new Set(models.filter(Boolean))];
+  return `<section class="primary-spec-sources">
+    <div class="result-section-title"><strong>Fuentes principales de especificaciones</strong><small>Prioridad de consulta</small></div>
+    <div class="primary-spec-source-grid">${unique.map(model => `
+      <article class="primary-spec-source-model">
+        <strong>${escapeHtml(model)}</strong>
+        <div class="primary-spec-source-links">${buildPrimarySpecSourceLinks(model).map(source => {
+          const url = safeExternalUrl(source.url);
+          return url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.name)} <span>↗</span></a>` : "";
+        }).join("")}</div>
+      </article>`).join("")}
+    </div>
+    <p class="field-hint">GSMArena y Xataka son las referencias principales. CoreInfo y TechAPI quedan limitadas a identificar el modelo y la marca; no completan la ficha técnica.</p>
+  </section>`;
+}
+
 function renderTechResults() {
   const result = state.techLookupResult;
   if (!result) return "";
@@ -298,6 +316,7 @@ function renderTechResults() {
   return `
     <section class="tech-results">
       <div class="result-section-title"><strong>${escapeHtml(result.model)}</strong><small>Slug: ${escapeHtml(result.slug)}</small></div>
+      ${renderPrimarySpecSources([result.model])}
       ${result.sources.map(renderTechSource).join("")}
       <div class="result-disclaimer">${found ? "Estos datos son candidatos recuperados de fuentes públicas. No están verificados independientemente." : "No se obtuvo una ficha coincidente con este slug. Confirma el nombre/identificador e inténtalo con la categoría correcta."} La búsqueda es exacta y no descarga catálogos completos.</div>
       ${found && state.techSavedProductId === result.slug
@@ -418,6 +437,7 @@ function renderTechComparisonResults() {
   const identity=result.identityPairs.map(x=>`<li><span>${escapeHtml(x.left)} ↔ ${escapeHtml(x.right)}</span><b>${escapeHtml(x.matchType.replaceAll("_"," "))}</b>${x.variantConflicts?.length?`<small>Variantes distintas: ${escapeHtml(x.variantConflicts.join(", "))}</small>`:""}</li>`).join("");
   const sources=result.products.map(p=>`<div class="comparison-source-card"><strong>${escapeHtml(p.name)}</strong>${p.sources.map(s=>{const url=safeExternalUrl(s.url);return `<span>${escapeHtml(s.name)} · ${escapeHtml(s.status)}</span>${url?`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Fuente ↗</a>`:""}`;}).join("")}</div>`).join("");
   return `<section class="tech-comparison-results"><div class="result-section-title"><strong>Comparación técnica</strong><small>${result.products.length} equipos</small></div>
+    ${renderPrimarySpecSources(result.products.map(product => product.name))}
     <div class="comparison-table-wrap"><table class="tech-comparison-table"><thead><tr><th>Especificación</th>${header}</tr></thead><tbody>${rows}</tbody></table></div>
     ${ranking}${profileDetails}
     <section class="comparison-rank"><strong>Identidad y variantes</strong><ul>${identity}</ul></section>
