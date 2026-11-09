@@ -2,7 +2,7 @@ import { compareProducts, matchProducts, normalizeTechnologyProduct, createEvide
 
 export const TECHNOLOGY_COMPARISON_LOOKUP_FIELDS = Object.freeze([
   "name", "brand", "chipset", "gpu", "ram", "storage", "displaySize",
-  "displayResolution", "refreshRate", "battery", "batteryWh", "camera", "weight", "connectivity",
+  "displayResolution", "refreshRate", "battery", "batteryWh", "storageOptions", "camera", "weight", "connectivity",
 ]);
 export const TECHNOLOGY_COMPARISON_PROFILES = Object.freeze([
   Object.freeze({
@@ -27,6 +27,7 @@ const FIELDS = Object.freeze([
   {key:"gpu",label:"Gráficos",attribute:"gpu"},
   {key:"ram",label:"Memoria RAM",attribute:"ramGB",unit:"capacity"},
   {key:"storage",label:"Almacenamiento",attribute:"storageGB",unit:"capacity"},
+  {key:"storageOptions",label:"Opciones de almacenamiento"},
   {key:"displaySize",label:"Pantalla",attribute:"displaySizeInches",unit:"display"},
   {key:"displayResolution",label:"Resolución",attribute:"displayResolution"},
   {key:"refreshRate",label:"Frecuencia",attribute:"refreshRateHz",unit:"frequency"},
@@ -44,6 +45,14 @@ function printable(value) {
 }
 function numeric(value, kind) {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+  if (kind === "camera") {
+    const raw = printable(value);
+    const match = /(\d+(?:[.,]\d+)?)\s*(?:mp|megapixels?)(?:\b|$)/iu.exec(raw);
+    if (match) {
+      const amount = Number(match[1].replace(",", "."));
+      return Number.isFinite(amount) && amount > 0 ? amount : null;
+    }
+  }
   const m = /^(\d+(?:[.,]\d+)?)\s*([a-zA-Z]+)?$/u.exec(printable(value).trim());
   if (!m) return null;
   const n = Number(m[1].replace(",", "."));
@@ -106,7 +115,38 @@ function buildDevice(lookup, resource, index) {
   if(Number.isFinite(attributes.storageGB)) variant.storageGB=attributes.storageGB;
   const id="lookup-"+lookup.slug+"-"+index;
   const product=normalizeTechnologyProduct({id,name:lookup.model,...(brand?{brand}:{}),model:lookup.model,deviceType:DEVICE_TYPES[resource],...(Object.keys(variant).length?{variant}:{}),attributes});
-  return Object.freeze({id,name:lookup.model,brand:brand??"Fabricante no confirmado",attributes:product.attributes,product,rows:Object.freeze(rows),facts,sources:Object.freeze((lookup.sources??[]).map(s=>({id:s.id,name:s.name,status:s.status,url:s.source?.url??null})))});
+  const availableDimensions = [
+    ["ramGB","Memoria RAM"],
+    ["storageGB","Almacenamiento"],
+    ["batteryCapacityMah","Batería (mAh)"],
+    ["batteryCapacityWh","Batería (Wh)"],
+    ["cameraMegapixels","Cámara principal"],
+    ["weightGrams","Peso"],
+    ["displaySizeInches","Pantalla"],
+    ["refreshRateHz","Frecuencia"],
+  ].filter(([field]) => Number.isFinite(product.attributes[field]) &&
+    !rows.some(row => row.conflict && FIELDS.find(item => item.key === row.key)?.attribute === field));
+  const normalizedSourceList = (lookup.sources ?? []).map(source => ({
+    id: source.id,
+    name: source.name,
+    status: source.status,
+    query: source.query ?? null,
+    error: source.error ?? null,
+    url: source.source?.url ?? null,
+    factCount: source.facts?.length ?? 0,
+  }));
+  return Object.freeze({
+    id,
+    name:lookup.model,
+    brand:brand??"Fabricante no confirmado",
+    attributes:product.attributes,
+    product,
+    rows:Object.freeze(rows),
+    facts,
+    availableDimensions:Object.freeze(availableDimensions.map(([field,label])=>Object.freeze({field,label}))),
+    sourceCoverage:Object.freeze(normalizedSourceList),
+    sources:Object.freeze(normalizedSourceList),
+  });
 }
 const GENERAL_PROFILE_DIMENSIONS = Object.freeze([
   { field: "ramGB", label: "Memoria RAM", weight: 0.25, direction: "higher" },
@@ -120,6 +160,26 @@ function hasComparableValue(product, field) {
   if (!Number.isFinite(product.attributes[field])) return false;
   const sourceField = FIELDS.find(item => item.attribute === field);
   return !sourceField || !product.rows.find(row => row.key === sourceField.key)?.conflict;
+}
+
+function deviceProfileCoverage(product) {
+  const fields = [
+    ["ramGB","Memoria RAM"],
+    ["storageGB","Almacenamiento"],
+    ["batteryCapacityMah","Batería"],
+    ["batteryCapacityWh","Batería"],
+    ["cameraMegapixels","Cámara principal"],
+    ["weightGrams","Peso"],
+  ];
+  const available = fields.filter(([field]) => hasComparableValue(product, field));
+  const uniqueLabels = [...new Set(available.map(([,label])=>label))];
+  return Object.freeze({
+    id:product.id,
+    name:product.name,
+    availableDimensionCount:uniqueLabels.length,
+    availableDimensions:Object.freeze(uniqueLabels),
+    sourceCoverage:product.sourceCoverage,
+  });
 }
 
 function buildGeneralProfile(products) {
@@ -143,7 +203,9 @@ function buildGeneralProfile(products) {
   }));
   const coverageWeight = available.reduce((sum, dimension) => sum + dimension.weight, 0);
   const coveragePercent = Math.round(coverageWeight * 100);
-  const enoughData = available.length >= 3 && coverageWeight >= 0.60;
+  const deviceCoverage = products.map(deviceProfileCoverage);
+  const enoughPerDevice = deviceCoverage.every(item => item.availableDimensionCount >= 3);
+  const enoughData = enoughPerDevice && available.length >= 3 && coverageWeight >= 0.60;
   const ranking = enoughData
     ? compareProducts({
       products: products.map(item => item.product),
@@ -172,6 +234,7 @@ function buildGeneralProfile(products) {
     : [];
   return Object.freeze({
     ranking,
+    deviceCoverage:Object.freeze(deviceCoverage),
     profile: Object.freeze({
       value: "general",
       label: "Uso general (equilibrado)",
@@ -218,13 +281,34 @@ export function buildTechnologyComparison({lookups,resource,metric="general"}={}
 
   if (metric === "general") {
     const result = buildGeneralProfile(products);
+    if (!result.profile.available) {
+      const weakest = result.deviceCoverage
+        .filter(item => item.availableDimensionCount < 3)
+        .map(item => item.name + ": " + item.availableDimensionCount + "/3 dimensiones evaluables")
+        .join("; ");
+      return Object.freeze({
+        error:"No se puede completar una comparación fiable de uso general. Se necesitan al menos tres dimensiones numéricas válidas por dispositivo, tres dimensiones comunes y un 60% de cobertura.",
+        qualityGate:Object.freeze({
+          valid:false,
+          coveragePercent:result.profile.coveragePercent,
+          commonDimensionCount:result.profile.availableDimensionCount,
+          requiredCommonDimensions:3,
+          minimumCoveragePercent:60,
+          devices:result.deviceCoverage,
+          reason:weakest || "Las fuentes no aportaron suficientes dimensiones comunes o existen discrepancias.",
+        }),
+        products:Object.freeze(products),
+        metric:Object.freeze({value:"general",label:"Uso general (equilibrado)"}),
+        profile:result.profile,
+      });
+    }
     return Object.freeze({
       products:Object.freeze(products),
       rows:Object.freeze(rows),
       metric:Object.freeze({value:"general",label:"Uso general (equilibrado)"}),
       profile:result.profile,
       ranking:result.ranking,
-      metricUnavailable:!result.profile.available,
+      metricUnavailable:false,
       identityPairs:Object.freeze(buildIdentityPairs(products)),
       disclaimer:"Índice orientativo de equilibrio de especificaciones, no una prueba de rendimiento ni una calificación universal. Los datos de las fuentes siguen sin verificación independiente.",
     });
@@ -233,14 +317,30 @@ export function buildTechnologyComparison({lookups,resource,metric="general"}={}
   const metricDefinition=TECHNOLOGY_COMPARISON_METRICS.find(x=>x.value===metric);
   if(!metricDefinition) throw new TypeError("El criterio de comparación no es compatible.");
   const complete=products.every(p=>hasComparableValue(p,metric));
-  const ranking=complete?compareProducts({products:products.map(x=>x.product),criteria:[{field:metric,weight:1,direction:metricDefinition.direction}]}):null;
+  if (!complete) {
+    return Object.freeze({
+      error:"No se puede puntuar esta característica porque falta el dato en uno o más dispositivos o existe un conflicto entre fuentes.",
+      qualityGate:Object.freeze({
+        valid:false,
+        metric:metricDefinition.label,
+        devices:Object.freeze(products.map(product=>Object.freeze({
+          name:product.name,
+          available:Number.isFinite(product.attributes[metric]) && !product.rows.some(row=>row.conflict && FIELDS.find(field=>field.key===row.key)?.attribute===metric),
+          sourceCoverage:product.sourceCoverage,
+        }))),
+      }),
+      products:Object.freeze(products),
+      metric:metricDefinition,
+    });
+  }
+  const ranking=compareProducts({products:products.map(x=>x.product),criteria:[{field:metric,weight:1,direction:metricDefinition.direction}]});
   return Object.freeze({
     products:Object.freeze(products),
     rows:Object.freeze(rows),
     metric:metricDefinition,
     profile:null,
     ranking,
-    metricUnavailable:!complete,
+    metricUnavailable:false,
     identityPairs:Object.freeze(buildIdentityPairs(products)),
     disclaimer:"La comparación usa datos recuperados de fuentes públicas, todavía no verificados ni guardados. El puntaje es relativo al criterio elegido y no representa calidad o rendimiento universal.",
   });
