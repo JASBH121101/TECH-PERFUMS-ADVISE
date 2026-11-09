@@ -1,4 +1,6 @@
 import "./styles.css";
+import { Capacitor } from "@capacitor/core";
+import { localizeFragranceList, localizeFragranceTerm } from "./fragrance-localization.js";
 import { safeExternalUrl } from "./safe-external-url.js";
 import { DOMAINS } from "../../../src/index.js";
 import { closeStorage, initializeStorage } from "./storage.js";
@@ -61,10 +63,8 @@ function renderValue(value) {
   return String(value);
 }
 
-function displayList(value) {
-  return Array.isArray(value) && value.length
-    ? value.map(escapeHtml).join(", ")
-    : "Sin dato en la ficha";
+function displayList(value, type = "note") {
+  return escapeHtml(localizeFragranceList(value, type));
 }
 
 function renderHome() {
@@ -238,18 +238,18 @@ function renderFragranceDetail(product) {
       <div class="tag-row"><span>${escapeHtml(attributes.concentrationLabel ?? "Concentración no indicada")}</span><span>${escapeHtml(attributes.releaseYear ?? "Año no indicado")}</span></div>
     </section>
     <section class="detail-block"><span class="kicker">PERFIL OLFATIVO</span><h2>Familias y carácter</h2>
-      <p>${displayList(attributes.scentFamilies)}</p>
+      <p>${displayList(attributes.scentFamilies, "family")}</p>
       <div class="note-grid">
-        <div><small>SALIDA</small><strong>${displayList(attributes.topNotes)}</strong></div>
-        <div><small>CORAZÓN</small><strong>${displayList(attributes.middleNotes)}</strong></div>
-        <div><small>FONDO</small><strong>${displayList(attributes.baseNotes)}</strong></div>
+        <div><small>SALIDA</small><strong>${displayList(attributes.topNotes, "note")}</strong></div>
+        <div><small>CORAZÓN</small><strong>${displayList(attributes.middleNotes, "note")}</strong></div>
+        <div><small>FONDO</small><strong>${displayList(attributes.baseNotes, "note")}</strong></div>
       </div>
     </section>
     <section class="detail-block"><span class="kicker">DETALLES DISPONIBLES</span><h2>Información de la ficha</h2>
       <dl class="fact-list">
         <div><dt>Perfumista</dt><dd>${displayList(attributes.perfumers)}</dd></div>
-        <div><dt>Temporadas</dt><dd>${displayList(attributes.seasons)}</dd></div>
-        <div><dt>Momentos del día</dt><dd>${displayList(attributes.timesOfDay)}</dd></div>
+        <div><dt>Temporadas</dt><dd>${displayList(attributes.seasons, "season")}</dd></div>
+        <div><dt>Momentos del día</dt><dd>${displayList(attributes.timesOfDay, "time")}</dd></div>
         <div><dt>Año de lanzamiento</dt><dd>${escapeHtml(attributes.releaseYear ?? "Sin dato")}</dd></div>
       </dl>
     </section>
@@ -627,6 +627,7 @@ function registerPagesServiceWorker() {
 }
 
 async function boot() {
+  if (Capacitor.isNativePlatform()) document.body.classList.add("jbae-native");
   registerPagesServiceWorker();
   try {
     state.runtime = await initializeStorage();
