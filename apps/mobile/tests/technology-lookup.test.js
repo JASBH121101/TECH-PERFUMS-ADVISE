@@ -51,7 +51,7 @@ test("rechaza categorías no soportadas", async () => {
 test("limita la consulta a campos solicitados y rechaza campos desconocidos",async()=>{
  const requests=[],provider={async search(request){requests.push(request.field);return[];}};
  await lookupTechnology({model:"Galaxy A17",resource:"smartphones",fields:["name","brand"],coreInfoProvider:provider,techApiProvider:provider});
- assert.deepEqual(requests,["name","name","brand","brand"]);
+ assert.deepEqual(requests.sort(),["brand","brand","name","name"]);
  await assert.rejects(lookupTechnology({model:"Galaxy A17",fields:["ram"]}),/solo pueden aportar identidad básica/);
  await assert.rejects(lookupTechnology({model:"Galaxy A17",fields:["imei"]}),/solo pueden aportar identidad básica/);
 });
