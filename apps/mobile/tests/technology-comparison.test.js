@@ -163,7 +163,7 @@ test("el formulario TECH limpia los cuatro modelos al enviarlos",async()=>{
  const start=main.indexOf('if (event.target.id === "tech-compare-form")');
  const end=main.indexOf('if (event.target.id === "tech-lookup-form")',start);
  const submit=main.slice(start,end);
- assert.match(submit,/state\.techCompareModels=\["","","",""\]/u);
+ assert.match(submit,/state\.techCompareModels = \["", "", "", ""\]/u);
 });
 
 
