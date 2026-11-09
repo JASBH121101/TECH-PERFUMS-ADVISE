@@ -312,8 +312,12 @@ export function buildTechnologyComparison({lookups,resource,metric="general"}={}
           reason:weakest || "Las fuentes no aportaron suficientes dimensiones comunes o existen discrepancias.",
         }),
         products:Object.freeze(products),
+        rows:Object.freeze(rows),
         metric:Object.freeze({value:"general",label:"Uso general (equilibrado)"}),
         profile:result.profile,
+        ranking:null,
+        metricUnavailable:true,
+        identityPairs:Object.freeze(buildIdentityPairs(products)),
       });
     }
     return Object.freeze({
@@ -344,7 +348,12 @@ export function buildTechnologyComparison({lookups,resource,metric="general"}={}
         }))),
       }),
       products:Object.freeze(products),
+      rows:Object.freeze(rows),
       metric:metricDefinition,
+      profile:null,
+      ranking:null,
+      metricUnavailable:true,
+      identityPairs:Object.freeze(buildIdentityPairs(products)),
     });
   }
   const ranking=compareProducts({products:products.map(x=>x.product),criteria:[{field:metric,weight:1,direction:metricDefinition.direction}]});
