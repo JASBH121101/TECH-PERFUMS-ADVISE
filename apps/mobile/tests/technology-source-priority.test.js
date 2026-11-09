@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const worker = await readFile(join(root, "infra/cloudflare/jbae-tech-sources/worker.js"), "utf8");
 
 test("Xataka is the primary public device detail source and has a dedicated route",()=>{
