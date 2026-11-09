@@ -97,7 +97,7 @@ test("reintenta TechAPI con el alias canonical cuando el slug CoreInfo no existe
  assert.ok(techQueries.includes("smartphones:samsung-galaxy-s26-ultra"));
  assert.ok(techQueries.includes("smartphones:galaxy-s26-ultra"));
  assert.equal(result.techApiSlug,"galaxy-s26-ultra");
- assert.equal(result.sources[1].status,"found");
+ assert.equal(result.sources[3].status,"found");
 });
 
 
