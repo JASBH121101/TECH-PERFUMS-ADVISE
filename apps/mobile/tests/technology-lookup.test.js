@@ -7,6 +7,11 @@ import {
   buildPrimarySpecSourceLinks,
 } from "../src/technology-lookup.js";
 
+const noPrimarySources = async (_path, _params, id, name) => ({
+  id, name, status: "not_found", source: null, observedAt: null,
+  facts: [], variants: [], error: null,
+});
+
 test("convierte el nombre del modelo en slug sin acentos", () => {
   assert.equal(slugifyTechnologyModel("  Samsung Galaxy A17  "), "samsung-galaxy-a17");
   assert.equal(slugifyTechnologyModel("Xiaomi 14T Pro"), "xiaomi-14t-pro");
@@ -32,6 +37,7 @@ test("consulta dos fuentes exactas y conserva el estado pendiente de revisión",
     resource: "smartphones",
     coreInfoProvider,
     techApiProvider,
+    primarySourceFetcher: noPrimarySources,
   });
   assert.equal(result.slug, "samsung-galaxy-a17");
   assert.equal(result.hasResults, true);
@@ -85,6 +91,7 @@ test("reintenta TechAPI con el alias canonical cuando el slug CoreInfo no existe
   fields:["name","brand"],
   coreInfoProvider,
   techApiProvider,
+  primarySourceFetcher: noPrimarySources,
  });
  assert.deepEqual(coreQueries,["samsung-galaxy-s26-ultra","samsung-galaxy-s26-ultra"]);
  assert.ok(techQueries.includes("smartphones:samsung-galaxy-s26-ultra"));
@@ -121,6 +128,7 @@ test("reintenta TechAPI con el slug sin marca después de un 404",async()=>{
   fields:["name","brand"],
   coreInfoProvider,
   techApiProvider,
+  primarySourceFetcher: noPrimarySources,
  });
  assert.equal(result.slug,"samsung-galaxy-s26-ultra");
  assert.equal(result.techApiSlug,"galaxy-s26-ultra");
