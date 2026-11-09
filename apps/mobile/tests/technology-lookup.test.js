@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   lookupTechnology,
   slugifyTechnologyModel,
+  buildTechApiSlugCandidates,
 } from "../src/technology-lookup.js";
 
 test("convierte el nombre del modelo en slug sin acentos", () => {
@@ -51,4 +52,39 @@ test("limita la consulta a campos solicitados y rechaza campos desconocidos",asy
  await lookupTechnology({model:"Galaxy A17",resource:"smartphones",fields:["name","ram"],coreInfoProvider:provider,techApiProvider:provider});
  assert.deepEqual(requests,["name","name","ram_gb","ram_gb"]);
  await assert.rejects(lookupTechnology({model:"Galaxy A17",fields:["imei"]}),/campos solicitados/);
+});
+
+
+test("deriva slugs distintos para CoreInfo y TechAPI desde el modelo seleccionado",()=>{
+ assert.deepEqual(
+  buildTechApiSlugCandidates("Samsung Galaxy S26 Ultra","samsung-galaxy-s26-ultra"),
+  ["samsung-galaxy-s26-ultra","galaxy-s26-ultra"],
+ );
+ assert.deepEqual(
+  buildTechApiSlugCandidates("Apple iPhone 18 Pro Max","apple-iphone-18-pro-max"),
+  ["apple-iphone-18-pro-max","iphone-18-pro-max"],
+ );
+});
+
+test("reintenta TechAPI con el alias canonical cuando el slug CoreInfo no existe",async()=>{
+ const coreQueries=[],techQueries=[];
+ const coreInfoProvider={async search(request){coreQueries.push(request.query);return request.field==="name"?[{value:"Samsung Galaxy S26 Ultra",source:{name:"CoreInfo",url:"https://example.test/core"}}]:[];}};
+ const techApiProvider={async search(request){
+  techQueries.push(request.query);
+  if(request.query==="smartphones:samsung-galaxy-s26-ultra") throw new Error("404 record not found");
+  return request.field==="name"?[{value:"Galaxy S26 Ultra",source:{name:"TechAPI",url:"https://example.test/tech"}}]:[];
+ }};
+ const result=await lookupTechnology({
+  model:"Samsung Galaxy S26 Ultra",
+  catalogSlug:"samsung-galaxy-s26-ultra",
+  resource:"smartphones",
+  fields:["name","brand"],
+  coreInfoProvider,
+  techApiProvider,
+ });
+ assert.deepEqual(coreQueries,["samsung-galaxy-s26-ultra","samsung-galaxy-s26-ultra"]);
+ assert.ok(techQueries.includes("smartphones:samsung-galaxy-s26-ultra"));
+ assert.ok(techQueries.includes("smartphones:galaxy-s26-ultra"));
+ assert.equal(result.techApiSlug,"galaxy-s26-ultra");
+ assert.equal(result.sources[1].status,"found");
 });
