@@ -52,6 +52,8 @@ const state = {
   products: [],
   fragranceMode: "advisor",
   collectionSearch: "",
+  collectionFilter: "all",
+  editingCollectionNoteId: null,
   comparisonSearch: "",
   comparisonSelection: [],
   comparisonResult: null,
@@ -308,32 +310,53 @@ const COLLECTION_STATUS_LABELS = Object.freeze({
   sampled: "Ya lo probé",
 });
 
-function renderManagedFragranceCard(product, { collectionItem = null, favorite = false } = {}) {
+function renderManagedFragranceCard(product, {
+  collectionItem = null,
+  favorite = false,
+  comparisonSelected = false,
+} = {}) {
   const status = collectionItem ? COLLECTION_STATUS_LABELS[collectionItem.status] : null;
   const family = product.attributes.primaryScentFamily ?? product.attributes.scentFamilies?.[0] ?? "Familia no indicada";
+  const productId = encodeURIComponent(product.id);
+  const noteEditorOpen = state.editingCollectionNoteId === product.id && Boolean(collectionItem);
+  const note = collectionItem?.note ?? "";
   return `
     <article class="collection-card">
-      <button type="button" class="collection-open" data-action="open-fragrance" data-id="${encodeURIComponent(product.id)}">
+      <button type="button" class="collection-open" data-action="open-fragrance" data-id="${productId}">
         <span class="result-monogram">F</span>
         <span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.brand ?? "Casa no indicada")}</small><em>${escapeHtml(family)}</em></span>
         <span class="result-arrow">↗</span>
       </button>
       ${collectionItem ? `<div class="collection-status"><span>Estado</span><strong>${escapeHtml(status)}</strong></div>` : ""}
+      ${collectionItem ? `
+        <div class="collection-note">
+          <div><strong>Nota privada</strong><p>${note ? escapeHtml(note) : "Todavía no has escrito una nota para esta fragancia."}</p></div>
+          ${noteEditorOpen ? `
+            <form id="collection-note-form" data-product-id="${productId}">
+              <label for="collection-note-editor">TU NOTA (MÁXIMO 240 CARACTERES)</label>
+              <textarea id="collection-note-editor" name="note" maxlength="240" rows="3" placeholder="Ej.: Me gustó para noches frescas; revisar duración...">${escapeHtml(note)}</textarea>
+              <small><span id="collection-note-count">${note.length}</span>/240 caracteres · Solo se guarda en este perfil local</small>
+              <div class="collection-note-actions">
+                <button type="submit">Guardar nota</button>
+                <button type="button" data-action="cancel-collection-note" data-id="${productId}">Cancelar</button>
+              </div>
+            </form>` : `<button type="button" data-action="edit-collection-note" data-id="${productId}">${note ? "Editar nota" : "Añadir nota"}</button>`}
+        </div>` : ""}
       <div class="collection-card-actions">
-        <button type="button" data-action="toggle-favorite" data-id="${encodeURIComponent(product.id)}"
+        <button type="button" data-action="toggle-favorite" data-id="${productId}"
           data-favorite="${favorite ? "false" : "true"}">${favorite ? "★ Favorito" : "☆ Favorito"}</button>
+        <button type="button" data-action="toggle-collection-compare" data-id="${productId}">${comparisonSelected ? "Quitar de comparación" : "Comparar"}</button>
         ${collectionItem ? `
-          <button type="button" data-action="collection-status" data-id="${encodeURIComponent(product.id)}" data-status="wishlist">Por probar</button>
-          <button type="button" data-action="collection-status" data-id="${encodeURIComponent(product.id)}" data-status="owned">Lo tengo</button>
-          <button type="button" data-action="collection-status" data-id="${encodeURIComponent(product.id)}" data-status="sampled">Lo probé</button>
-          <button type="button" class="collection-remove" data-action="remove-collection" data-id="${encodeURIComponent(product.id)}">Quitar</button>` : `
-          <button type="button" data-action="collection-status" data-id="${encodeURIComponent(product.id)}" data-status="wishlist">Añadir a colección</button>`}
+          <button type="button" data-action="collection-status" data-id="${productId}" data-status="wishlist">Por probar</button>
+          <button type="button" data-action="collection-status" data-id="${productId}" data-status="owned">Lo tengo</button>
+          <button type="button" data-action="collection-status" data-id="${productId}" data-status="sampled">Lo probé</button>
+          <button type="button" class="collection-remove" data-action="remove-collection" data-id="${productId}">Quitar</button>` : `
+          <button type="button" data-action="collection-status" data-id="${productId}" data-status="wishlist">Añadir a colección</button>`}
       </div>
     </article>`;
 }
 
-function renderFragranceCollection() {
-  const profile = state.profile ?? state.runtime.knowledgeStore.getFragranceProfile();
+function renderFragranceCollectionContent(profile) {
   const productMap = new Map(state.products.map(product => [product.id, product]));
   const collection = (profile?.collection ?? [])
     .map(item => ({ item, product: productMap.get(item.productId) }))
@@ -341,14 +364,67 @@ function renderFragranceCollection() {
   const favorites = (profile?.favorites ?? [])
     .map(id => productMap.get(id))
     .filter(Boolean);
-  const wishlistCount = collection.filter(item => item.item.status === "wishlist").length;
-  const ownedCount = collection.filter(item => item.item.status === "owned").length;
-  const sampledCount = collection.filter(item => item.item.status === "sampled").length;
+  const query = state.collectionSearch.trim().toLocaleLowerCase();
+  const matchesQuery = product => !query || [
+    product.name,
+    product.brand,
+    product.attributes.primaryScentFamily,
+    ...(product.attributes.scentFamilies ?? []),
+  ].filter(Boolean).join(" ").toLocaleLowerCase().includes(query);
+  const visibleFavorites = favorites.filter(matchesQuery);
+  const visibleCollection = collection.filter(entry =>
+    matchesQuery(entry.product) &&
+    (state.collectionFilter === "all" || state.collectionFilter === "favorites" ||
+      entry.item.status === state.collectionFilter));
+  const selectedIds = new Set(state.comparisonSelection);
+  const selectedCount = state.comparisonSelection.filter(id => productMap.has(id)).length;
+  const showFavorites = state.collectionFilter === "all" || state.collectionFilter === "favorites";
+  const showCollection = state.collectionFilter !== "favorites";
+
+  return `
+    <section class="collection-compare-tools">
+      <div><strong>Comparación rápida</strong><p>Marca entre dos y cuatro perfumes de tus listas para compararlos lado a lado.</p></div>
+      <button type="button" data-action="open-collection-comparison" ${selectedCount < 2 ? "disabled" : ""}>
+        Comparar selección · ${selectedCount}/4
+      </button>
+    </section>
+    ${showFavorites ? `
+      <section class="collection-section">
+        <div class="result-section-title"><strong>Mis favoritos</strong><small>${visibleFavorites.length} / ${favorites.length}</small></div>
+        ${visibleFavorites.length
+          ? `<div class="collection-list">${visibleFavorites.map(product => renderManagedFragranceCard(product, {
+            favorite: true,
+            comparisonSelected: selectedIds.has(product.id),
+            // Keep note editing in the collection section only to avoid duplicate form IDs.
+            collectionItem: null,
+          })).join("")}</div>`
+          : `<div class="empty-panel compact"><strong>${favorites.length ? "No hay favoritos que coincidan" : "Todavía no tienes favoritos"}</strong><p>${favorites.length ? "Prueba con otro nombre, casa o familia." : "Abre una ficha y marca la estrella para guardar tus perfumes preferidos."}</p></div>`}
+      </section>` : ""}
+    ${showCollection ? `
+      <section class="collection-section">
+        <div class="result-section-title"><strong>${state.collectionFilter === "all" ? "Mi colección" : "Resultados filtrados"}</strong><small>${visibleCollection.length} / ${collection.length}</small></div>
+        ${visibleCollection.length
+          ? `<div class="collection-list">${visibleCollection.map(entry => renderManagedFragranceCard(entry.product, {
+            collectionItem: entry.item,
+            favorite: (profile?.favorites ?? []).includes(entry.product.id),
+            comparisonSelected: selectedIds.has(entry.product.id),
+          })).join("")}</div>`
+          : `<div class="empty-panel compact"><strong>${collection.length ? "No hay perfumes en este filtro" : "Tu colección está vacía"}</strong><p>${collection.length ? "Cambia el estado o la búsqueda para ver otros perfumes." : "Desde cualquier ficha puedes añadir un perfume como “Por probar”, “Lo tengo” o “Ya lo probé”."}</p></div>`}
+      </section>` : ""}
+    ${state.comparisonSelection.length >= 4 ? '<p class="field-hint">Has alcanzado el máximo de cuatro perfumes para comparar. Quita uno para seleccionar otro.</p>' : ""}`;
+}
+
+function renderFragranceCollection() {
+  const profile = state.profile ?? state.runtime.knowledgeStore.getFragranceProfile();
+  const collection = profile?.collection ?? [];
+  const wishlistCount = collection.filter(item => item.status === "wishlist").length;
+  const ownedCount = collection.filter(item => item.status === "owned").length;
+  const sampledCount = collection.filter(item => item.status === "sampled").length;
   return `
     <section class="collection-summary">
       <span class="kicker">TU BIBLIOTECA PERSONAL</span>
       <h2>Tu colección, a tu manera.</h2>
-      <p>Guarda perfumes que quieres probar, que ya tienes o que ya conoces. Los favoritos son independientes del estado de colección.</p>
+      <p>Guarda perfumes que quieres probar, que ya tienes o que ya conoces. Los favoritos son independientes del estado de colección. Puedes anotar impresiones privadas y comparar tus selecciones.</p>
       <div class="collection-stats">
         <div><strong>${collection.length}</strong><small>En colección</small></div>
         <div><strong>${wishlistCount}</strong><small>Por probar</small></div>
@@ -356,24 +432,20 @@ function renderFragranceCollection() {
         <div><strong>${sampledCount}</strong><small>Probados</small></div>
       </div>
     </section>
-    <section class="collection-section">
-      <div class="result-section-title"><strong>Mis favoritos</strong><small>${favorites.length}</small></div>
-      ${favorites.length
-        ? `<div class="collection-list">${favorites.map(product => renderManagedFragranceCard(product, {
-          favorite: true,
-          collectionItem: collection.find(item => item.product.id === product.id)?.item ?? null,
-        })).join("")}</div>`
-        : `<div class="empty-panel compact"><strong>Todavía no tienes favoritos</strong><p>Abre una ficha y marca la estrella para guardar tus perfumes preferidos.</p></div>`}
+    <section class="collection-tools">
+      <label for="collection-search">BUSCAR EN TUS LISTAS</label>
+      <input id="collection-search" type="search" autocomplete="off" placeholder="Perfume, casa o familia..." value="${escapeHtml(state.collectionSearch)}">
+      <label for="collection-filter">FILTRAR LISTA</label>
+      <select id="collection-filter">
+        <option value="all" ${state.collectionFilter === "all" ? "selected" : ""}>Toda mi colección y favoritos</option>
+        <option value="wishlist" ${state.collectionFilter === "wishlist" ? "selected" : ""}>Por probar</option>
+        <option value="owned" ${state.collectionFilter === "owned" ? "selected" : ""}>Lo tengo</option>
+        <option value="sampled" ${state.collectionFilter === "sampled" ? "selected" : ""}>Ya lo probé</option>
+        <option value="favorites" ${state.collectionFilter === "favorites" ? "selected" : ""}>Solo favoritos</option>
+      </select>
+      <p class="field-hint">Los filtros no modifican ni eliminan tus registros.</p>
     </section>
-    <section class="collection-section">
-      <div class="result-section-title"><strong>Mi colección</strong><small>${collection.length}</small></div>
-      ${collection.length
-        ? `<div class="collection-list">${collection.map(entry => renderManagedFragranceCard(entry.product, {
-          collectionItem: entry.item,
-          favorite: (profile?.favorites ?? []).includes(entry.product.id),
-        })).join("")}</div>`
-        : `<div class="empty-panel compact"><strong>Tu colección está vacía</strong><p>Desde cualquier ficha puedes añadir un perfume como “Por probar”, “Lo tengo” o “Ya lo probé”.</p></div>`}
-    </section>`;
+    <div id="collection-content">${renderFragranceCollectionContent(profile)}</div>`;
 }
 
 function renderComparisonValue(value) {
@@ -894,6 +966,31 @@ app.addEventListener("click", async event => {
       state.profileMessage = error instanceof Error ? error.message : "No se pudo guardar en tu colección.";
     }
     render();
+  } else if (actionButton.dataset.action === "edit-collection-note") {
+    state.editingCollectionNoteId = decodeURIComponent(actionButton.dataset.id ?? "");
+    render();
+  } else if (actionButton.dataset.action === "cancel-collection-note") {
+    state.editingCollectionNoteId = null;
+    render();
+  } else if (actionButton.dataset.action === "toggle-collection-compare") {
+    const productId = decodeURIComponent(actionButton.dataset.id ?? "");
+    if (state.comparisonSelection.includes(productId)) {
+      state.comparisonSelection = state.comparisonSelection.filter(id => id !== productId);
+    } else if (state.comparisonSelection.length < 4) {
+      state.comparisonSelection = [...state.comparisonSelection, productId];
+    } else {
+      state.profileMessage = "La comparación admite un máximo de cuatro perfumes.";
+    }
+    state.comparisonResult = null;
+    render();
+  } else if (actionButton.dataset.action === "open-collection-comparison") {
+    if (state.comparisonSelection.length >= 2) {
+      state.fragranceMode = "compare";
+      state.comparisonSearch = "";
+      state.comparisonResult = null;
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   } else if (actionButton.dataset.action === "remove-collection") {
     const productId = decodeURIComponent(actionButton.dataset.id ?? "");
     try {
@@ -967,6 +1064,15 @@ app.addEventListener("input", event => {
   if (event.target.id === "fragrance-search") {
     state.searchQuery = event.target.value;
     renderFragranceSearchResults();
+  } else if (event.target.id === "collection-search") {
+    state.collectionSearch = event.target.value;
+    const target = document.querySelector("#collection-content");
+    if (target) target.innerHTML = renderFragranceCollectionContent(
+      state.profile ?? state.runtime.knowledgeStore.getFragranceProfile(),
+    );
+  } else if (event.target.id === "collection-note-editor") {
+    const count = document.querySelector("#collection-note-count");
+    if (count) count.textContent = String(event.target.value.length);
   } else if (event.target.id === "fragrance-prompt") {
     state.fragrancePrompt = event.target.value;
   } else if (event.target.id === "fragrance-notes") {
@@ -1025,6 +1131,15 @@ app.addEventListener("change", event => {
     document.querySelector("#fragrance-comparison-output").innerHTML = "";
     return;
   }
+  if (event.target.id === "collection-filter") {
+    state.collectionFilter = ["all", "wishlist", "owned", "sampled", "favorites"].includes(event.target.value)
+      ? event.target.value : "all";
+    const target = document.querySelector("#collection-content");
+    if (target) target.innerHTML = renderFragranceCollectionContent(
+      state.profile ?? state.runtime.knowledgeStore.getFragranceProfile(),
+    );
+    return;
+  }
   const fields = {
     "fragrance-occasion": "occasion",
     "fragrance-climate": "climate",
@@ -1060,6 +1175,33 @@ app.addEventListener("change", event => {
 
 app.addEventListener("submit", async event => {
   event.preventDefault();
+  if (event.target.id === "collection-note-form") {
+    const productId = decodeURIComponent(event.target.dataset.productId ?? "");
+    const note = event.target.querySelector("#collection-note-editor")?.value ?? "";
+    const profile = state.runtime.knowledgeStore.getFragranceProfile();
+    const existing = profile?.collection.find(item => item.productId === productId);
+    if (!existing) {
+      state.profileMessage = "La fragancia ya no está en tu colección; vuelve a cargar la lista.";
+      state.editingCollectionNoteId = null;
+      render();
+      return;
+    }
+    try {
+      await state.runtime.knowledgeStore.saveFragranceCollectionItem({
+        productId,
+        status: existing.status,
+        note: note.trim() ? note : null,
+      });
+      state.profile = state.runtime.knowledgeStore.getFragranceProfile();
+      state.profileMessage = note.trim() ? "Nota privada guardada en tu perfil local." : "Nota privada eliminada.";
+      state.editingCollectionNoteId = null;
+    } catch (error) {
+      state.profileMessage = error instanceof Error ? error.message : "No se pudo guardar la nota.";
+    }
+    render();
+    return;
+  }
+
   if (event.target.id === "fragrance-advisor-form") {
     state.fragrancePrompt = document.querySelector("#fragrance-prompt")?.value ?? state.fragrancePrompt;
     state.fragranceForm.families = [...event.target.querySelectorAll('input[name="fragrance-family"]:checked')]

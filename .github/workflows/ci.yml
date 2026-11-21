@@ -8,6 +8,7 @@ on:
       - feature/jbae-standalone-android-app
       - feature/jbae-olfactory-profile
       - feature/jbae-fragrance-collection
+      - feature/jbae-collection-management
   pull_request:
     branches:
       - main
