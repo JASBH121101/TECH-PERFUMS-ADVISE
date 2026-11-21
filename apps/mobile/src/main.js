@@ -1,7 +1,7 @@
 import "./styles.css";
 import { formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
 import { safeExternalUrl } from "./safe-external-url.js";
-import { DOMAINS } from "../../../src/index.js";
+import { DOMAINS, buildFragranceComparison } from "../../../src/index.js";
 import { closeStorage, initializeStorage } from "./storage.js";
 import { initializeUpdateManager } from "./update-manager.js";
 import { searchProducts } from "./search.js";
@@ -51,6 +51,10 @@ const state = {
   runtime: null,
   products: [],
   fragranceMode: "advisor",
+  collectionSearch: "",
+  comparisonSearch: "",
+  comparisonSelection: [],
+  comparisonResult: null,
   fragrancePrompt: "",
   fragranceForm: { occasion: "", families: [], avoidFamilies: [], notes: "", avoidNotes: "", climate: "", intensity: "" },
   profile: null,
@@ -115,10 +119,18 @@ function renderHome() {
 }
 
 function renderModeTabs() {
+  const modes = [
+    ["advisor", "Asesor"],
+    ["search", "Buscar"],
+    ["collection", "Mi colección"],
+    ["compare", "Comparar"],
+  ];
   return `
-    <div class="mode-tabs" role="tablist" aria-label="Modo de fragancias">
-      <button type="button" class="mode-tab ${state.fragranceMode === "advisor" ? "active" : ""}" data-action="fragrance-mode" data-mode="advisor" role="tab" aria-selected="${state.fragranceMode === "advisor"}">Asesor personalizado</button>
-      <button type="button" class="mode-tab ${state.fragranceMode === "search" ? "active" : ""}" data-action="fragrance-mode" data-mode="search" role="tab" aria-selected="${state.fragranceMode === "search"}">Buscar en catálogo</button>
+    <div class="mode-tabs fragrance-mode-tabs" role="tablist" aria-label="Secciones de fragancias">
+      ${modes.map(([mode, label]) => `
+        <button type="button" class="mode-tab ${state.fragranceMode === mode ? "active" : ""}"
+          data-action="fragrance-mode" data-mode="${mode}" role="tab"
+          aria-selected="${state.fragranceMode === mode}">${label}</button>`).join("")}
     </div>`;
 }
 
@@ -298,7 +310,10 @@ function renderFragrance() {
       <div class="catalog-chip"><i></i> ${state.runtime.fragranceCount.toLocaleString("es-NI")} fichas locales · funciona sin conexión</div>
     </section>
     ${renderModeTabs()}
-    ${state.fragranceMode === "advisor" ? renderFragranceAdvisorForm() : renderFragranceSearch()}
+    ${state.fragranceMode === "advisor" ? renderFragranceAdvisorForm()
+      : state.fragranceMode === "search" ? renderFragranceSearch()
+        : state.fragranceMode === "collection" ? renderFragranceCollection()
+          : renderFragranceComparison()}
   `;
 }
 
