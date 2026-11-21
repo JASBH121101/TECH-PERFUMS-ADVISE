@@ -136,7 +136,7 @@ test("aprende familias y notas repetidas a partir de valoraciones positivas", ()
   const advice = buildFragranceAdvice({ products, profile, message: "Busco una fragancia para diario" });
   assert.ok(advice.learnedPreferences.preferredFamilies.includes("Wood & Root"));
   assert.ok(advice.learnedPreferences.preferredNotes.includes("Cedarwood"));
-  assert.ok(advice.preferences.preferredFamilies.includes("Wood & Root"));
+  assert.ok(advice.preferences.preferredFamilies.includes("woody"));
 });
 
 test("no aprende una familia desde una sola valoración aislada", () => {
