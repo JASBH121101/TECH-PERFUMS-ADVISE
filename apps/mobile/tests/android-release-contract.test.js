@@ -91,8 +91,9 @@ test("release workflow tests before signing, verifies package and signature, the
   assert.match(workflow, /JBAE_ANDROID_KEYSTORE_PASSWORD/u);
   assert.match(workflow, /JBAE_SIGNING_CERT_SHA256/u);
   assert.match(workflow, /jbae-release-2026/u);
-  assert.doesNotMatch(workflow, /actions\\/cache\\/(?:restore|save)@v4/u);
-  assert.doesNotMatch(workflow, /debug\\.keystore/u);
+  assert.equal(workflow.includes("actions/cache/restore@v4"), false);
+  assert.equal(workflow.includes("actions/cache/save@v4"), false);
+  assert.equal(workflow.includes("debug.keystore"), false);
   assert.match(workflow, /cmp JBAE\.apk/u);
   assert.match(workflow, /actions\/upload-artifact@v4/u);
 });
@@ -100,8 +101,8 @@ test("release workflow tests before signing, verifies package and signature, the
 test("release channel and direct APK distribution are documented without claiming Play Store publication", async () => {
   const readme = await read("README.md");
   assert.match(readme, /releases\/latest\/download\/JBAE\.apk/u);
-  assert.match(readme, /debug\.keystore/u);
-  assert.match(readme, /no es una clave de publicación de Play Store/u);
+  assert.match(readme, /jbae-release\.p12/u);
+  assert.match(readme, /no es una publicación en Google Play/u);
   assert.match(readme, /Permitir desde esta fuente/u);
 });
 
@@ -114,14 +115,15 @@ test("new signing identity is restored from protected PKCS12 secrets and fingerp
   assert.ok(workflow.includes('keyAlias "jbae-release-2026"'));
   assert.ok(workflow.includes("JBAE_SIGNING_CERT_SHA256"));
   assert.ok(workflow.includes("The APK certificate fingerprint does not match"));
-  assert.doesNotMatch(workflow, /actions\\/cache\\/(?:restore|save)@v4/u);
+  assert.equal(workflow.includes("actions/cache/restore@v4"), false);
+  assert.equal(workflow.includes("actions/cache/save@v4"), false);
   assert.match(script, /-storetype PKCS12/u);
   assert.match(script, /-keysize 3072/u);
   assert.match(script, /JBAE_ANDROID_SIGNING_KEYSTORE_BASE64/u);
   assert.match(script, /JBAE_ANDROID_KEYSTORE_PASSWORD/u);
 });
 
-test("manual APK release dispatch uses the original signing-cache branch and integrated source", async () => {
+test("manual APK release dispatch builds from the integrated certification branch", async () => {
   const workflow = await read("../../.github/workflows/android-app.yml");
   assert.match(workflow, /workflow_dispatch:/u);
   assert.ok(workflow.includes("ref: ${{ github.event_name == 'workflow_dispatch' && 'feature/jbae-android-certification' || github.sha }}"));
