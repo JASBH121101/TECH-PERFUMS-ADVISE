@@ -1,1 +1,0 @@
-JBAE Android signing identity is stored in the protected GitHub Actions cache. Builds must fail closed if the cache is missing.
