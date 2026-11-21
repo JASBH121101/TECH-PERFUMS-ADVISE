@@ -395,7 +395,8 @@ function renderFragranceCollectionContent(profile) {
           ? `<div class="collection-list">${visibleFavorites.map(product => renderManagedFragranceCard(product, {
             favorite: true,
             comparisonSelected: selectedIds.has(product.id),
-            collectionItem: collection.find(item => item.product.id === product.id)?.item ?? null,
+            // Keep note editing in the collection section only to avoid duplicate form IDs.
+            collectionItem: null,
           })).join("")}</div>`
           : `<div class="empty-panel compact"><strong>${favorites.length ? "No hay favoritos que coincidan" : "Todavía no tienes favoritos"}</strong><p>${favorites.length ? "Prueba con otro nombre, casa o familia." : "Abre una ficha y marca la estrella para guardar tus perfumes preferidos."}</p></div>`}
       </section>` : ""}
