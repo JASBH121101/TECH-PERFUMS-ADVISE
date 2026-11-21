@@ -76,14 +76,16 @@ test("release workflow tests before signing, verifies package and signature, the
   const workflow = await read("../../.github/workflows/android-app.yml");
   const mobileTests = workflow.indexOf("run: npm test");
   const engineTests = workflow.indexOf("run: npm test", mobileTests + 1);
-  const assemble = workflow.indexOf("./gradlew assembleRelease");
-  const verify = workflow.indexOf("apksigner verify");
+  const assemble = workflow.indexOf("name: Assemble signed release APK");
+  const verify = workflow.indexOf("name: Verify APK signature and package");
   const publish = workflow.indexOf("Publish installable APK release");
   const verifyAsset = workflow.indexOf("Verify published APK asset");
   assert.ok(mobileTests >= 0 && engineTests > mobileTests);
   assert.ok(assemble > engineTests);
   assert.ok(verify > assemble);
   assert.ok(publish > verify);
+  assert.match(workflow, /apksigner" verify/u);
+  assert.match(workflow, /aapt" dump badging/u);
   assert.ok(verifyAsset > publish);
   assert.match(workflow, /jbae-android-signing-key-persisted/u);
   assert.match(workflow, /Refusing to rotate the app signing identity/u);
