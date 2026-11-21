@@ -19,7 +19,7 @@ test("Capacitor package identity and local SQLite policy remain stable", async (
 
 test("release version follows the existing monotonic major.minor.run-number scheme", async () => {
   const source = await read("src/version.js");
-  const workflow = await read("../.github/workflows/android-app.yml");
+  const workflow = await read("../../.github/workflows/android-app.yml");
   assert.match(source, /return String\(Number\(match\[1\]\)\) \+ "\." \+ String\(Number\(match\[2\]\)\) \+ "\." \+ numericRun/u);
   assert.match(workflow, /VERSION_CODE: \$\{\{ github\.run_number \}\}/u);
   assert.match(workflow, /resolve-release-version\.mjs/u);
@@ -73,7 +73,7 @@ test("native registration and shrinker rules are installed by the Android build 
 });
 
 test("release workflow tests before signing, verifies package and signature, then publishes", async () => {
-  const workflow = await read("../.github/workflows/android-app.yml");
+  const workflow = await read("../../.github/workflows/android-app.yml");
   const mobileTests = workflow.indexOf("run: npm test");
   const engineTests = workflow.indexOf("run: npm test", mobileTests + 1);
   const assemble = workflow.indexOf("./gradlew assembleRelease");
@@ -95,12 +95,12 @@ test("release channel and direct APK distribution are documented without claimin
   const readme = await read("README.md");
   assert.match(readme, /releases\/latest\/download\/JBAE\.apk/u);
   assert.match(readme, /debug\.keystore/u);
-  assert.match(readme, /no es una clave de publicación de Google Play/u);
+  assert.match(readme, /no es una clave de publicación de Play Store/u);
   assert.match(readme, /Permitir desde esta fuente/u);
 });
 
 test("manual APK release dispatch uses the original signing-cache branch and integrated source", async () => {
-  const workflow = await read("../.github/workflows/android-app.yml");
+  const workflow = await read("../../.github/workflows/android-app.yml");
   assert.match(workflow, /workflow_dispatch:/u);
   assert.ok(workflow.includes("ref: ${{ github.event_name == 'workflow_dispatch' && 'feature/jbae-android-certification' || github.sha }}"));
   assert.doesNotMatch(workflow, /pull_request:/u);
