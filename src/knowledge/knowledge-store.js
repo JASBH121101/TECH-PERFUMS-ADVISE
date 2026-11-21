@@ -150,7 +150,7 @@ export class KnowledgeStore {
       await this.#commit({
         ...this.#snapshot,
         metadata: { ...this.#snapshot.metadata, updatedAt: timestamp },
-        profiles: { schemaVersion: 1, items },
+        profiles: { schemaVersion: 2, items },
       });
       return profile;
     });
@@ -196,7 +196,7 @@ export class KnowledgeStore {
       await this.#commit({
         ...this.#snapshot,
         metadata: { ...this.#snapshot.metadata, updatedAt: timestamp },
-        profiles: { schemaVersion: 1, items },
+        profiles: { schemaVersion: 2, items },
       });
       return record;
     });
