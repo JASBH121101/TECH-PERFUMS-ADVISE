@@ -5,9 +5,10 @@ JBAE es una aplicación Android y una vista previa web independientes que consum
 ## Implementado
 
 - Aplicación Capacitor con navegación principal entre Inicio, FRAGRANCE, TECH y Biblioteca.
-- FRAGRANCE: búsqueda offline, fichas de perfumes y asesor personalizado en español.
+- FRAGRANCE: búsqueda offline, fichas de perfumes y asesor personalizado en español. El perfil olfativo conserva familias/notas preferidas y evitadas, ocasión y clima; las valoraciones positivas/negativas contribuyen al aprendizaje tras repetirse en al menos dos fragancias distintas.
+- Perfil local persistente en SQLite nativo, con preferencias, historial de hasta 500 valoraciones, favoritos y colección personal (por probar, en posesión y probado). Las referencias se validan contra el catálogo. También se puede comparar de 2 a 4 perfumes sin generar un ganador artificial. La colección permite filtrar por estado o favoritos, buscar por perfume/casa/familia y guardar, editar o borrar notas privadas de hasta 240 caracteres. Se pueden seleccionar de 2 a 4 perfumes desde favoritos o colección y abrir la comparación directamente. La vista previa web sigue siendo temporal.
 - Biblioteca inicial construida desde el snapshot Scento del repositorio; la procedencia permanece como reportada y no equivale a verificación sensorial.
-- TECH: consulta exacta por modelo a CoreInfo y TechAPI para smartphones, tablets, laptops, smartwatches y monitores. Incluye comparación visual de 2–4 equipos, normalización de unidades y variantes con IDs por configuración, detección de conflictos entre fuentes y perfil "Uso general (equilibrado)" con ponderación de varias dimensiones y desglose de cobertura, además de criterios individuales. Los resultados siguen siendo candidatos sin verificar y no se guardan automáticamente.
+- TECH: consulta exacta por modelo a CoreInfo y TechAPI para smartphones, tablets, laptops, smartwatches y monitores. Incluye comparación visual de 2–4 equipos, normalización de unidades y variantes con IDs por configuración, detección de conflictos entre fuentes y perfil "Uso general (equilibrado)" con ponderación de varias dimensiones y desglose de cobertura, además de criterios individuales. Los resultados siguen siendo candidatos sin verificar y no se guardan automáticamente. Las consultas en curso se invalidan al cambiar de pantalla, modo o categoría para impedir que respuestas antiguas sobrescriban la selección actual; el comparador conserva los modelos seleccionados cuando una consulta falla.
 - SQLite nativo mediante `@capacitor-community/sqlite`, con importación inicial del seed y uso de `CapacitorSQLiteKnowledgeAdapter`.
 - Actualizador Android propio: GitHub Releases, DownloadManager en segundo plano, recuperación del estado de descarga y validación de paquete, versión, tamaño, estructura APK y continuidad del certificado.
 - Vista previa pública en GitHub Pages con manifiesto PWA, iconos instalables y service worker para shell/recursos del mismo origen.
@@ -23,6 +24,16 @@ JBAE es una aplicación Android y una vista previa web independientes que consum
 - Versión inicial publicada: `0.4.0`, `versionCode=21`. Las siguientes versiones usan el contador monotónico del workflow Android.
 
 La vista previa web usa memoria temporal: al recargar o cerrar el navegador se pierde el estado de la sesión. La instalación Android usa SQLite nativo.
+
+## Instalación y distribución directa del APK
+
+1. Descarga siempre el APK desde [JBAE Releases](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/latest/download/JBAE.apk).
+2. Abre el archivo desde Descargas. Android mostrará el instalador del paquete.
+3. En una primera instalación, Android puede pedir permiso para instalar aplicaciones desde el navegador o administrador de archivos que abrió el APK. En Ajustes, activa «Permitir desde esta fuente» únicamente para esa aplicación de origen y confirma la instalación en Android.
+4. Para actualizar una instalación existente, instala la nueva versión **encima de la anterior**. No desinstales JBAE antes: la actualización conserva el almacenamiento local cuando coinciden el Application ID y el certificado.
+5. El actualizador integrado descarga el APK mediante DownloadManager, comprueba paquete, versión, tamaño y certificado, y deja la confirmación final al instalador de Android.
+
+La distribución actual es descarga directa de APK desde GitHub Releases; no es una publicación en Google Play. La firma persistente existente es un keystore debug dedicado a JBAE, guardado como `~/.android/debug.keystore`; no es una clave de publicación de Play Store. No se debe borrar el marcador `.github/jbae-android-signing-key-persisted`, eliminar la caché de firma ni generar otra clave para una actualización.
 
 ## Desarrollo local
 
@@ -62,9 +73,9 @@ El workflow falla de forma cerrada si ya existe el marcador de identidad y la ca
 
 - El perfil "Uso general" es un índice relativo de especificaciones comunes (RAM, almacenamiento, batería, resolución de cámara principal y peso); exige al menos tres dimensiones y 60% de cobertura. El procesador/GPU se muestra sin puntuar por nombre si no hay benchmarks comparables. Megapíxeles no equivalen a calidad fotográfica y mAh/Wh no equivalen directamente a horas de autonomía.
 - La revisión humana sigue siendo necesaria para promover datos `reported` a `verified` o `cross_checked`; el botón de guardado no verifica la exactitud de los proveedores.
-- Pruebas en emulador y teléfono físico: primera importación SQLite, cierre/reapertura, recuperación tras terminación del proceso y restauración de backup.
+- Pruebas en emulador y teléfono físico: primera importación SQLite, cierre/reapertura, recuperación tras terminación del proceso y restauración de backup. Las pruebas automatizadas del perfil usan el adaptador SQLite simulado y no sustituyen esta certificación física.
 - SQLCipher no está habilitado en esta fase.
 - PWA: shell, manifiesto, iconos y precarga offline de HTML, JS/CSS y recursos estáticos implementados para Pages. La vista previa web todavía usa memoria temporal y no conserva el estado de conocimiento después de recargar; eso es independiente de la caché del service worker.
 - Ampliar cobertura de FRAGRANCE a body mists, body sprays, aceites y lociones antes de afirmar que el dataset los cubre ampliamente.
 
-Los workflows actuales verifican pruebas automatizadas, compilación Android, identidad del paquete, versión, firma y publicación del APK. No certifican instalación real, comportamiento del actualizador ni persistencia después de reiniciar Android.
+Los workflows verifican pruebas automatizadas, compilación Android, identidad del paquete, versión, firma y que el APK publicado coincida byte por byte con el artefacto compilado. Eso no reemplaza la validación final en un teléfono real del instalador, SQLite nativo, el actualizador y la conservación de datos después de una actualización.
