@@ -49,3 +49,10 @@ if (result.decision === "matched") {
 ```
 
 The module is deterministic, offline-capable and read-only. It does not write to the catalog, change evidence status, call an AI provider or fetch new products.
+
+
+## Catalogue family normalization and multi-preference matching
+
+The matcher normalizes the Scento snapshot's source-family labels before overlap scoring. In particular, `Wood & Root` maps to `woody`, `Sunlit Citrus` to `citrus`, and the other source labels map to their corresponding canonical family aliases (floral, gourmand, spicy, green, fruity, amber, powdery, musky, leather, mineral and oud). `White Bloom` and `Petal Garden` intentionally share the broader `floral` family. This is vocabulary normalization, not a claim that every perfume in a broad family smells identical.
+
+Customers may supply multiple values in `preferredFamilies` and `preferredNotes`. Overlap is calculated across all selected values; an absent or partial note pyramid remains incomplete and is never treated as proof that an unlisted note is absent. The Android adviser merges selected family chips with explicitly recognized families in the customer's message and merges manually entered notes with notes parsed from the message.
