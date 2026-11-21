@@ -393,7 +393,7 @@ function renderFragranceCollectionContent(profile) {
             // Keep note editing in the collection section only to avoid duplicate form IDs.
             collectionItem: null,
           })).join("")}</div>`
-          : `<div class="empty-panel compact"><strong>${favorites.length ? "No hay favoritos que coincidan" : "Todavía no tienes favoritos"}</strong><p>${favorites.length ? "Prueba con otro nombre, casa o familia." : "Abre una ficha y marca la estrella para guardar tus perfumes preferidos."}</p></div>`}
+          : `<div class="empty-panel compact"><strong>${favoritesCount ? "No hay favoritos que coincidan" : "Todavía no tienes favoritos"}</strong><p>${favoritesCount ? "Prueba con otro nombre, casa o familia." : "Abre una ficha y marca la estrella para guardar tus perfumes preferidos."}</p></div>`}
       </section>` : ""}
     ${showCollection ? `
       <section class="collection-section">
@@ -404,7 +404,7 @@ function renderFragranceCollectionContent(profile) {
             favorite: (profile?.favorites ?? []).includes(entry.product.id),
             comparisonSelected: selectedIds.has(entry.product.id),
           })).join("")}</div>`
-          : `<div class="empty-panel compact"><strong>${collection.length ? "No hay perfumes en este filtro" : "Tu colección está vacía"}</strong><p>${collection.length ? "Cambia el estado o la búsqueda para ver otros perfumes." : "Desde cualquier ficha puedes añadir un perfume como “Por probar”, “Lo tengo” o “Ya lo probé”."}</p></div>`}
+          : `<div class="empty-panel compact"><strong>${collectionCount ? "No hay perfumes en este filtro" : "Tu colección está vacía"}</strong><p>${collectionCount ? "Cambia el estado o la búsqueda para ver otros perfumes." : "Desde cualquier ficha puedes añadir un perfume como “Por probar”, “Lo tengo” o “Ya lo probé”."}</p></div>`}
       </section>` : ""}
     ${state.comparisonSelection.length >= 4 ? '<p class="field-hint">Has alcanzado el máximo de cuatro perfumes para comparar. Quita uno para seleccionar otro.</p>' : ""}`;
 }
@@ -421,7 +421,7 @@ function renderFragranceCollection() {
       <h2>Tu colección, a tu manera.</h2>
       <p>Guarda perfumes que quieres probar, que ya tienes o que ya conoces. Los favoritos son independientes del estado de colección. Puedes anotar impresiones privadas y comparar tus selecciones.</p>
       <div class="collection-stats">
-        <div><strong>${collectionCount}</strong><small>En colección</small></div>
+        <div><strong>${collection.length}</strong><small>En colección</small></div>
         <div><strong>${wishlistCount}</strong><small>Por probar</small></div>
         <div><strong>${ownedCount}</strong><small>En posesión</small></div>
         <div><strong>${sampledCount}</strong><small>Probados</small></div>
