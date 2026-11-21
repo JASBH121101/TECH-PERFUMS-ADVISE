@@ -10,10 +10,8 @@ function uniqueStrings(values) {
 function collectSignals(profile, products) {
   const productMap = new Map(products.map(product => [product.id, product]));
   const votes = {
-    preferredFamilies: new Map(),
-    avoidFamilies: new Map(),
-    preferredNotes: new Map(),
-    avoidNotes: new Map(),
+    families: { positive: new Map(), negative: new Map() },
+    notes: { positive: new Map(), negative: new Map() },
   };
   const addVote = (map, value, productId) => {
     if (!value) return;
@@ -25,7 +23,7 @@ function collectSignals(profile, products) {
     if (item.rating === 3) continue;
     const product = productMap.get(item.productId);
     if (!product) continue;
-    const positive = item.rating >= 4;
+    const sentiment = item.rating >= 4 ? "positive" : "negative";
     const attributes = product.attributes ?? {};
     const families = uniqueStrings(attributes.scentFamilies ?? []);
     const notes = uniqueStrings([
@@ -34,20 +32,28 @@ function collectSignals(profile, products) {
       ...(attributes.middleNotes ?? []),
       ...(attributes.baseNotes ?? []),
     ]);
-    for (const family of families) {
-      addVote(votes[positive ? "preferredFamilies" : "avoidFamilies"], family, product.id);
-    }
-    for (const note of notes) {
-      addVote(votes[positive ? "preferredNotes" : "avoidNotes"], note, product.id);
-    }
+    for (const family of families) addVote(votes.families[sentiment], family, product.id);
+    for (const note of notes) addVote(votes.notes[sentiment], note, product.id);
   }
-  const learned = {};
-  for (const [field, entries] of Object.entries(votes)) {
-    learned[field] = [...entries]
-      .filter(([, productIds]) => productIds.size >= 2)
-      .map(([value]) => value);
-  }
-  return Object.freeze(learned);
+  const resolve = group => {
+    const values = new Set([...group.positive.keys(), ...group.negative.keys()]);
+    const preferred = [], avoided = [];
+    for (const value of values) {
+      const positive = group.positive.get(value)?.size ?? 0;
+      const negative = group.negative.get(value)?.size ?? 0;
+      if (positive >= 2 && positive > negative) preferred.push(value);
+      else if (negative >= 2 && negative > positive) avoided.push(value);
+    }
+    return { preferred, avoided };
+  };
+  const families = resolve(votes.families);
+  const notes = resolve(votes.notes);
+  return Object.freeze({
+    preferredFamilies: Object.freeze(families.preferred),
+    avoidFamilies: Object.freeze(families.avoided),
+    preferredNotes: Object.freeze(notes.preferred),
+    avoidNotes: Object.freeze(notes.avoided),
+  });
 }
 
 function parseSelectedNotes(value) {
