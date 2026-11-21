@@ -7,6 +7,7 @@ on:
       - feature/jb-advisor-engine
       - feature/jbae-standalone-android-app
       - feature/jbae-olfactory-profile
+      - feature/jbae-fragrance-collection
   pull_request:
     branches:
       - main
