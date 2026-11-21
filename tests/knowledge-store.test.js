@@ -354,3 +354,48 @@ test("profile feedback rejects unknown products and invalid ratings without chan
   );
   assert.equal(store.getFragranceProfile().feedback.length, 0);
 });
+
+
+test("updates the existing product rating instead of creating duplicate feedback votes", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  await store.addProduct({
+    id: "fragrance-rating-update",
+    domain: "fragrance",
+    name: "Rating Update",
+    brand: "Example House",
+    productType: "perfume",
+    attributes: { scentFamilies: ["Wood & Root"] },
+    evidenceIds: {},
+  });
+  await store.recordFragranceFeedback({ productId: "fragrance-rating-update", rating: 5 });
+  const firstId = store.getFragranceProfile().feedback[0].id;
+  await store.recordFragranceFeedback({ productId: "fragrance-rating-update", rating: 1 });
+  const feedback = store.getFragranceProfile().feedback;
+  assert.equal(feedback.length, 1);
+  assert.equal(feedback[0].id, firstId);
+  assert.equal(feedback[0].rating, 1);
+});
+
+test("does not record feedback against an unknown local profile ID", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  await store.addProduct({
+    id: "fragrance-profile-scope",
+    domain: "fragrance",
+    name: "Profile Scope",
+    brand: "Example House",
+    productType: "perfume",
+    attributes: {},
+    evidenceIds: {},
+  });
+  await assert.rejects(
+    () => store.recordFragranceFeedback({
+      profileId: "missing-profile",
+      productId: "fragrance-profile-scope",
+      rating: 5,
+    }),
+    /Unknown local fragrance profile ID/,
+  );
+  assert.equal(store.getFragranceProfile().feedback.length, 0);
+});
