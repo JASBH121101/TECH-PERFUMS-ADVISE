@@ -37,11 +37,11 @@ La distribución es descarga directa desde GitHub Releases; no es una publicaci�
 
 **Transición de firma (21-11-2026):** GitHub ya no conserva la caché de la clave histórica. Se autorizó reemplazarla. La última Release pública sigue siendo `jbae-v0.4.83`, firmada con el certificado anterior; todavía no se ha generado ni publicado un APK con la nueva identidad.
 
-Para crear la nueva identidad en Windows, ejecutá `scripts/create-android-signing-key.ps1` desde PowerShell. El script crea `%USERPROFILE%\JBAE-signing-backup\jbae-release.p12`, alias `jbae-release-2026`, RSA 3072 y vigencia de 10,000 días. Después guarda estos secretos en GitHub → Settings → Secrets and variables → Actions:
+La nueva identidad ya fue generada y validada como PKCS#12 con alias `jbae-release-2026`, RSA 3072 y vigencia de 10,000 días. Huella pública SHA-256: `4A0CD130AF30B9D6EEE5FF1D10F725E5B3DAB26199622782ACE243F980052CC1`. El archivo privado se entrega fuera del repositorio; no está incluido en Git. Para activar el workflow, guardar estos secretos en GitHub → Settings → Secrets and variables → Actions:
 - `JBAE_ANDROID_KEYSTORE_PASSWORD`
 - `JBAE_ANDROID_SIGNING_KEYSTORE_BASE64`
 
-El workflow valida el keystore PKCS#12, comprueba que la huella del APK coincida con la huella derivada de la clave protegida y utiliza los secretos en cada compilación. No depende de una caché de Actions. No compartas el archivo .p12, la cadena Base64 ni la contraseña por chat, issues o commits. Conservá una copia cifrada adicional del .p12 fuera del repositorio.
+El workflow valida el keystore PKCS#12, comprueba que la huella del APK coincida con la huella derivada de la clave protegida y utiliza los secretos en cada compilación. No depende de una caché de Actions. Los secretos todavía no se han configurado en GitHub; por eso aún no se ha publicado un APK con esta identidad. No compartas el archivo .p12, la cadena Base64 ni la contraseña por chat, issues o commits. Conservá una copia cifrada adicional del .p12 fuera del repositorio.
 
 ## Desarrollo local
 
