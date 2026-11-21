@@ -1,7 +1,7 @@
 # JBAE — Bloque 8: certificación y distribución Android
 
 **Rama:** `feature/jbae-android-certification`  
-**Base:** `feature/jbae-integration-audit`  
+**Base:** `feature/jbae-standalone-android-app`  
 **Punto de partida:** PR #6 / commit `2d345f0f95c53635f755a4140fa2f400ef66df94`  
 **Versión ya publicada antes del bloque:** `0.4.83`, `versionCode=83`, tag `jbae-v0.4.83`.
 
@@ -75,19 +75,28 @@ El run #85 se detuvo antes de Gradle y antes de firmar porque GitHub informó `C
 
 El usuario autorizó crear una identidad de firma nueva el 21-11-2026. La nueva firma no puede actualizar directamente la instalación histórica porque Android requiere que una actualización mantenga el certificado del paquete instalado. La transición requiere desinstalar la versión anterior y aceptar la eliminación de sus datos privados locales. La nueva firma conservará el mismo Application ID; una vez instalada limpiamente, las siguientes actualizaciones podrán instalarse encima con la nueva identidad.
 
-### Generación y custodia de la nueva identidad
+### Generación, configuración y custodia de la nueva identidad
 
-1. Ejecutar en Windows `apps/mobile/scripts/create-android-signing-key.ps1` desde PowerShell.
-2. El script genera un keystore PKCS#12 local en `%USERPROFILE%\JBAE-signing-backup\jbae-release.p12`, alias `jbae-release-2026`, clave RSA de 3072 bits y vigencia de 10,000 días.
-3. Guardar en GitHub → Settings → Secrets and variables → Actions:
-   - `JBAE_ANDROID_KEYSTORE_PASSWORD`
-   - `JBAE_ANDROID_SIGNING_KEYSTORE_BASE64`
-5. Conservar una copia cifrada adicional del keystore fuera del repositorio. Nunca subir el archivo .p12, Base64 ni contraseñas a commits, issues o chats.
-6. El workflow reconstruye el archivo en el runner, verifica tipo PKCS#12, alias y contraseña, calcula la huella pública SHA-256 y exige que coincida con la huella del APK firmado.
+La identidad se generó fuera del repositorio y se validó como PKCS#12 con alias `jbae-release-2026`, RSA de 3072 bits y vigencia de 10,000 días. Huella pública SHA-256:
 
-El workflow ya no utiliza la antigua caché de firma ni el marcador de identidad histórica. Cada compilación depende de los secretos protegidos; si faltan o no coinciden, debe detenerse antes de publicar.
+`4A0CD130AF30B9D6EEE5FF1D10F725E5B3DAB26199622782ACE243F980052CC1`
 
-La Release `jbae-v0.4.83` permanece como APK histórico firmado con la huella anterior. La nueva clave ya está generada y su huella está registrada, pero la transición no está completa hasta que se configuren ambos secretos, el workflow produzca y verifique un APK nuevo y se complete la instalación limpia en un teléfono. No se afirma todavía que exista un APK con la nueva firma.
+Los secretos protegidos `JBAE_ANDROID_KEYSTORE_PASSWORD` y `JBAE_ANDROID_SIGNING_KEYSTORE_BASE64` quedaron configurados en el repositorio. La ejecución Android #86 los reconstruyó y validó correctamente; sus valores no se registran en el repositorio ni en los logs.
+
+### Resultado de publicación — 21-11-2026
+
+- Release: [`jbae-v0.4.86`](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/tag/jbae-v0.4.86).
+- APK: [`JBAE.apk`](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/download/jbae-v0.4.86/JBAE.apk).
+- Versión: `0.4.86`; `versionCode=86`.
+- Tamaño del asset: 12,911,588 bytes.
+- Workflow Android #44933553687: éxito.
+- CI del mismo commit #44933553652: éxito.
+- Pruebas móviles y del motor: éxito.
+- Keystore PKCS#12, alias y contraseña: validados.
+- `assembleRelease`, firma, huella SHA-256, Application ID y versión: verificados.
+- Asset de GitHub Releases descargado y comparado byte por byte con el APK compilado: coincidencia.
+
+La Release histórica `jbae-v0.4.83` permanece disponible con el certificado anterior. La nueva firma no puede instalarse encima de esa instalación: Android exige una instalación limpia y la desinstalación elimina los datos privados locales, incluida SQLite. No desinstalar la aplicación histórica sin aceptar esa pérdida y sin respaldar previamente cualquier dato necesario.
 
 ## 6. Verificación que puede hacer CI y lo que todavía exige teléfono
 
@@ -114,7 +123,7 @@ Un test sobre `MemoryKnowledgeAdapter` o un build APK exitoso no prueba el compo
 
 ## 7. Checklist de prueba del usuario en Android
 
-Al disponer del APK release:
+APK disponible: [JBAE v0.4.86](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/download/jbae-v0.4.86/JBAE.apk). La validación automática de CI y publicación ya está aprobada; esta lista es exclusivamente la certificación física pendiente:
 
 - [ ] Registrar marca/modelo del teléfono y versión Android.
 - [ ] Instalar JBAE sin una copia anterior, abrir y esperar a que cargue la biblioteca.
@@ -134,6 +143,8 @@ Registrar versión, `versionCode`, teléfono, versión Android, paso y resultado
 
 ## 8. Criterio de salida del Bloque 8
 
-El pipeline de validación del código integrado está aprobado. La difusión del APK nuevo queda pendiente de generar la identidad nueva en el equipo local, configurar ambos secretos, verificar el certificado y publicar correctamente. Solo queda aprobada cuando el APK firmado pase CI y el asset publicado se valide byte por byte. La certificación final de producto Android se cierra solo cuando todos los puntos de la sección 6 se hayan ejecutado sin pérdida de datos ni error de instalación/actualización.
+**Aprobado en CI y distribución:** el workflow Android #86 compiló y firmó el APK con la nueva identidad, verificó la huella del certificado, el Application ID, la versión y la firma, publicó `jbae-v0.4.86` y confirmó la igualdad byte por byte del asset publicado. El CI #458 del mismo commit también terminó con éxito.
 
-No se debe afirmar certificación física si el usuario todavía no ha ejecutado esas pruebas. No fusionar la cadena a `main` como atajo para fabricar un resultado de certificación.
+**Pendiente para cierre físico:** instalar y probar el APK en un teléfono real, verificar importación/persistencia SQLite, reapertura, reinicio, funcionamiento offline y flujo del actualizador. La transición desde la versión histórica exige instalación limpia y pérdida de los datos locales anteriores; no debe iniciarse sin aceptar esa consecuencia.
+
+El PR #7 permanece abierto en Draft y no se ha fusionado. `main` sigue intacta. No se debe afirmar certificación física hasta completar los puntos de la sección 6.
