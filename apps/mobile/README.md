@@ -37,7 +37,7 @@ La distribución es descarga directa desde GitHub Releases; no es una publicaci�
 
 **Transición de firma (21-11-2026):** GitHub ya no conserva la caché de la clave histórica. Se autorizó reemplazarla. La última Release pública sigue siendo `jbae-v0.4.83`, firmada con el certificado anterior; todavía no se ha generado ni publicado un APK con la nueva identidad.
 
-Para crear la nueva identidad en Windows, ejecutá `scripts/create-android-signing-key.ps1` desde PowerShell. El script crea `%USERPROFILE%\\JBAE-signing-backup\\jbae-release.p12`, alias `jbae-release-2026`, RSA 3072 y vigencia de 10,000 días. Después guarda estos secretos en GitHub → Settings → Secrets and variables → Actions:
+Para crear la nueva identidad en Windows, ejecutá `scripts/create-android-signing-key.ps1` desde PowerShell. El script crea `%USERPROFILE%\JBAE-signing-backup\jbae-release.p12`, alias `jbae-release-2026`, RSA 3072 y vigencia de 10,000 días. Después guarda estos secretos en GitHub → Settings → Secrets and variables → Actions:
 - `JBAE_ANDROID_KEYSTORE_PASSWORD`
 - `JBAE_ANDROID_SIGNING_KEYSTORE_BASE64`
 
