@@ -246,7 +246,7 @@ test("migrates version one evidence snapshots through to version three with an e
     },
     evidence: { schemaVersion: 1, records: [] },
   }, { clock: fixedClock });
-  assert.equal(migrated.schemaVersion, 2);
+  assert.equal(migrated.schemaVersion, 3);
   assert.deepEqual(migrated.catalog.products, []);
   assert.equal(migrated.profiles.items[0].id, "local-default");
 });
