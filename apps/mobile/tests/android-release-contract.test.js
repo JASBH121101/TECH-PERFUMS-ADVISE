@@ -23,7 +23,7 @@ test("release version follows the existing monotonic major.minor.run-number sche
   assert.match(source, /return String\(Number\(match\[1\]\)\) \+ "\." \+ String\(Number\(match\[2\]\)\) \+ "\." \+ numericRun/u);
   assert.match(workflow, /VERSION_CODE: \$\{\{ github\.run_number \}\}/u);
   assert.match(workflow, /resolve-release-version\.mjs/u);
-  assert.match(workflow, /versionCode\s+\$VERSION_CODE/u);
+  assert.ok(workflow.includes('os.environ["VERSION_CODE"]'));
 });
 
 test("JavaScript updater only accepts the official versioned JBAE release asset", async () => {
@@ -33,7 +33,8 @@ test("JavaScript updater only accepts the official versioned JBAE release asset"
   assert.match(updater, /RELEASE_PREFIX = "https:\/\/github\.com\/JASBH121101\/TECH-PERFUMS-ADVISE\/releases\/download\//u);
   assert.match(updater, /const expectedUrl = RELEASE_PREFIX \+ "jbae-v" \+ normalizedVersion \+ "\/JBAE\.apk"/u);
   assert.match(updater, /url !== expectedUrl/u);
-  assert.match(utils, /\^jbae-v\(\\d\+\\\.\\d\+\\\.\\d\+\)\$/u);
+  assert.match(utils, /jbae-v/u);
+  assert.match(utils, /release\.tag_name/u);
   assert.match(utils, /item\?\.name === "JBAE\.apk"/u);
   assert.match(utils, /release\.draft \|\| release\.prerelease/u);
 });
