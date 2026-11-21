@@ -130,6 +130,8 @@ const snapshot = (id = "ev-1") => ({
       maxProjection: null,
       maxSillage: null,
       feedback: [],
+      favorites: [],
+      collection: [],
       createdAt: "2026-11-07T18:00:00.000Z",
       updatedAt: "2026-11-07T18:00:00.000Z",
     }],
