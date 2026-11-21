@@ -88,18 +88,18 @@ jobs:
           echo "Verified native system-bar insets handler in $MAIN_ACTIVITY"
       - name: Restore JBAE signing identity from protected repository secrets
         env:
-          JBAE_ANDROID_SIGNING_KEYSTORE_BASE64: \${{ secrets.JBAE_ANDROID_SIGNING_KEYSTORE_BASE64 }}
-          JBAE_ANDROID_KEYSTORE_PASSWORD: \${{ secrets.JBAE_ANDROID_KEYSTORE_PASSWORD }}
+          JBAE_ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.JBAE_ANDROID_SIGNING_KEYSTORE_BASE64 }}
+          JBAE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.JBAE_ANDROID_KEYSTORE_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
           KEYSTORE="$HOME/.android/jbae-release.p12"
           KEY_ALIAS="jbae-release-2026"
-          if [ -z "\${JBAE_ANDROID_SIGNING_KEYSTORE_BASE64:-}" ]; then
+          if [ -z "${JBAE_ANDROID_SIGNING_KEYSTORE_BASE64:-}" ]; then
             echo "::error::Missing repository secret JBAE_ANDROID_SIGNING_KEYSTORE_BASE64."
             exit 1
           fi
-          if [ -z "\${JBAE_ANDROID_KEYSTORE_PASSWORD:-}" ]; then
+          if [ -z "${JBAE_ANDROID_KEYSTORE_PASSWORD:-}" ]; then
             echo "::error::Missing repository secret JBAE_ANDROID_KEYSTORE_PASSWORD."
             exit 1
           fi
@@ -174,8 +174,8 @@ jobs:
           ./gradlew assembleRelease --no-daemon
       - name: Verify APK signature, certificate fingerprint and package
         env:
-          APP_VERSION: \${{ steps.release-version.outputs.app_version }}
-          VERSION_CODE: \${{ env.VERSION_CODE }}
+          APP_VERSION: ${{ steps.release-version.outputs.app_version }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
         shell: bash
         run: |
           set -euo pipefail
