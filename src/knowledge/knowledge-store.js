@@ -168,13 +168,19 @@ export class KnowledgeStore {
       const timestamp = nowIso(this.#clock);
       const defaults = createDefaultFragranceProfile({ clock: () => timestamp });
       const current = existing ?? defaults;
+      if (!existing && profileId !== "local-default") {
+        throw new Error("Unknown local fragrance profile ID");
+      }
+      const previous = current.feedback.find(item => item.productId === productId);
       const record = Object.freeze({
-        id: `${timestamp}:${productId}:${current.feedback.length + 1}`,
+        id: previous?.id ?? `${timestamp}:${productId}:${current.feedback.length + 1}`,
         productId,
         rating,
         createdAt: timestamp,
       });
-      const feedback = [...current.feedback, record].slice(-500);
+      const feedback = previous
+        ? current.feedback.map(item => item.productId === productId ? record : item)
+        : [...current.feedback, record].slice(-500);
       const candidate = {
         ...current,
         feedback,
