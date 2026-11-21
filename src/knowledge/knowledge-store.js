@@ -157,12 +157,12 @@ export class KnowledgeStore {
   }
   recordFragranceFeedback({ profileId = "local-default", productId, rating } = {}) {
     return this.#exclusive(async () => {
+      if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+        throw new TypeError("Fragrance feedback rating must be an integer from 1 to 5");
+      }
       if (typeof productId !== "string" || !this.#snapshot.catalog.products.some(product =>
         product.id === productId && product.domain === DOMAINS.FRAGRANCE)) {
         throw new Error("Feedback can only be recorded for a fragrance in the local catalog");
-      }
-      if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-        throw new TypeError("Fragrance feedback rating must be an integer from 1 to 5");
       }
       const existing = this.getFragranceProfile(profileId);
       const timestamp = nowIso(this.#clock);
