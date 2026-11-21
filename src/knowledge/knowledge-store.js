@@ -234,7 +234,7 @@ export class KnowledgeStore {
     });
   }
   saveFragranceCollectionItem({
-    profileId = "local-default", productId, status = "wishlist", note = null,
+    profileId = "local-default", productId, status = "wishlist", note,
   } = {}) {
     return this.#exclusive(async () => {
       if (typeof productId !== "string" || !this.#snapshot.catalog.products.some(product =>
