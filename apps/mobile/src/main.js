@@ -7,6 +7,8 @@ import { initializeUpdateManager } from "./update-manager.js";
 import { searchProducts } from "./search.js";
 import { searchTechnologyCatalog } from "./technology-catalog-search.js";
 import { buildFragranceAdvice } from "./personalization.js";
+import { filterFragranceCollection, setComparisonSelection } from "./collection-flows.js";
+import { createRequestGuard } from "./request-guard.js";
 import {
   lookupTechnology,
   slugifyTechnologyModel,
@@ -25,6 +27,8 @@ import {
 const app = document.querySelector("#app");
 const nav = document.querySelector("#bottom-nav");
 const runtimeLabel = document.querySelector("#runtime-label");
+const techLookupGuard = createRequestGuard();
+const techComparisonGuard = createRequestGuard();
 
 const FRAGRANCE_FAMILY_OPTIONS = Object.freeze([
   { value: "woody", label: "Amaderada" },
@@ -358,24 +362,15 @@ function renderManagedFragranceCard(product, {
 
 function renderFragranceCollectionContent(profile) {
   const productMap = new Map(state.products.map(product => [product.id, product]));
-  const collection = (profile?.collection ?? [])
-    .map(item => ({ item, product: productMap.get(item.productId) }))
-    .filter(entry => entry.product);
-  const favorites = (profile?.favorites ?? [])
-    .map(id => productMap.get(id))
-    .filter(Boolean);
-  const query = state.collectionSearch.trim().toLocaleLowerCase();
-  const matchesQuery = product => !query || [
-    product.name,
-    product.brand,
-    product.attributes.primaryScentFamily,
-    ...(product.attributes.scentFamilies ?? []),
-  ].filter(Boolean).join(" ").toLocaleLowerCase().includes(query);
-  const visibleFavorites = favorites.filter(matchesQuery);
-  const visibleCollection = collection.filter(entry =>
-    matchesQuery(entry.product) &&
-    (state.collectionFilter === "all" || state.collectionFilter === "favorites" ||
-      entry.item.status === state.collectionFilter));
+  const { favorites: visibleFavorites, collection: visibleCollection } = filterFragranceCollection({
+    products: state.products,
+    collection: profile?.collection ?? [],
+    favorites: profile?.favorites ?? [],
+    query: state.collectionSearch,
+    status: state.collectionFilter,
+  });
+  const favoritesCount = (profile?.favorites ?? []).length;
+  const collectionCount = (profile?.collection ?? []).length;
   const selectedIds = new Set(state.comparisonSelection);
   const selectedCount = state.comparisonSelection.filter(id => productMap.has(id)).length;
   const showFavorites = state.collectionFilter === "all" || state.collectionFilter === "favorites";
@@ -390,7 +385,7 @@ function renderFragranceCollectionContent(profile) {
     </section>
     ${showFavorites ? `
       <section class="collection-section">
-        <div class="result-section-title"><strong>Mis favoritos</strong><small>${visibleFavorites.length} / ${favorites.length}</small></div>
+        <div class="result-section-title"><strong>Mis favoritos</strong><small>${visibleFavorites.length} / ${favoritesCount}</small></div>
         ${visibleFavorites.length
           ? `<div class="collection-list">${visibleFavorites.map(product => renderManagedFragranceCard(product, {
             favorite: true,
@@ -402,7 +397,7 @@ function renderFragranceCollectionContent(profile) {
       </section>` : ""}
     ${showCollection ? `
       <section class="collection-section">
-        <div class="result-section-title"><strong>${state.collectionFilter === "all" ? "Mi colección" : "Resultados filtrados"}</strong><small>${visibleCollection.length} / ${collection.length}</small></div>
+        <div class="result-section-title"><strong>${state.collectionFilter === "all" ? "Mi colección" : "Resultados filtrados"}</strong><small>${visibleCollection.length} / ${collectionCount}</small></div>
         ${visibleCollection.length
           ? `<div class="collection-list">${visibleCollection.map(entry => renderManagedFragranceCard(entry.product, {
             collectionItem: entry.item,
@@ -426,7 +421,7 @@ function renderFragranceCollection() {
       <h2>Tu colección, a tu manera.</h2>
       <p>Guarda perfumes que quieres probar, que ya tienes o que ya conoces. Los favoritos son independientes del estado de colección. Puedes anotar impresiones privadas y comparar tus selecciones.</p>
       <div class="collection-stats">
-        <div><strong>${collection.length}</strong><small>En colección</small></div>
+        <div><strong>${collectionCount}</strong><small>En colección</small></div>
         <div><strong>${wishlistCount}</strong><small>Por probar</small></div>
         <div><strong>${ownedCount}</strong><small>En posesión</small></div>
         <div><strong>${sampledCount}</strong><small>Probados</small></div>
@@ -723,17 +718,18 @@ function renderTechComparisonForm() {
     <label for="tech-compare-model-${i+1}">DISPOSITIVO ${i+1}${i<2?' <span class="required-marker" aria-label="requerido">*</span>':""}</label>
     <input id="tech-compare-model-${i+1}" autocomplete="off" autocapitalize="off" spellcheck="false"
       maxlength="120" role="combobox" aria-autocomplete="list" aria-expanded="false"
-      aria-controls="tech-compare-suggestions-${i}" value="${escapeHtml(model)}" ${i<2?"required":""}>
+      aria-controls="tech-compare-suggestions-${i}" value="${escapeHtml(model)}" ${i<2?"required":""}
+      ${state.techComparisonStatus === "loading" ? "disabled" : ""}>
     <div id="tech-compare-suggestions-${i}" class="technology-suggestions" role="listbox" aria-label="Modelos coincidentes"></div>
   </div>`).join("");
   const generalSelected=state.techCompareMetric==="general";
   return `<form id="tech-compare-form" class="tech-compare-form">
     <div class="form-heading"><strong>Comparar de 2 a 4 dispositivos</strong><p>Escribí el modelo y elegilo de la lista. JBAE consulta cada registro en las fuentes disponibles.</p></div>
-    <div class="field-group"><label for="tech-resource">CATEGORÍA</label><select id="tech-resource">
+    <div class="field-group"><label for="tech-resource">CATEGORÍA</label><select id="tech-resource" ${state.techComparisonStatus === "loading" ? "disabled" : ""}>
       <option value="smartphones" ${state.techResource==="smartphones"?"selected":""}>Celulares</option><option value="tablets" ${state.techResource==="tablets"?"selected":""}>Tablets</option><option value="laptops" ${state.techResource==="laptops"?"selected":""}>Laptops</option><option value="watches" ${state.techResource==="watches"?"selected":""}>Smartwatches</option><option value="monitors" ${state.techResource==="monitors"?"selected":""}>Monitores</option>
     </select></div>
     <div class="tech-compare-inputs">${inputs}</div>
-    <div class="field-group"><label for="tech-compare-metric">PERFIL DE ANÁLISIS</label><select id="tech-compare-metric">
+    <div class="field-group"><label for="tech-compare-metric">PERFIL DE ANÁLISIS</label><select id="tech-compare-metric" ${state.techComparisonStatus === "loading" ? "disabled" : ""}>
       ${profileOptions.join("")}<optgroup label="Análisis por característica">${metricOptions.join("")}</optgroup>
     </select><span class="field-hint">${generalSelected
       ?"Uso general pondera memoria, almacenamiento, batería, cámara y portabilidad. El procesador y la GPU se muestran, pero solo se puntúan con pruebas comparables."
@@ -783,8 +779,8 @@ function renderTechComparisonResults() {
 function renderTech() {
   const tabs=`<div class="mode-tabs" role="tablist" aria-label="Herramientas TECH"><button type="button" class="mode-tab ${state.techMode==="lookup"?"active":""}" data-action="tech-mode" data-mode="lookup" role="tab" aria-selected="${state.techMode==="lookup"}">Buscar ficha</button><button type="button" class="mode-tab ${state.techMode==="compare"?"active":""}" data-action="tech-mode" data-mode="compare" role="tab" aria-selected="${state.techMode==="compare"}">Comparar equipos</button></div>`;
   const lookupForm=`<form id="tech-lookup-form" class="tech-lookup-form"><div class="form-heading"><strong>Buscar una ficha técnica</strong><p>Escribí el modelo y seleccioná una coincidencia del catálogo.</p></div>
-    <div class="field-group tech-device-field"><label for="tech-model">MODELO O NOMBRE DEL DISPOSITIVO</label><input id="tech-model" name="model" autocomplete="off" autocapitalize="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tech-model-suggestions" value="${escapeHtml(state.techModel)}"><div id="tech-model-suggestions" class="technology-suggestions" role="listbox" aria-label="Modelos coincidentes"></div></div>
-    <div class="field-group"><label for="tech-resource">CATEGORÍA</label><select id="tech-resource"><option value="smartphones" ${state.techResource==="smartphones"?"selected":""}>Celular / smartphone</option><option value="tablets" ${state.techResource==="tablets"?"selected":""}>Tablet</option><option value="laptops" ${state.techResource==="laptops"?"selected":""}>Laptop</option><option value="watches" ${state.techResource==="watches"?"selected":""}>Smartwatch</option><option value="monitors" ${state.techResource==="monitors"?"selected":""}>Monitor</option></select></div>
+    <div class="field-group tech-device-field"><label for="tech-model">MODELO O NOMBRE DEL DISPOSITIVO</label><input id="tech-model" name="model" autocomplete="off" autocapitalize="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tech-model-suggestions" value="${escapeHtml(state.techModel)}" ${state.techLookupStatus === "loading" ? "disabled" : ""}><div id="tech-model-suggestions" class="technology-suggestions" role="listbox" aria-label="Modelos coincidentes"></div></div>
+    <div class="field-group"><label for="tech-resource">CATEGORÍA</label><select id="tech-resource" ${state.techLookupStatus === "loading" ? "disabled" : ""}><option value="smartphones" ${state.techResource==="smartphones"?"selected":""}>Celular / smartphone</option><option value="tablets" ${state.techResource==="tablets"?"selected":""}>Tablet</option><option value="laptops" ${state.techResource==="laptops"?"selected":""}>Laptop</option><option value="watches" ${state.techResource==="watches"?"selected":""}>Smartwatch</option><option value="monitors" ${state.techResource==="monitors"?"selected":""}>Monitor</option></select></div>
     <button class="primary-action tech-action" type="submit" ${state.techLookupStatus==="loading"?"disabled":""}>Consultar especificaciones <span>↗</span></button></form>
     ${state.techLookupStatus==="loading"?'<div class="loading-inline">Consultando fuentes públicas...</div>':renderTechResults()}
     <div class="result-disclaimer">Los resultados son candidatos pendientes de revisión. No se guardan automáticamente.</div>`;
@@ -866,6 +862,10 @@ function renderFragranceSearchResults() {
 }
 
 function navigate(route) {
+  techLookupGuard.invalidate();
+  techComparisonGuard.invalidate();
+  if (state.techLookupStatus === "loading") state.techLookupStatus = "idle";
+  if (state.techComparisonStatus === "loading") state.techComparisonStatus = "idle";
   state.route = route;
   state.detailsId = null;
   state.searchQuery = "";
@@ -891,6 +891,8 @@ app.addEventListener("click", async event => {
   if (!actionButton) return;
 
   if (actionButton.dataset.action === "select-tech-lookup-model") {
+    techLookupGuard.invalidate();
+    state.techLookupStatus = "idle";
     const item = { name: actionButton.dataset.name, slug: actionButton.dataset.slug, resource: actionButton.dataset.resource };
     state.techLookupSuggestionToken += 1;
     state.techLookupSelection = item;
@@ -903,6 +905,9 @@ app.addEventListener("click", async event => {
     document.querySelector("#tech-model-suggestions").innerHTML = "";
     document.querySelector("#tech-model").setAttribute("aria-expanded", "false");
   } else if (actionButton.dataset.action === "select-tech-compare-model") {
+    techComparisonGuard.invalidate();
+    state.techComparisonStatus = "idle";
+    state.techComparisonResult = null;
     const index = Number(actionButton.dataset.index);
     if (!Number.isInteger(index) || index < 0 || index > 3) return;
     const item = { name: actionButton.dataset.name, slug: actionButton.dataset.slug, resource: actionButton.dataset.resource };
@@ -938,7 +943,13 @@ app.addEventListener("click", async event => {
     }
     render();
   } else if (actionButton.dataset.action === "tech-mode") {
-    state.techMode=actionButton.dataset.mode; state.techComparisonStatus="idle"; state.techComparisonResult=null; render();
+    techLookupGuard.invalidate();
+    techComparisonGuard.invalidate();
+    state.techMode = actionButton.dataset.mode;
+    state.techLookupStatus = "idle";
+    state.techComparisonStatus = "idle";
+    state.techComparisonResult = null;
+    render();
   } else if (actionButton.dataset.action === "fragrance-mode") {
     state.fragranceMode = actionButton.dataset.mode;
     state.searchQuery = "";
@@ -974,11 +985,10 @@ app.addEventListener("click", async event => {
     render();
   } else if (actionButton.dataset.action === "toggle-collection-compare") {
     const productId = decodeURIComponent(actionButton.dataset.id ?? "");
-    if (state.comparisonSelection.includes(productId)) {
-      state.comparisonSelection = state.comparisonSelection.filter(id => id !== productId);
-    } else if (state.comparisonSelection.length < 4) {
-      state.comparisonSelection = [...state.comparisonSelection, productId];
-    } else {
+    const selected = !state.comparisonSelection.includes(productId);
+    const result = setComparisonSelection(state.comparisonSelection, productId, selected);
+    state.comparisonSelection = [...result.selection];
+    if (result.reason === "limit_reached") {
       state.profileMessage = "La comparación admite un máximo de cuatro perfumes.";
     }
     state.comparisonResult = null;
@@ -1083,6 +1093,8 @@ app.addEventListener("input", event => {
     state.comparisonSearch = event.target.value;
     renderComparisonSearchResults();
   } else if (event.target.id === "tech-model") {
+    techLookupGuard.invalidate();
+    state.techLookupStatus = "idle";
     state.techModel = event.target.value;
     state.techLookupSelection = null;
     state.techSaveStatus = "idle";
@@ -1096,6 +1108,9 @@ app.addEventListener("input", event => {
       panel: document.querySelector("#tech-model-suggestions"),
     });
   } else if (event.target.id.startsWith("tech-compare-model-")) {
+    techComparisonGuard.invalidate();
+    state.techComparisonStatus = "idle";
+    state.techComparisonResult = null;
     const index = Number(event.target.id.split("-").at(-1)) - 1;
     if (index < 0 || index > 3) return;
     state.techCompareModels[index] = event.target.value;
@@ -1121,10 +1136,8 @@ app.addEventListener("change", event => {
   }
   if (event.target.matches('input[name="fragrance-compare-product"]')) {
     const productId = event.target.value;
-    const selected = new Set(state.comparisonSelection);
-    if (event.target.checked && selected.size < 4) selected.add(productId);
-    else selected.delete(productId);
-    state.comparisonSelection = [...selected];
+    const result = setComparisonSelection(state.comparisonSelection, productId, event.target.checked);
+    state.comparisonSelection = [...result.selection];
     state.comparisonResult = null;
     renderComparisonSelection();
     renderComparisonSearchResults();
@@ -1151,6 +1164,8 @@ app.addEventListener("change", event => {
     return;
   }
   if (event.target.id === "tech-resource") {
+    techLookupGuard.invalidate();
+    techComparisonGuard.invalidate();
     state.techResource = event.target.value;
     state.techModel = "";
     state.techLookupSelection = null;
@@ -1166,6 +1181,7 @@ app.addEventListener("change", event => {
     render();
   }
   if (event.target.id === "tech-compare-metric") {
+    techComparisonGuard.invalidate();
     state.techCompareMetric = event.target.value;
     state.techComparisonResult = null;
     state.techComparisonStatus = "idle";
@@ -1239,21 +1255,22 @@ app.addEventListener("submit", async event => {
   if (event.target.id === "tech-compare-form") {
     const selectedModels = state.techCompareSelections.filter(Boolean);
     const uniqueSlugs = selectedModels.map(item => item.slug);
-    state.techCompareModels = ["", "", "", ""];
-    state.techCompareSelections = [null, null, null, null];
     if (selectedModels.length < 2 || new Set(uniqueSlugs).size !== uniqueSlugs.length) {
       state.techComparisonStatus = "complete";
       state.techComparisonResult = { error: "Seleccioná al menos dos modelos de las sugerencias y no repitas dispositivos." };
       render();
       return;
     }
-    if (selectedModels.some(item => item.resource !== state.techResource)) {
+    const resource = state.techResource;
+    if (selectedModels.some(item => item.resource !== resource)) {
       state.techComparisonStatus = "complete";
       state.techComparisonResult = { error: "Los modelos seleccionados no pertenecen a la categoría elegida. Volvé a seleccionarlos." };
       render();
       return;
     }
-    state.techCompareMetric = document.querySelector("#tech-compare-metric")?.value ?? state.techCompareMetric;
+    const metric = document.querySelector("#tech-compare-metric")?.value ?? state.techCompareMetric;
+    state.techCompareMetric = metric;
+    const requestToken = techComparisonGuard.begin();
     state.techComparisonStatus = "loading";
     state.techComparisonResult = null;
     render();
@@ -1261,19 +1278,22 @@ app.addEventListener("submit", async event => {
       const lookups = await Promise.all(selectedModels.map(item => lookupTechnology({
         model: item.name,
         catalogSlug: item.slug,
-        resource: state.techResource,
+        resource,
         fields: TECHNOLOGY_COMPARISON_LOOKUP_FIELDS,
       })));
-      state.techComparisonResult = buildTechnologyComparison({
-        lookups,
-        resource: state.techResource,
-        metric: state.techCompareMetric,
-      });
-    } catch(error) {
+      const result = buildTechnologyComparison({ lookups, resource, metric });
+      if (!techComparisonGuard.isCurrent(requestToken) ||
+          state.route !== "tech" || state.techMode !== "compare" || state.techResource !== resource) return;
+      state.techComparisonResult = result;
+    } catch (error) {
+      if (!techComparisonGuard.isCurrent(requestToken) ||
+          state.route !== "tech" || state.techMode !== "compare" || state.techResource !== resource) return;
       state.techComparisonResult = {
         error: error instanceof Error ? error.message : "No se pudo completar la comparación.",
       };
     }
+    if (!techComparisonGuard.isCurrent(requestToken) ||
+        state.route !== "tech" || state.techMode !== "compare" || state.techResource !== resource) return;
     state.techComparisonStatus = "complete";
     render();
     return;
@@ -1287,12 +1307,14 @@ app.addEventListener("submit", async event => {
       render();
       return;
     }
-    if (selected.resource !== state.techResource) {
+    const resource = state.techResource;
+    if (selected.resource !== resource) {
       state.techLookupStatus = "complete";
       state.techLookupResult = { error: "El modelo seleccionado no corresponde a la categoría elegida." };
       render();
       return;
     }
+    const requestToken = techLookupGuard.begin();
     state.techModel = selected.name;
     state.techLookupStatus = "loading";
     state.techLookupResult = null;
@@ -1301,22 +1323,33 @@ app.addEventListener("submit", async event => {
     state.techSavedProductId = null;
     render();
     try {
-      state.techLookupResult = await lookupTechnology({
+      const result = await lookupTechnology({
         model: selected.name,
         catalogSlug: selected.slug,
-        resource: state.techResource,
+        resource,
       });
-    } catch(error) {
+      if (!techLookupGuard.isCurrent(requestToken) ||
+          state.route !== "tech" || state.techMode !== "lookup" ||
+          state.techResource !== resource || state.techModel.trim() !== selected.name) return;
+      state.techLookupResult = result;
+    } catch (error) {
+      if (!techLookupGuard.isCurrent(requestToken) ||
+          state.route !== "tech" || state.techMode !== "lookup" ||
+          state.techResource !== resource || state.techModel.trim() !== selected.name) return;
       state.techLookupResult = {
         model: selected.name,
         slug: selected.slug,
-        resource: state.techResource,
+        resource,
         error: error instanceof Error ? error.message : "No se pudo completar la consulta.",
         sources: [],
       };
     }
+    if (!techLookupGuard.isCurrent(requestToken) ||
+        state.route !== "tech" || state.techMode !== "lookup" ||
+        state.techResource !== resource || state.techModel.trim() !== selected.name) return;
     state.techLookupStatus = "complete";
     render();
+    return;
   }
 });
 
