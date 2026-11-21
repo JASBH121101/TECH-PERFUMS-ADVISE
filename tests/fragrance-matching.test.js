@@ -106,3 +106,63 @@ test("validates preference input, product identity and coverage threshold", () =
   assert.throws(() => matchFragrances({ products, preferences: { avoidNotes: "vanilla" } }), /array of non-empty strings/u);
   assert.throws(() => matchFragrances({ products: [products[0], products[0]] }), /unique/u);
 });
+
+
+test("normalizes the real Scento woody and citrus family labels as a combined preference", () => {
+  const combined = {
+    id: "scento-woody-citrus",
+    name: "Scento Woody Citrus",
+    domain: "fragrance",
+    productType: "perfume",
+    attributes: {
+      scentFamilies: ["Sunlit Citrus", "Wood & Root"],
+      allNotes: ["Bergamot", "Grapefruit", "Sandalwood"],
+    },
+  };
+  const result = matchFragrances({
+    products: [combined],
+    preferences: { preferredFamilies: ["amaderado", "cítrico"] },
+  });
+  assert.equal(result.decision, "matched");
+  assert.equal(result.ranking[0].eligibility, "eligible");
+  assert.equal(result.ranking[0].score, 100);
+  assert.ok(result.ranking[0].matchedCriteria.includes("scentFamilies"));
+});
+
+test("matches Scento family taxonomy aliases without collapsing unrelated families", () => {
+  const combined = {
+    id: "scento-taxonomy",
+    name: "Scento taxonomy",
+    domain: "fragrance",
+    productType: "perfume",
+    attributes: {
+      scentFamilies: ["White Bloom", "Spice Route", "Salt & Mineral"],
+      allNotes: ["Jasmine", "Pepper", "Sea Salt"],
+    },
+  };
+  const result = matchFragrances({
+    products: [combined],
+    preferences: { preferredFamilies: ["floral", "spicy", "mineral"] },
+  });
+  assert.equal(result.ranking[0].score, 100);
+  assert.equal(result.ranking[0].eligibility, "eligible");
+});
+
+test("normalizes Spanish note aliases against actual catalogue note names", () => {
+  const combined = {
+    id: "scento-notes",
+    name: "Scento notes",
+    domain: "fragrance",
+    productType: "perfume",
+    attributes: {
+      scentFamilies: ["Wood & Root", "Sunlit Citrus"],
+      allNotes: ["Cedarwood", "Sandalwood", "Vetiver", "Bergamot"],
+    },
+  };
+  const result = matchFragrances({
+    products: [combined],
+    preferences: { preferredNotes: ["cedro", "sándalo", "vetiver", "bergamota"] },
+  });
+  assert.equal(result.ranking[0].score, 100);
+  assert.equal(result.ranking[0].eligibility, "eligible");
+});
