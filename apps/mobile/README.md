@@ -33,7 +33,7 @@ La vista previa web usa memoria temporal: al recargar o cerrar el navegador se p
 4. Para actualizar una instalación existente, instala la nueva versión **encima de la anterior**. No desinstales JBAE antes: la actualización conserva el almacenamiento local cuando coinciden el Application ID y el certificado.
 5. El actualizador integrado descarga el APK mediante DownloadManager, comprueba paquete, versión, tamaño y certificado, y deja la confirmación final al instalador de Android.
 
-La distribución actual es descarga directa de APK desde GitHub Releases; no es una publicación en Google Play. La firma persistente existente es un keystore debug dedicado a JBAE, no una clave de publicación de Play Store. No se debe borrar el marcador `.github/jbae-android-signing-key-persisted`, eliminar la caché de firma ni generar otra clave para una actualización.
+La distribución actual es descarga directa de APK desde GitHub Releases; no es una publicación en Google Play. La firma persistente existente es un keystore debug dedicado a JBAE, guardado como `~/.android/debug.keystore`; no es una clave de publicación de Play Store. No se debe borrar el marcador `.github/jbae-android-signing-key-persisted`, eliminar la caché de firma ni generar otra clave para una actualización.
 
 ## Desarrollo local
 
