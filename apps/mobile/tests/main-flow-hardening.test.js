@@ -43,6 +43,12 @@ test("collection UI delegates status filters, accent-insensitive search and max-
 
 test("TECH model edits remove stale comparison output before a replacement query", async () => {
   const main = await readMain();
-  assert.match(main, /function clearTechComparisonOutput\(\) \{[\s\S]*?\.tech-comparison-results\)\?\.remove\(\)/u);
-  assert.match(main, /event\.target\.id\.startsWith\("tech-compare-model-"\)[\s\S]{0,180}clearTechComparisonOutput\(\)/u);
+  const start = main.indexOf("function clearTechComparisonOutput()");
+  const end = main.indexOf("function renderTechComparisonResults()", start);
+  assert.ok(start >= 0 && end > start);
+  const helper = main.slice(start, end);
+  assert.ok(helper.includes('app.querySelector(".tech-comparison-results")?.remove();'));
+  assert.ok(helper.includes('app.querySelector(".comparison-incomplete")?.remove();'));
+  assert.equal(main.split("clearTechComparisonOutput();").length - 1, 2);
 });
+
