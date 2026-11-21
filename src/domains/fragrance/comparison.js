@@ -90,7 +90,7 @@ export function buildFragranceComparison({ products } = {}) {
         available: hasValue(value),
       }))),
     });
-  }).filter(field => field.available > 0);
+  });
 
   return Object.freeze({
     method: "descriptive-field-matrix-v1",
