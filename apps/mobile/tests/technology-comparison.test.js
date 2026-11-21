@@ -163,9 +163,9 @@ test("el formulario TECH conserva los modelos al enviar para permitir reintentos
  const start=main.indexOf('if (event.target.id === "tech-compare-form")');
  const end=main.indexOf('if (event.target.id === "tech-lookup-form")',start);
  const submit=main.slice(start,end);
- assert.doesNotMatch(submit,/state\\.techCompareModels = \\["", "", "", ""\\]/u);
- assert.doesNotMatch(submit,/state\\.techCompareSelections = \\[null, null, null, null\\]/u);
- assert.match(submit,/state\\.techComparisonStatus = "loading"/u);
+ assert.doesNotMatch(submit,/state\.techCompareModels = \["", "", "", ""\]/u);
+ assert.doesNotMatch(submit,/state\.techCompareSelections = \[null, null, null, null\]/u);
+ assert.match(submit,/state\.techComparisonStatus = "loading"/u);
 });
 
 test("el comparador bloquea resultados parciales y conserva el detalle de cobertura",()=>{
