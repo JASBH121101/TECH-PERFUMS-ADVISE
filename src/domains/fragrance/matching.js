@@ -12,14 +12,30 @@ function alias(value, map) {
   return map[key] ?? key;
 }
 const FAMILY_ALIASES = Object.freeze({
-  citrica: "citrus", citrico: "citrus", amaderado: "woody",
-  amaderada: "woody", madera: "woody", aromatica: "aromatic",
-  aromatico: "aromatic", acuatico: "aquatic", acuatica: "aquatic",
+  citrica: "citrus", citrico: "citrus", citricos: "citrus", citricas: "citrus",
+  "sunlit citrus": "citrus",
+  amaderado: "woody", amaderada: "woody", amaderados: "woody", amaderadas: "woody",
+  madera: "woody", maderas: "woody", wood: "woody", woodsy: "woody", "wood & root": "woody",
+  "white bloom": "floral", "petal garden": "floral",
+  aromatica: "aromatic", aromatico: "aromatic", herbal: "aromatic",
+  acuatico: "aquatic", acuatica: "aquatic", marino: "aquatic", marina: "aquatic",
+  dulce: "gourmand", "velvet sweet": "gourmand", gourmand: "gourmand",
+  ambar: "amber", ambarado: "amber", ambarada: "amber", "amber & resin": "amber",
+  "spice route": "spicy", especiado: "spicy", especiada: "spicy", especiados: "spicy",
+  verde: "green", "green leaf": "green", frutal: "fruity", frutales: "fruity",
+  "orchard fruit": "fruity", empolvado: "powdery", empolvada: "powdery", "powder veil": "powdery",
+  almizclado: "musky", almizclada: "musky", "skin musk": "musky",
+  cuero: "leather", ahumado: "leather", "smoke & leather": "leather",
+  mineral: "mineral", "salt & mineral": "mineral",
+  "oud court": "oud",
 });
 const NOTE_ALIASES = Object.freeze({
   vainilla: "vanilla", bergamota: "bergamot", limon: "lemon", lavanda: "lavender",
   jazmin: "jasmine", rosa: "rose", ambar: "amber", almizcle: "musk",
   canela: "cinnamon", coco: "coconut", cuero: "leather", pachuli: "patchouli",
+  cedro: "cedarwood", cedar: "cedarwood", sandal: "sandalwood", sandalo: "sandalwood",
+  toronja: "grapefruit", pomelo: "grapefruit", naranja: "orange", mandarina: "mandarin",
+  lima: "lime", yuzu: "yuzu", manzana: "apple", pera: "pear",
 });
 const CHARACTER_ALIASES = Object.freeze({
   fresco: "fresh", fresca: "fresh", limpio: "clean", limpia: "clean",
