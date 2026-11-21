@@ -973,6 +973,9 @@ app.addEventListener("input", event => {
     state.fragranceForm.notes = event.target.value;
   } else if (event.target.id === "fragrance-avoid-notes") {
     state.fragranceForm.avoidNotes = event.target.value;
+  } else if (event.target.id === "fragrance-compare-search") {
+    state.comparisonSearch = event.target.value;
+    renderComparisonSearchResults();
   } else if (event.target.id === "tech-model") {
     state.techModel = event.target.value;
     state.techLookupSelection = null;
@@ -1008,6 +1011,18 @@ app.addEventListener("change", event => {
   if (event.target.matches('input[name="fragrance-avoid-family"]')) {
     state.fragranceForm.avoidFamilies = [...app.querySelectorAll('input[name="fragrance-avoid-family"]:checked')]
       .map(input => input.value);
+    return;
+  }
+  if (event.target.matches('input[name="fragrance-compare-product"]')) {
+    const productId = event.target.value;
+    const selected = new Set(state.comparisonSelection);
+    if (event.target.checked && selected.size < 4) selected.add(productId);
+    else selected.delete(productId);
+    state.comparisonSelection = [...selected];
+    state.comparisonResult = null;
+    renderComparisonSelection();
+    renderComparisonSearchResults();
+    document.querySelector("#fragrance-comparison-output").innerHTML = "";
     return;
   }
   const fields = {
