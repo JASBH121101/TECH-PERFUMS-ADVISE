@@ -82,12 +82,12 @@ El usuario autorizó crear una identidad de firma nueva el 21-11-2026. La nueva 
 3. Guardar en GitHub → Settings → Secrets and variables → Actions:
    - `JBAE_ANDROID_KEYSTORE_PASSWORD`
    - `JBAE_ANDROID_SIGNING_KEYSTORE_BASE64`
-4. Conservar una copia cifrada adicional del keystore fuera del repositorio. Nunca subir el archivo .p12, Base64 ni contraseñas a commits, issues o chats.
-5. El workflow reconstruye el archivo en el runner, verifica tipo PKCS#12, alias y contraseña, calcula la huella pública SHA-256 y exige que coincida con la huella del APK firmado.
+5. Conservar una copia cifrada adicional del keystore fuera del repositorio. Nunca subir el archivo .p12, Base64 ni contraseñas a commits, issues o chats.
+6. El workflow reconstruye el archivo en el runner, verifica tipo PKCS#12, alias y contraseña, calcula la huella pública SHA-256 y exige que coincida con la huella del APK firmado.
 
 El workflow ya no utiliza la antigua caché de firma ni el marcador de identidad histórica. Cada compilación depende de los secretos protegidos; si faltan o no coinciden, debe detenerse antes de publicar.
 
-La Release `jbae-v0.4.83` permanece como APK histórico firmado con la huella anterior. La transición no está completa hasta que se cree la nueva clave localmente, se configuren ambos secretos, el workflow produzca y verifique un APK nuevo y se complete la instalación limpia en un teléfono. No se afirma todavía que exista un APK con la nueva firma.
+La Release `jbae-v0.4.83` permanece como APK histórico firmado con la huella anterior. La nueva clave ya está generada y su huella está registrada, pero la transición no está completa hasta que se configuren ambos secretos, el workflow produzca y verifique un APK nuevo y se complete la instalación limpia en un teléfono. No se afirma todavía que exista un APK con la nueva firma.
 
 ## 6. Verificación que puede hacer CI y lo que todavía exige teléfono
 
