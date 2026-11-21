@@ -124,3 +124,26 @@ test("ofrece alternativas parciales separadas cuando la cobertura no alcanza el 
   assert.equal(advice.alternatives.length, 1);
   assert.equal(advice.alternatives[0].eligibility, "insufficient_coverage");
 });
+
+
+test("aprende familias y notas repetidas a partir de valoraciones positivas", () => {
+  const profile = {
+    feedback: [
+      { productId: "woody-daily", rating: 5 },
+      { productId: "citrus-woody", rating: 4 },
+    ],
+  };
+  const advice = buildFragranceAdvice({ products, profile, message: "Busco una fragancia para diario" });
+  assert.ok(advice.learnedPreferences.preferredFamilies.includes("Wood & Root"));
+  assert.ok(advice.learnedPreferences.preferredNotes.includes("Cedarwood"));
+  assert.ok(advice.preferences.preferredFamilies.includes("Wood & Root"));
+});
+
+test("no aprende una familia desde una sola valoración aislada", () => {
+  const profile = {
+    feedback: [{ productId: "woody-daily", rating: 5 }],
+  };
+  const advice = buildFragranceAdvice({ products, profile, message: "Hola" });
+  assert.deepEqual(advice.learnedPreferences.preferredFamilies, []);
+  assert.equal(advice.status, "needs_preferences");
+});
