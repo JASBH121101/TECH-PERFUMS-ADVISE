@@ -29,7 +29,7 @@ La vista previa web usa memoria temporal: al recargar o cerrar el navegador se p
 
 1. Descarga siempre el APK desde [JBAE Releases](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/latest/download/JBAE.apk).
 2. Abre el archivo desde Descargas. Android mostrará el instalador del paquete.
-3. En una primera instalación, Android puede pedir permiso para instalar aplicaciones desde el navegador o administrador de archivos que abrió el APK. Autoriza únicamente esa aplicación de origen y confirma la instalación en Android.
+3. En una primera instalación, Android puede pedir permiso para instalar aplicaciones desde el navegador o administrador de archivos que abrió el APK. En Ajustes, activa «Permitir desde esta fuente» únicamente para esa aplicación de origen y confirma la instalación en Android.
 4. Para actualizar una instalación existente, instala la nueva versión **encima de la anterior**. No desinstales JBAE antes: la actualización conserva el almacenamiento local cuando coinciden el Application ID y el certificado.
 5. El actualizador integrado descarga el APK mediante DownloadManager, comprueba paquete, versión, tamaño y certificado, y deja la confirmación final al instalador de Android.
 
