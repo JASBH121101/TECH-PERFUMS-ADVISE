@@ -872,6 +872,63 @@ app.addEventListener("click", async event => {
     state.searchQuery = "";
     state.adviceResult = null;
     render();
+  } else if (actionButton.dataset.action === "toggle-favorite") {
+    const productId = decodeURIComponent(actionButton.dataset.id ?? "");
+    const favorite = actionButton.dataset.favorite === "true";
+    try {
+      await state.runtime.knowledgeStore.setFragranceFavorite({ productId, favorite });
+      state.profile = state.runtime.knowledgeStore.getFragranceProfile();
+      state.profileMessage = favorite ? "Fragancia guardada en favoritos." : "Fragancia retirada de favoritos.";
+    } catch (error) {
+      state.profileMessage = error instanceof Error ? error.message : "No se pudo actualizar el favorito.";
+    }
+    render();
+  } else if (actionButton.dataset.action === "collection-status") {
+    const productId = decodeURIComponent(actionButton.dataset.id ?? "");
+    const status = actionButton.dataset.status;
+    try {
+      await state.runtime.knowledgeStore.saveFragranceCollectionItem({ productId, status });
+      state.profile = state.runtime.knowledgeStore.getFragranceProfile();
+      state.profileMessage = "Estado de colección actualizado.";
+    } catch (error) {
+      state.profileMessage = error instanceof Error ? error.message : "No se pudo guardar en tu colección.";
+    }
+    render();
+  } else if (actionButton.dataset.action === "remove-collection") {
+    const productId = decodeURIComponent(actionButton.dataset.id ?? "");
+    try {
+      await state.runtime.knowledgeStore.removeFragranceCollectionItem({ productId });
+      state.profile = state.runtime.knowledgeStore.getFragranceProfile();
+      state.profileMessage = "Fragancia retirada de tu colección. El favorito se conserva por separado.";
+    } catch (error) {
+      state.profileMessage = error instanceof Error ? error.message : "No se pudo quitar de la colección.";
+    }
+    render();
+  } else if (actionButton.dataset.action === "remove-comparison") {
+    const productId = decodeURIComponent(actionButton.dataset.id ?? "");
+    state.comparisonSelection = state.comparisonSelection.filter(id => id !== productId);
+    state.comparisonResult = null;
+    renderComparisonSelection();
+    renderComparisonSearchResults();
+    document.querySelector("#fragrance-comparison-output").innerHTML = "";
+  } else if (actionButton.dataset.action === "clear-comparison") {
+    state.comparisonSelection = [];
+    state.comparisonResult = null;
+    renderComparisonSelection();
+    renderComparisonSearchResults();
+    document.querySelector("#fragrance-comparison-output").innerHTML = "";
+  } else if (actionButton.dataset.action === "run-fragrance-comparison") {
+    const selected = state.comparisonSelection
+      .map(id => state.products.find(product => product.id === id))
+      .filter(Boolean);
+    try {
+      state.comparisonResult = buildFragranceComparison({ products: selected });
+      document.querySelector("#fragrance-comparison-output").innerHTML =
+        renderFragranceComparisonMatrix(state.comparisonResult);
+    } catch (error) {
+      document.querySelector("#fragrance-comparison-output").innerHTML =
+        `<div class="warning-panel"><strong>No se pudo comparar</strong><p>${escapeHtml(error.message)}</p></div>`;
+    }
   } else if (actionButton.dataset.action === "open-fragrance") {
     state.detailsId = decodeURIComponent(actionButton.dataset.id);
     render();
