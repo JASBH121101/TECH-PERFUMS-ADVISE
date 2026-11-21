@@ -99,10 +99,11 @@ test("release channel and direct APK distribution are documented without claimin
   assert.match(readme, /Permitir desde esta fuente/u);
 });
 
-test("pull request builds an APK artifact but cannot publish a public release", async () => {
+test("manual APK release dispatch uses the original signing-cache branch and integrated source", async () => {
   const workflow = await read("../.github/workflows/android-app.yml");
-  assert.match(workflow, /pull_request:\s+branches:\s+- feature\/jbae-standalone-android-app/u);
-  assert.equal((workflow.match(/if: github\.event_name != 'pull_request'/gu) ?? []).length, 2);
-  assert.match(workflow, /name: Upload APK artifact/u);
-  assert.match(workflow, /retention-days: 14/u);
+  assert.match(workflow, /workflow_dispatch:/u);
+  assert.match(workflow, /ref: \\$\\{\\{ github\\.event_name == 'workflow_dispatch' && 'feature\\/jbae-android-certification' \\|\\| github\\.sha \\}\\}/u);
+  assert.doesNotMatch(workflow, /pull_request:/u);
+  assert.match(workflow, /name: Publish installable APK release/u);
+  assert.match(workflow, /name: Verify published APK asset/u);
 });
