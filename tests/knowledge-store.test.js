@@ -510,3 +510,61 @@ test("rejects favorites or collection statuses outside the validated fragrance c
   assert.deepEqual(store.getFragranceProfile().favorites, []);
   assert.deepEqual(store.getFragranceProfile().collection, []);
 });
+
+
+test("edits, preserves, validates and clears private fragrance collection notes across reopen", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const first = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  await first.addProduct({
+    id: "fragrance-private-note",
+    domain: "fragrance",
+    name: "Private Note Test",
+    brand: "Example House",
+    productType: "perfume",
+    attributes: {},
+    evidenceIds: {},
+  });
+
+  await first.saveFragranceCollectionItem({
+    productId: "fragrance-private-note",
+    status: "sampled",
+    note: "  Primera impresión: fresco y limpio.  ",
+  });
+  let item = first.getFragranceProfile().collection[0];
+  assert.equal(item.note, "Primera impresión: fresco y limpio.");
+
+  await first.saveFragranceCollectionItem({
+    productId: "fragrance-private-note",
+    status: "owned",
+    note: "Lo prefiero para clima caliente.",
+  });
+  await first.saveFragranceCollectionItem({
+    productId: "fragrance-private-note",
+    status: "sampled",
+  });
+  item = first.getFragranceProfile().collection[0];
+  assert.equal(item.status, "sampled");
+  assert.equal(item.note, "Lo prefiero para clima caliente.");
+
+  await assert.rejects(
+    () => first.saveFragranceCollectionItem({
+      productId: "fragrance-private-note",
+      status: "sampled",
+      note: "x".repeat(241),
+    }),
+    /up to 240 characters/,
+  );
+  assert.equal(first.getFragranceProfile().collection[0].note, "Lo prefiero para clima caliente.");
+
+  const reopened = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  assert.equal(reopened.getFragranceProfile().collection[0].note, "Lo prefiero para clima caliente.");
+  await reopened.saveFragranceCollectionItem({
+    productId: "fragrance-private-note",
+    status: "owned",
+    note: null,
+  });
+
+  const afterClear = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  assert.equal(afterClear.getFragranceProfile().collection[0].status, "owned");
+  assert.equal(afterClear.getFragranceProfile().collection[0].note, null);
+});
