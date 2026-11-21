@@ -47,7 +47,7 @@ function includesAny(text, terms) {
 }
 function hasNegatedTerm(text, term) {
   return new RegExp(
-    "\\b(?:no quiero|no me gusta|no me gustan|no soporto|sin|evita|evitar)\\s+(?:(?:el|la|los|las)\\s+)?(?:(?:aroma|aromas|nota|notas|fragancia|fragancias)\\s+de?\\s+)?"+escapeRegExp(term)+"\\b",
+    "\\b(?:no quiero|no me gusta|no me gustan|no soporto|sin|evita|evitar)\\s+(?:(?:el|la|los|las)\\s+)?(?:(?:aroma|aromas|nota|notas|fragancia|fragancias|perfume|perfumes|familia|familias)(?:\\s+de)?\\s+)?"+escapeRegExp(term)+"\\b",
     "u",
   ).test(text);
 }
