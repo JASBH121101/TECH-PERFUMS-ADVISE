@@ -102,7 +102,7 @@ test("release channel and direct APK distribution are documented without claimin
 test("manual APK release dispatch uses the original signing-cache branch and integrated source", async () => {
   const workflow = await read("../.github/workflows/android-app.yml");
   assert.match(workflow, /workflow_dispatch:/u);
-  assert.match(workflow, /ref: \\$\\{\\{ github\\.event_name == 'workflow_dispatch' && 'feature\\/jbae-android-certification' \\|\\| github\\.sha \\}\\}/u);
+  assert.ok(workflow.includes("ref: ${{ github.event_name == 'workflow_dispatch' && 'feature/jbae-android-certification' || github.sha }}"));
   assert.doesNotMatch(workflow, /pull_request:/u);
   assert.match(workflow, /name: Publish installable APK release/u);
   assert.match(workflow, /name: Verify published APK asset/u);
