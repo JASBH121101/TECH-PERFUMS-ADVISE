@@ -88,7 +88,7 @@ test("combina notas manuales con notas detectadas en el texto", () => {
     message: "Me gustan las notas de cedro y vetiver",
     notes: "bergamota",
   });
-  assert.deepEqual(advice.preferences.preferredNotes, ["cedarwood", "vetiver", "bergamota"]);
+  assert.deepEqual(advice.preferences.preferredNotes, ["cedarwood", "vetiver", "bergamot"]);
 });
 
 test("pide preferencias en lugar de inventar una recomendación", () => {
@@ -117,6 +117,7 @@ test("ofrece alternativas parciales separadas cuando la cobertura no alcanza el 
       attributes: { scentFamilies: ["Wood & Root"] },
     }],
     families: ["woody", "citrus", "floral"],
+    notes: "cedro",
   });
   assert.equal(advice.status, "partial_matches");
   assert.equal(advice.recommendations.length, 0);
