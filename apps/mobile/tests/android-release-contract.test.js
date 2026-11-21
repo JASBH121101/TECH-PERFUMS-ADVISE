@@ -77,7 +77,7 @@ test("release workflow tests before signing, verifies package and signature, the
   const mobileTests = workflow.indexOf("run: npm test");
   const engineTests = workflow.indexOf("run: npm test", mobileTests + 1);
   const assemble = workflow.indexOf("name: Assemble signed release APK");
-  const verify = workflow.indexOf("name: Verify APK signature and package");
+  const verify = workflow.indexOf("name: Verify APK signature, certificate fingerprint and package");
   const publish = workflow.indexOf("Publish installable APK release");
   const verifyAsset = workflow.indexOf("Verify published APK asset");
   assert.ok(mobileTests >= 0 && engineTests > mobileTests);
@@ -87,8 +87,12 @@ test("release workflow tests before signing, verifies package and signature, the
   assert.match(workflow, /apksigner" verify/u);
   assert.match(workflow, /aapt" dump badging/u);
   assert.ok(verifyAsset > publish);
-  assert.match(workflow, /jbae-android-signing-key-persisted/u);
-  assert.match(workflow, /Refusing to rotate the app signing identity/u);
+  assert.match(workflow, /JBAE_ANDROID_SIGNING_KEYSTORE_BASE64/u);
+  assert.match(workflow, /JBAE_ANDROID_KEYSTORE_PASSWORD/u);
+  assert.match(workflow, /JBAE_SIGNING_CERT_SHA256/u);
+  assert.match(workflow, /jbae-release-2026/u);
+  assert.doesNotMatch(workflow, /actions\\/cache\\/(?:restore|save)@v4/u);
+  assert.doesNotMatch(workflow, /debug\\.keystore/u);
   assert.match(workflow, /cmp JBAE\.apk/u);
   assert.match(workflow, /actions\/upload-artifact@v4/u);
 });
@@ -101,13 +105,20 @@ test("release channel and direct APK distribution are documented without claimin
   assert.match(readme, /Permitir desde esta fuente/u);
 });
 
-test("missing signing cache requires the original protected keystore and cannot rotate identity", async () => {
+test("new signing identity is restored from protected PKCS12 secrets and fingerprint-pinned at build time", async () => {
   const workflow = await read("../../.github/workflows/android-app.yml");
-  assert.ok(workflow.includes("JBAE_ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.JBAE_ANDROID_SIGNING_KEYSTORE_BASE64 }}"));
-  assert.ok(workflow.includes("The original JBAE signing key is unavailable"));
-  assert.ok(workflow.includes("Refusing to generate a replacement key"));
-  assert.ok(workflow.includes('keytool -list -keystore "$KEYSTORE" -storepass android -alias androiddebugkey'));
-  assert.ok(workflow.includes("cache-hit != 'true'"));
+  const script = await read("scripts/create-android-signing-key.ps1");
+  assert.ok(workflow.includes("JBAE_ANDROID_SIGNING_KEYSTORE_BASE64"));
+  assert.ok(workflow.includes("JBAE_ANDROID_KEYSTORE_PASSWORD"));
+  assert.ok(workflow.includes("keytool -list -storetype PKCS12"));
+  assert.ok(workflow.includes('keyAlias "jbae-release-2026"'));
+  assert.ok(workflow.includes("JBAE_SIGNING_CERT_SHA256"));
+  assert.ok(workflow.includes("The APK certificate fingerprint does not match"));
+  assert.doesNotMatch(workflow, /actions\\/cache\\/(?:restore|save)@v4/u);
+  assert.match(script, /-storetype PKCS12/u);
+  assert.match(script, /-keysize 3072/u);
+  assert.match(script, /JBAE_ANDROID_SIGNING_KEYSTORE_BASE64/u);
+  assert.match(script, /JBAE_ANDROID_KEYSTORE_PASSWORD/u);
 });
 
 test("manual APK release dispatch uses the original signing-cache branch and integrated source", async () => {
