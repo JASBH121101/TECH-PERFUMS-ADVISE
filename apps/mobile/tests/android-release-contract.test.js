@@ -101,6 +101,15 @@ test("release channel and direct APK distribution are documented without claimin
   assert.match(readme, /Permitir desde esta fuente/u);
 });
 
+test("missing signing cache requires the original protected keystore and cannot rotate identity", async () => {
+  const workflow = await read("../../.github/workflows/android-app.yml");
+  assert.match(workflow, /JBAE_ANDROID_SIGNING_KEYSTORE_BASE64: \\$\\{\\{ secrets\\.JBAE_ANDROID_SIGNING_KEYSTORE_BASE64 \\}\\}/u);
+  assert.match(workflow, /The original JBAE signing key is unavailable/u);
+  assert.match(workflow, /Refusing to generate a replacement key/u);
+  assert.match(workflow, /keytool -list -keystore "\\$KEYSTORE" -storepass android -alias androiddebugkey/u);
+  assert.match(workflow, /cache-hit != 'true'/u);
+});
+
 test("manual APK release dispatch uses the original signing-cache branch and integrated source", async () => {
   const workflow = await read("../../.github/workflows/android-app.yml");
   assert.match(workflow, /workflow_dispatch:/u);
