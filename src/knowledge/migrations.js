@@ -104,15 +104,17 @@ export function validateKnowledgeSnapshot(snapshot) {
     throw new TypeError("Knowledge snapshot catalog is missing or unsupported");
   }
   if (!isPlainObject(snapshot.profiles) || snapshot.profiles.schemaVersion !== PROFILE_SCHEMA_VERSION ||
-      !Array.isArray(snapshot.profiles.items) || snapshot.profiles.items.length > 20) {
+      !Array.isArray(snapshot.profiles.items) || snapshot.profiles.items.length < 1 || snapshot.profiles.items.length > 20) {
     throw new TypeError("Knowledge snapshot profiles are missing or unsupported");
   }
   const ledger = EvidenceStore.fromExport(snapshot.evidence);
   const products = snapshot.catalog.products.map(normalizeCatalogProduct);
   const productIds = new Set();
+  const fragranceProductIds = new Set();
   for (const product of products) {
     if (productIds.has(product.id)) throw new Error(`Duplicate catalog product ID: ${product.id}`);
     productIds.add(product.id);
+    if (product.domain === DOMAINS.FRAGRANCE) fragranceProductIds.add(product.id);
     for (const evidenceId of iterateProductEvidenceIds(product.evidenceIds)) {
       if (!ledger.getById(evidenceId)) {
         throw new Error(`Catalog product ${product.id} references missing evidence: ${evidenceId}`);
@@ -120,12 +122,13 @@ export function validateKnowledgeSnapshot(snapshot) {
     }
   }
   const profiles = snapshot.profiles.items.map(profile =>
-    normalizeFragranceProfile(profile, { productIds }));
+    normalizeFragranceProfile(profile, { productIds: fragranceProductIds }));
   const profileIds = new Set();
   for (const profile of profiles) {
     if (profileIds.has(profile.id)) throw new Error(`Duplicate fragrance profile ID: ${profile.id}`);
     profileIds.add(profile.id);
   }
+  if (!profileIds.has("local-default")) throw new Error("Knowledge snapshot is missing the default local fragrance profile");
   return freezeDeep({
     schemaVersion: KNOWLEDGE_SCHEMA_VERSION,
     metadata: { createdAt, updatedAt },
