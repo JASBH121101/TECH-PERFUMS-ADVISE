@@ -21,7 +21,7 @@ const products = [
     productType: "perfume",
     attributes: {
       scentFamilies: ["Sunlit Citrus", "Wood & Root"],
-      allNotes: ["Bergamot", "Grapefruit", "Sandalwood"],
+      allNotes: ["Bergamot", "Grapefruit", "Sandalwood", "Cedarwood", "Vetiver"],
     },
   },
   {
