@@ -86,58 +86,43 @@ jobs:
           grep -Fq "ViewCompat.requestApplyInsets(content)" "$MAIN_ACTIVITY"
           grep -Fq "WindowInsetsCompat.Type.systemBars()" "$MAIN_ACTIVITY"
           echo "Verified native system-bar insets handler in $MAIN_ACTIVITY"
-      - name: Restore persistent JBAE signing key
-        id: signing-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: jbae-android-signing-v1-${{ runner.os }}
-      - name: Restore original JBAE signing key from protected secret if cache is unavailable
+      - name: Restore JBAE signing identity from protected repository secrets
         env:
-          JBAE_ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.JBAE_ANDROID_SIGNING_KEYSTORE_BASE64 }}
+          JBAE_ANDROID_SIGNING_KEYSTORE_BASE64: \${{ secrets.JBAE_ANDROID_SIGNING_KEYSTORE_BASE64 }}
+          JBAE_ANDROID_KEYSTORE_PASSWORD: \${{ secrets.JBAE_ANDROID_KEYSTORE_PASSWORD }}
+        shell: bash
         run: |
           set -euo pipefail
-          KEYSTORE="$HOME/.android/debug.keystore"
-          if [ -s "$KEYSTORE" ]; then
-            echo "Using the restored original JBAE signing key cache."
-            exit 0
+          KEYSTORE="$HOME/.android/jbae-release.p12"
+          KEY_ALIAS="jbae-release-2026"
+          if [ -z "\${JBAE_ANDROID_SIGNING_KEYSTORE_BASE64:-}" ]; then
+            echo "::error::Missing repository secret JBAE_ANDROID_SIGNING_KEYSTORE_BASE64."
+            exit 1
           fi
-          if [ -z "$JBAE_ANDROID_SIGNING_KEYSTORE_BASE64" ]; then
-            echo "::error::The original JBAE signing key is unavailable. Restore the original backup as the JBAE_ANDROID_SIGNING_KEYSTORE_BASE64 Actions secret. Refusing to generate a replacement key."
+          if [ -z "\${JBAE_ANDROID_KEYSTORE_PASSWORD:-}" ]; then
+            echo "::error::Missing repository secret JBAE_ANDROID_KEYSTORE_PASSWORD."
             exit 1
           fi
           mkdir -p "$HOME/.android"
           printf '%s' "$JBAE_ANDROID_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
-          if ! keytool -list -keystore "$KEYSTORE" -storepass android -alias androiddebugkey >/dev/null 2>&1; then
+          if ! keytool -list -storetype PKCS12 -keystore "$KEYSTORE" -storepass "$JBAE_ANDROID_KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
             rm -f "$KEYSTORE"
-            echo "::error::The supplied JBAE keystore backup is invalid or does not match the original Android debug keystore format."
+            echo "::error::The supplied JBAE PKCS12 keystore/password/alias could not be validated."
             exit 1
           fi
-          echo "Restored the original JBAE signing key from the protected Actions secret."
-      - name: Ensure stable signing identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.android"
-          if [ -f "$HOME/.android/debug.keystore" ]; then
-            echo "Restored persistent JBAE signing key."
-          elif [ -f .github/jbae-android-signing-key-persisted ]; then
-            echo "ERROR: JBAE signing key cache is missing. Refusing to rotate the app signing identity." >&2
+          CERT_SHA256="$(keytool -list -v -storetype PKCS12 -keystore "$KEYSTORE" -storepass "$JBAE_ANDROID_KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | awk -F': ' '/SHA256:/{gsub(/:/, "", $2); print toupper($2); exit}')"
+          if [ -z "$CERT_SHA256" ]; then
+            rm -f "$KEYSTORE"
+            echo "::error::Could not read the JBAE signing certificate fingerprint."
             exit 1
-          else
-            keytool -genkeypair -v \
-              -keystore "$HOME/.android/debug.keystore" \
-              -storepass android \
-              -keypass android \
-              -alias androiddebugkey \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=JBAE Android, OU=JBAE, O=JBAE, L=Granada, ST=Granada, C=NI"
-            echo "Generated the initial persistent JBAE signing key."
           fi
-      - name: Set Android version and persistent signing configuration
+          echo "JBAE_SIGNING_CERT_SHA256=$CERT_SHA256" >> "$GITHUB_ENV"
+          echo "Loaded the JBAE signing identity from protected repository secrets."
+      - name: Set Android version and protected signing configuration
         env:
           APP_VERSION: ${{ steps.release-version.outputs.app_version }}
           VERSION_CODE: ${{ env.VERSION_CODE }}
+          JBAE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.JBAE_ANDROID_KEYSTORE_PASSWORD }}
         run: |
           python3 - <<'PY'
           import os, re
@@ -152,10 +137,11 @@ jobs:
               block = '''
               signingConfigs {
                   release {
-                      storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")
-                      storePassword "android"
-                      keyAlias "androiddebugkey"
-                      keyPassword "android"
+                      storeFile file(System.getProperty("user.home") + "/.android/jbae-release.p12")
+                      storeType "PKCS12"
+                      storePassword System.getenv("JBAE_ANDROID_KEYSTORE_PASSWORD")
+                      keyAlias "jbae-release-2026"
+                      keyPassword System.getenv("JBAE_ANDROID_KEYSTORE_PASSWORD")
                   }
               }
               '''
@@ -181,38 +167,30 @@ jobs:
           PY
       - name: Assemble signed release APK
         working-directory: apps/mobile/android
+        env:
+          JBAE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.JBAE_ANDROID_KEYSTORE_PASSWORD }}
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon
-      - name: Verify APK signature and package
+      - name: Verify APK signature, certificate fingerprint and package
         env:
-          APP_VERSION: ${{ steps.release-version.outputs.app_version }}
-          VERSION_CODE: ${{ env.VERSION_CODE }}
+          APP_VERSION: \${{ steps.release-version.outputs.app_version }}
+          VERSION_CODE: \${{ env.VERSION_CODE }}
+        shell: bash
         run: |
           set -euo pipefail
           APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          SIGNATURE_INFO="$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK")"
+          printf '%s\n' "$SIGNATURE_INFO"
+          ACTUAL_CERT_SHA256="$(printf '%s\n' "$SIGNATURE_INFO" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{gsub(/:/, "", $2); print toupper($2); exit}')"
+          if [ -z "$ACTUAL_CERT_SHA256" ] || [ "$ACTUAL_CERT_SHA256" != "$JBAE_SIGNING_CERT_SHA256" ]; then
+            echo "::error::The APK certificate fingerprint does not match the protected JBAE keystore."
+            exit 1
+          fi
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.jb.advisor.mobile' versionCode='$VERSION_CODE' versionName='$APP_VERSION'"
           sha256sum "$APK"
-      - name: Save persistent JBAE signing key cache
-        if: steps.signing-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: jbae-android-signing-v1-${{ runner.os }}
-      - name: Mark signing identity as established
-        if: success() && steps.signing-cache.outputs.cache-hit != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          echo "JBAE Android signing identity is stored in the protected GitHub Actions cache. Builds must fail closed if the cache is missing." > .github/jbae-android-signing-key-persisted
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/jbae-android-signing-key-persisted
-          git commit -m "chore(android): mark JBAE signing key as persisted"
-          git push origin "HEAD:$GITHUB_REF_NAME"
+          echo "Verified JBAE signing certificate SHA-256: $ACTUAL_CERT_SHA256"
       - name: Publish installable APK release
         env:
           APP_VERSION: ${{ steps.release-version.outputs.app_version }}
