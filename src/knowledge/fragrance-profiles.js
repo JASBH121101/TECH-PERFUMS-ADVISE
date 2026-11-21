@@ -22,7 +22,15 @@ function canonicalTimestamp(value, field) {
   return value;
 }
 
-function normalizeStringList(value, field, productIds) {
+function normalizeStringList(value, field) {
+  if (!Array.isArray(value) || value.length > 100 ||
+      value.some(item => typeof item !== "string" || !item.trim() || item.trim().length > 100)) {
+    throw new TypeError(`${field} must be an array of up to 100 non-empty strings`);
+  }
+  return [...new Set(value.map(item => item.trim()))];
+}
+
+function normalizeProductIds(value, field, productIds) {
   if (!Array.isArray(value) || value.length > 500 ||
       value.some(item => typeof item !== "string" || !item.trim() || item.trim().length > 200)) {
     throw new TypeError(`${field} must be an array of up to 500 non-empty product IDs`);
@@ -103,7 +111,7 @@ export function normalizeFragranceProfile(input, { productIds = new Set() } = {}
       createdAt: canonicalTimestamp(item.createdAt, `profile.feedback[${index}].createdAt`),
     });
   });
-  const favorites = normalizeStringList(input.favorites ?? [], "profile.favorites", productIds);
+  const favorites = normalizeProductIds(input.favorites ?? [], "profile.favorites", productIds);
   const collection = input.collection ?? [];
   if (!Array.isArray(collection) || collection.length > 500) {
     throw new TypeError("Fragrance profile collection must be an array of up to 500 items");
@@ -131,7 +139,7 @@ export function normalizeFragranceProfile(input, { productIds = new Set() } = {}
     });
   });
   const lists = Object.fromEntries(PROFILE_LIST_FIELDS.map(field => [
-    field, Object.freeze(normalizeStringList(input[field] ?? [], `profile.${field}`, new Set(["*"]))),
+    field, Object.freeze(normalizeStringList(input[field] ?? [], `profile.${field}`)),
   ]));
   return Object.freeze({
     id,
