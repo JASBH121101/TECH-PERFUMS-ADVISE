@@ -7,6 +7,49 @@ function uniqueStrings(values) {
   return [...new Set(values.map(value => String(value).trim()).filter(Boolean))];
 }
 
+function collectSignals(profile, products) {
+  const productMap = new Map(products.map(product => [product.id, product]));
+  const votes = {
+    preferredFamilies: new Map(),
+    avoidFamilies: new Map(),
+    preferredNotes: new Map(),
+    avoidNotes: new Map(),
+  };
+  const addVote = (map, value, productId) => {
+    if (!value) return;
+    const entry = map.get(value) ?? new Set();
+    entry.add(productId);
+    map.set(value, entry);
+  };
+  for (const item of profile?.feedback ?? []) {
+    if (item.rating === 3) continue;
+    const product = productMap.get(item.productId);
+    if (!product) continue;
+    const positive = item.rating >= 4;
+    const attributes = product.attributes ?? {};
+    const families = uniqueStrings(attributes.scentFamilies ?? []);
+    const notes = uniqueStrings([
+      ...(attributes.allNotes ?? []),
+      ...(attributes.topNotes ?? []),
+      ...(attributes.middleNotes ?? []),
+      ...(attributes.baseNotes ?? []),
+    ]);
+    for (const family of families) {
+      addVote(votes[positive ? "preferredFamilies" : "avoidFamilies"], family, product.id);
+    }
+    for (const note of notes) {
+      addVote(votes[positive ? "preferredNotes" : "avoidNotes"], note, product.id);
+    }
+  }
+  const learned = {};
+  for (const [field, entries] of Object.entries(votes)) {
+    learned[field] = [...entries]
+      .filter(([, productIds]) => productIds.size >= 2)
+      .map(([value]) => value);
+  }
+  return Object.freeze(learned);
+}
+
 function parseSelectedNotes(value) {
   if (Array.isArray(value)) return uniqueStrings(value);
   if (typeof value === "string") return uniqueStrings(value.split(/[;,]/u));
@@ -28,6 +71,7 @@ export function buildFragranceAdvice({
   notes = [],
   climate = "",
   intensity = "",
+  profile = null,
 } = {}) {
   if (!Array.isArray(products) || products.length === 0) {
     return Object.freeze({ status: "empty_catalog", parsedSignals: Object.freeze([]), match: null });
@@ -49,8 +93,16 @@ export function buildFragranceAdvice({
     ? parseFragranceCustomerMessage(message.trim(), { knownNotes })
     : { preferences: Object.freeze({}), signals: Object.freeze([]) };
 
+  const learnedPreferences = collectSignals(profile, products);
   const preferences = { ...parsed.preferences };
-  if (occasion) preferences.occasion = occasion;
+  for (const field of ["preferredFamilies", "avoidFamilies", "preferredNotes", "avoidNotes"]) {
+    preferences[field] = uniqueStrings([
+      ...(profile?.[field] ?? []),
+      ...(learnedPreferences[field] ?? []),
+      ...(preferences[field] ?? []),
+    ]);
+    if (!preferences[field].length) delete preferences[field];
+  }
   if (family) {
     preferences.preferredFamilies = [family];
   } else if (families.length) {
@@ -66,8 +118,16 @@ export function buildFragranceAdvice({
       ...selectedNotes,
     ]);
   }
-  if (climate) preferences.climate = climate;
-  if (intensity) preferences.intensity = intensity;
+  const selectedAvoidFamilies = uniqueStrings(profile?.avoidFamilies ?? []);
+  if (selectedAvoidFamilies.length) preferences.avoidFamilies = uniqueStrings([
+    ...selectedAvoidFamilies,
+    ...(preferences.avoidFamilies ?? []),
+  ]);
+  for (const field of ["occasion", "climate", "intensity", "projection", "maxIntensity", "maxProjection", "maxSillage"]) {
+    const selected = ({ occasion, climate, intensity })[field];
+    if (selected) preferences[field] = selected;
+    else if (!preferences[field] && profile?.[field]) preferences[field] = profile[field];
+  }
 
   if (Object.keys(preferences).length === 0) {
     return Object.freeze({
@@ -75,6 +135,7 @@ export function buildFragranceAdvice({
       parsedSignals: parsed.signals,
       match: null,
       preferences: Object.freeze({}),
+      learnedPreferences,
     });
   }
 
@@ -91,6 +152,7 @@ export function buildFragranceAdvice({
     status: eligible.length ? "matched" : alternatives.length ? "partial_matches" : "insufficient_coverage",
     parsedSignals: parsed.signals,
     preferences: match.requestedPreferences,
+    learnedPreferences,
     match,
     recommendations: Object.freeze(eligible.slice(0, 8)),
     alternatives: Object.freeze(alternatives),
