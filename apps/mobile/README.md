@@ -25,6 +25,16 @@ JBAE es una aplicación Android y una vista previa web independientes que consum
 
 La vista previa web usa memoria temporal: al recargar o cerrar el navegador se pierde el estado de la sesión. La instalación Android usa SQLite nativo.
 
+## Instalación y distribución directa del APK
+
+1. Descarga siempre el APK desde [JBAE Releases](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/latest/download/JBAE.apk).
+2. Abre el archivo desde Descargas. Android mostrará el instalador del paquete.
+3. En una primera instalación, Android puede pedir permiso para instalar aplicaciones desde el navegador o administrador de archivos que abrió el APK. Autoriza únicamente esa aplicación de origen y confirma la instalación en Android.
+4. Para actualizar una instalación existente, instala la nueva versión **encima de la anterior**. No desinstales JBAE antes: la actualización conserva el almacenamiento local cuando coinciden el Application ID y el certificado.
+5. El actualizador integrado descarga el APK mediante DownloadManager, comprueba paquete, versión, tamaño y certificado, y deja la confirmación final al instalador de Android.
+
+La distribución actual es descarga directa de APK desde GitHub Releases; no es una publicación en Google Play. La firma persistente existente es un keystore debug dedicado a JBAE, no una clave de publicación de Play Store. No se debe borrar el marcador `.github/jbae-android-signing-key-persisted`, eliminar la caché de firma ni generar otra clave para una actualización.
+
 ## Desarrollo local
 
 Requisitos: Node.js 22.12 o posterior, Java 21 y Android SDK.
@@ -68,4 +78,4 @@ El workflow falla de forma cerrada si ya existe el marcador de identidad y la ca
 - PWA: shell, manifiesto, iconos y precarga offline de HTML, JS/CSS y recursos estáticos implementados para Pages. La vista previa web todavía usa memoria temporal y no conserva el estado de conocimiento después de recargar; eso es independiente de la caché del service worker.
 - Ampliar cobertura de FRAGRANCE a body mists, body sprays, aceites y lociones antes de afirmar que el dataset los cubre ampliamente.
 
-Los workflows actuales verifican pruebas automatizadas, compilación Android, identidad del paquete, versión, firma y publicación del APK. No certifican instalación real, comportamiento del actualizador ni persistencia después de reiniciar Android.
+Los workflows verifican pruebas automatizadas, compilación Android, identidad del paquete, versión, firma y que el APK publicado coincida byte por byte con el artefacto compilado. Eso no reemplaza la validación final en un teléfono real del instalador, SQLite nativo, el actualizador y la conservación de datos después de una actualización.
