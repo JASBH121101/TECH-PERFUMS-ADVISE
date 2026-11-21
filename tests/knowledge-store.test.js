@@ -283,3 +283,65 @@ test("KnowledgeStore exposes identity-aware matching without changing persisted 
   assert.equal(matches[0].rightId, "catalog-s25");
   assert.equal(store.getProducts().length, before);
 });
+
+
+test("migrates schema v2 snapshots to v3 with a default local fragrance profile", () => {
+  const migrated = migrateKnowledgeSnapshot({
+    schemaVersion: 2,
+    metadata: {
+      createdAt: "2026-11-07T18:00:00.000Z",
+      updatedAt: "2026-11-07T18:00:00.000Z",
+    },
+    evidence: { schemaVersion: 1, records: [] },
+    catalog: { schemaVersion: 1, products: [] },
+  }, { clock: fixedClock });
+  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.profiles.items[0].id, "local-default");
+  assert.deepEqual(migrated.profiles.items[0].preferredFamilies, []);
+});
+
+test("persists an olfactory profile and product ratings across KnowledgeStore reopen", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const first = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  await first.addProduct({
+    id: "fragrance-local-001",
+    domain: "fragrance",
+    name: "Woody Example",
+    brand: "Example House",
+    productType: "perfume",
+    attributes: { scentFamilies: ["Wood & Root"], allNotes: ["Cedarwood", "Vetiver"] },
+    evidenceIds: {},
+  });
+  await first.saveFragranceProfile({
+    preferredFamilies: ["woody"],
+    avoidFamilies: ["gourmand"],
+    preferredNotes: ["cedarwood"],
+    avoidNotes: ["coconut"],
+    occasion: "day",
+    climate: "hot_humid",
+  });
+  await first.recordFragranceFeedback({ productId: "fragrance-local-001", rating: 5 });
+
+  const reopened = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  const profile = reopened.getFragranceProfile();
+  assert.deepEqual(profile.preferredFamilies, ["woody"]);
+  assert.deepEqual(profile.avoidFamilies, ["gourmand"]);
+  assert.deepEqual(profile.preferredNotes, ["cedarwood"]);
+  assert.equal(profile.feedback.length, 1);
+  assert.equal(profile.feedback[0].productId, "fragrance-local-001");
+  assert.equal(profile.feedback[0].rating, 5);
+});
+
+test("profile feedback rejects unknown products and invalid ratings without changing state", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  await assert.rejects(
+    () => store.recordFragranceFeedback({ productId: "missing", rating: 5 }),
+    /only be recorded for a fragrance/,
+  );
+  await assert.rejects(
+    () => store.recordFragranceFeedback({ productId: "missing", rating: 6 }),
+    /only be recorded for a fragrance/,
+  );
+  assert.equal(store.getFragranceProfile().feedback.length, 0);
+});
