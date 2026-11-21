@@ -11,6 +11,7 @@ on:
       - feature/jbae-collection-management
       - feature/jbae-integrated-flow-hardening
       - feature/jbae-integration-audit
+      - feature/jbae-android-certification
   pull_request:
     branches:
       - main
