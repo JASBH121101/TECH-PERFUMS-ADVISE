@@ -9,6 +9,7 @@ on:
       - feature/jbae-olfactory-profile
       - feature/jbae-fragrance-collection
       - feature/jbae-collection-management
+      - feature/jbae-integrated-flow-hardening
   pull_request:
     branches:
       - main
