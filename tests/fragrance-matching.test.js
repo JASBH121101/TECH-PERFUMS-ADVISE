@@ -166,3 +166,16 @@ test("normalizes Spanish note aliases against actual catalogue note names", () =
   assert.equal(result.ranking[0].score, 100);
   assert.equal(result.ranking[0].eligibility, "eligible");
 });
+
+
+test("hard-excludes explicitly avoided olfactory families", () => {
+  const result = matchFragrances({
+    products,
+    preferences: { avoidFamilies: ["gourmand"] },
+  });
+  const excluded = result.ranking.find(item => item.id === "sweet-heavy");
+  const allowed = result.ranking.find(item => item.id === "soft-fresh");
+  assert.equal(excluded.eligibility, "excluded");
+  assert.ok(excluded.exclusions.includes("contains_avoided_families"));
+  assert.equal(allowed.eligibility, "eligible");
+});
