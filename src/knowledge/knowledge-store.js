@@ -303,6 +303,108 @@ export class KnowledgeStore {
       return true;
     });
   }
+  setFragranceFavorite({ profileId = "local-default", productId, favorite = true } = {}) {
+    return this.#exclusive(async () => {
+      if (typeof favorite !== "boolean") throw new TypeError("favorite must be a boolean");
+      if (typeof productId !== "string" || !this.#snapshot.catalog.products.some(product =>
+        product.id === productId && product.domain === DOMAINS.FRAGRANCE)) {
+        throw new Error("Favorite must reference a fragrance in the local catalog");
+      }
+      const existing = this.getFragranceProfile(profileId);
+      if (!existing) throw new Error("Unknown local fragrance profile ID");
+      const favorites = new Set(existing.favorites);
+      if (favorite) favorites.add(productId);
+      else favorites.delete(productId);
+      const timestamp = nowIso(this.#clock);
+      const productIds = new Set(this.#snapshot.catalog.products
+        .filter(product => product.domain === DOMAINS.FRAGRANCE)
+        .map(product => product.id));
+      const profile = normalizeFragranceProfile({
+        ...existing,
+        favorites: [...favorites],
+        updatedAt: timestamp,
+      }, { productIds });
+      await this.#commit({
+        ...this.#snapshot,
+        metadata: { ...this.#snapshot.metadata, updatedAt: timestamp },
+        profiles: {
+          schemaVersion: 2,
+          items: this.#snapshot.profiles.items.map(item => item.id === profileId ? profile : item),
+        },
+      });
+      return profile.favorites.includes(productId);
+    });
+  }
+  saveFragranceCollectionItem({
+    profileId = "local-default", productId, status = "wishlist", note = null,
+  } = {}) {
+    return this.#exclusive(async () => {
+      if (typeof productId !== "string" || !this.#snapshot.catalog.products.some(product =>
+        product.id === productId && product.domain === DOMAINS.FRAGRANCE)) {
+        throw new Error("Collection item must reference a fragrance in the local catalog");
+      }
+      const existing = this.getFragranceProfile(profileId);
+      if (!existing) throw new Error("Unknown local fragrance profile ID");
+      const previous = existing.collection.find(item => item.productId === productId);
+      if (!previous && existing.collection.length >= 500) {
+        throw new Error("A maximum of 500 collection items is supported");
+      }
+      const timestamp = nowIso(this.#clock);
+      const item = {
+        productId,
+        status,
+        note: note === undefined ? previous?.note ?? null : note,
+        createdAt: previous?.createdAt ?? timestamp,
+        updatedAt: timestamp,
+      };
+      const collection = previous
+        ? existing.collection.map(value => value.productId === productId ? item : value)
+        : [...existing.collection, item];
+      const productIds = new Set(this.#snapshot.catalog.products
+        .filter(product => product.domain === DOMAINS.FRAGRANCE)
+        .map(product => product.id));
+      const profile = normalizeFragranceProfile({
+        ...existing,
+        collection,
+        updatedAt: timestamp,
+      }, { productIds });
+      await this.#commit({
+        ...this.#snapshot,
+        metadata: { ...this.#snapshot.metadata, updatedAt: timestamp },
+        profiles: {
+          schemaVersion: 2,
+          items: this.#snapshot.profiles.items.map(value => value.id === profileId ? profile : value),
+        },
+      });
+      return profile.collection.find(value => value.productId === productId);
+    });
+  }
+  removeFragranceCollectionItem({ profileId = "local-default", productId } = {}) {
+    return this.#exclusive(async () => {
+      const existing = this.getFragranceProfile(profileId);
+      if (!existing) throw new Error("Unknown local fragrance profile ID");
+      const collection = existing.collection.filter(item => item.productId !== productId);
+      if (collection.length === existing.collection.length) return false;
+      const timestamp = nowIso(this.#clock);
+      const productIds = new Set(this.#snapshot.catalog.products
+        .filter(product => product.domain === DOMAINS.FRAGRANCE)
+        .map(product => product.id));
+      const profile = normalizeFragranceProfile({
+        ...existing,
+        collection,
+        updatedAt: timestamp,
+      }, { productIds });
+      await this.#commit({
+        ...this.#snapshot,
+        metadata: { ...this.#snapshot.metadata, updatedAt: timestamp },
+        profiles: {
+          schemaVersion: 2,
+          items: this.#snapshot.profiles.items.map(value => value.id === profileId ? profile : value),
+        },
+      });
+      return true;
+    });
+  }
   getEvidenceStore() { return EvidenceStore.fromExport(this.#snapshot.evidence); }
   queryEvidence(filters = {}) { return this.getEvidenceStore().query(filters); }
   conflicts(filters) { return this.getEvidenceStore().conflicts(filters); }
