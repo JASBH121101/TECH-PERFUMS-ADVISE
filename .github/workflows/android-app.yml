@@ -6,6 +6,7 @@ on:
       - feature/jbae-standalone-android-app
     paths:
       - "apps/mobile/**"
+      - "!apps/mobile/README.md"
       - "src/**"
       - "data/fragrance/**"
   workflow_dispatch:
