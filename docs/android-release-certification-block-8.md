@@ -65,7 +65,33 @@ El actualizador requiere:
 
 Los datos locales se conservan al instalar una actualización encima de la app instalada con el mismo Application ID y certificado. **No desinstalar la aplicación para actualizarla**: la desinstalación elimina los datos privados locales. La base SQLite no usa SQLCipher en esta fase.
 
-## 5. Verificación que puede hacer CI y lo que todavía exige teléfono
+## 5. Incidencia de firma detectada durante el Bloque 8
+
+**Run de Android:** #44926388190  
+**Versión calculada:** `0.4.85` / `versionCode=85` (no publicada).  
+**Última Release oficial verificada:** `jbae-v0.4.83`.
+
+El run #85 pasó:
+- Tests móviles y del motor.
+- Catálogo TECH y seed offline.
+- Build web.
+- Generación del proyecto Android, sincronización de Capacitor, instalación del plugin updater y verificación de insets nativos.
+- Restauración de herramientas Java/Android.
+
+El pipeline se detuvo en `Ensure stable signing identity`, antes de Gradle y antes de firmar. La línea de log dice `Cache not found for input keys: jbae-android-signing-v1-Linux`. Como el marcador `.github/jbae-android-signing-key-persisted` existe, el workflow se negó correctamente a crear otra clave. **No se compiló ni publicó un APK nuevo.**
+
+La última ejecución exitosa que restauró la caché fue el run #83 del 9 de noviembre de 2026; el intento del Bloque 8 fue el 21 de noviembre. GitHub indica que las cachés no usadas durante más de siete días se eliminan por defecto. La caducidad es coherente con el cache miss observado, aunque una eliminación manual o por cuota también sería posible. Referencia: [política oficial de retención y eviction de cachés](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#usage-limits-and-eviction-policy).
+
+### Recuperación compatible
+
+1. Localizar una copia externa del keystore original `~/.android/debug.keystore`, creado por el workflow histórico con store password `android` y alias `androiddebugkey`.
+2. En GitHub → Settings → Secrets and variables → Actions, crear el secreto de repositorio `JBAE_ANDROID_SIGNING_KEYSTORE_BASE64` con el contenido Base64 del keystore original.
+3. El workflow restaurará ese archivo si la caché falta, validará su alias/password, guardará una nueva caché y seguirá utilizando el mismo certificado.
+4. Si no existe una copia del keystore original, detener la publicación de actualizaciones para la aplicación actual. El certificado público que contiene el APK no permite reconstruir la clave privada. No cambiar el Application ID ni generar otro certificado como supuesto reemplazo de una actualización compatible.
+
+La Release `jbae-v0.4.83` sigue siendo el canal público existente. No representa el código de los bloques 1–8. El actualizador debe seguir descargando únicamente releases oficiales, y el siguiente release compatible queda bloqueado hasta recuperar la identidad de firma original.
+
+## 6. Verificación que puede hacer CI y lo que todavía exige teléfono
 
 ### CI puede certificar
 - Integridad de sintaxis y tests del motor/móvil.
@@ -88,7 +114,7 @@ Los datos locales se conservan al instalar una actualización encima de la app i
 
 Un test sobre `MemoryKnowledgeAdapter` o un build APK exitoso no prueba el comportamiento del plugin SQLite en un teléfono. Tampoco se debe llamar «certificado físicamente» hasta completar esta lista.
 
-## 6. Checklist de prueba del usuario en Android
+## 7. Checklist de prueba del usuario en Android
 
 Al disponer del APK release:
 
@@ -107,8 +133,8 @@ Al disponer del APK release:
 
 Registrar versión, `versionCode`, teléfono, versión Android, paso y resultado cuando algo falle.
 
-## 7. Criterio de salida del Bloque 8
+## 8. Criterio de salida del Bloque 8
 
-El pipeline y la difusión directa están aprobados cuando el APK firmado pase CI y el asset publicado se valide byte por byte. La certificación final de producto Android se cierra solo cuando todos los puntos de la sección 6 se hayan ejecutado sin pérdida de datos ni error de instalación/actualización.
+El pipeline de validación del código integrado está aprobado, pero la difusión de un APK actualizado permanece bloqueada por la recuperación de la firma original. Solo queda aprobada cuando el APK firmado pase CI y el asset publicado se valide byte por byte. La certificación final de producto Android se cierra solo cuando todos los puntos de la sección 6 se hayan ejecutado sin pérdida de datos ni error de instalación/actualización.
 
 No se debe afirmar certificación física si el usuario todavía no ha ejecutado esas pruebas. No fusionar la cadena a `main` como atajo para fabricar un resultado de certificación.
