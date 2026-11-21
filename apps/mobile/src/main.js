@@ -52,7 +52,9 @@ const state = {
   products: [],
   fragranceMode: "advisor",
   fragrancePrompt: "",
-  fragranceForm: { occasion: "", families: [], notes: "", climate: "", intensity: "" },
+  fragranceForm: { occasion: "", families: [], avoidFamilies: [], notes: "", avoidNotes: "", climate: "", intensity: "" },
+  profile: null,
+  profileMessage: "",
   adviceResult: null,
   techModel: "",
   techLookupSelection: null,
@@ -123,6 +125,11 @@ function renderModeTabs() {
 function renderFragranceAdvisorForm() {
   const f = state.fragranceForm;
   return `
+    <section class="profile-panel" aria-live="polite">
+      <div><span class="kicker">PERFIL LOCAL INTELIGENTE</span><strong>Tu memoria olfativa</strong></div>
+      <p>${state.profile?.feedback?.length ?? 0} valoraciones guardadas. El motor detecta tendencias cuando una familia o nota se repite en al menos dos fragancias valoradas.</p>
+      <small>${escapeHtml(state.profileMessage || (state.runtime.native ? "Se conserva en SQLite en este dispositivo." : "Vista previa web: la memoria se reinicia al cerrar o recargar."))}</small>
+    </section>
     <form id="fragrance-advisor-form" class="advisor-form">
       <div class="form-heading"><strong>Cuéntame qué estás buscando</strong><p>Escribe como lo dirías a un asesor. También puedes añadir filtros para que la recomendación respete tus preferencias.</p></div>
       <div class="field-group">
@@ -150,10 +157,26 @@ function renderFragranceAdvisorForm() {
             </label>`).join("")}
         </div>
       </fieldset>
+      <fieldset class="field-group family-fieldset">
+        <legend>¿QUÉ FAMILIAS OLFATIVAS QUIERES EVITAR?</legend>
+        <span class="field-hint">Estas familias se aplican como exclusiones, no como preferencias suaves.</span>
+        <div class="family-choice-grid">
+          ${FRAGRANCE_FAMILY_OPTIONS.map(option => `
+            <label class="family-choice">
+              <input type="checkbox" name="fragrance-avoid-family" value="${option.value}" ${f.avoidFamilies.includes(option.value) ? "checked" : ""}>
+              <span>${option.label}</span>
+            </label>`).join("")}
+        </div>
+      </fieldset>
       <div class="field-group">
         <label for="fragrance-notes">¿QUÉ NOTAS ESPECÍFICAS PREFIERES?</label>
         <input id="fragrance-notes" name="notes" type="text" autocomplete="off" value="${escapeHtml(f.notes)}" placeholder="Ej.: cedro, bergamota, vetiver">
         <span class="field-hint">Puedes escribir varias separadas por comas. El motor busca las notas presentes en la biblioteca.</span>
+      </div>
+      <div class="field-group">
+        <label for="fragrance-avoid-notes">¿QUÉ NOTAS QUIERES EVITAR?</label>
+        <input id="fragrance-avoid-notes" name="avoidNotes" type="text" autocomplete="off" value="${escapeHtml(f.avoidNotes)}" placeholder="Ej.: coco, pachulí">
+        <span class="field-hint">Se excluyen las opciones que incluyan esas notas cuando la ficha permite comprobarlo.</span>
       </div>
       <div class="field-group">
         <label for="fragrance-climate">¿EN QUÉ CLIMA LA USARÁS?</label>
@@ -174,7 +197,7 @@ function renderFragranceAdvisorForm() {
         </select>
         <span class="field-hint">No se inventa la intensidad: si el catálogo no la registra, el motor la marcará como dato faltante.</span>
       </div>
-      <button class="primary-action" type="submit">Analizar mis preferencias <span>↗</span></button>
+      <button class="primary-action" type="submit">Guardar perfil y analizar <span>↗</span></button>
     </form>
     <section id="advice-results" class="advice-results"></section>`;
 }
@@ -240,7 +263,12 @@ function renderAdviceResults() {
         </div>
         ${reasons}
         <div class="evidence-inline">Cobertura del perfil: ${item.coverage}% · ${notes.length ? escapeHtml(notes.slice(0, 5).join(", ")) : "Pirámide de notas no disponible"}</div>
-      </button>`;
+      </button>
+      <div class="advice-feedback">
+        <span>¿Qué te pareció?</span>
+        <button type="button" data-action="rate-fragrance" data-id="${encodeURIComponent(item.id)}" data-rating="5">Me gusta</button>
+        <button type="button" data-action="rate-fragrance" data-id="${encodeURIComponent(item.id)}" data-rating="1">No es para mí</button>
+      </div>`;
   }).join("");
   const recognized = Object.entries(result.preferences ?? {}).flatMap(([key, value]) => {
     const values = Array.isArray(value) ? value : [value];
@@ -652,6 +680,25 @@ app.addEventListener("click", async event => {
     state.detailsId = null;
     state.route = "fragrance";
     render();
+  } else if (actionButton.dataset.action === "rate-fragrance") {
+    const productId = decodeURIComponent(actionButton.dataset.id ?? "");
+    const rating = Number(actionButton.dataset.rating);
+    try {
+      await state.runtime.knowledgeStore.recordFragranceFeedback({ productId, rating });
+      state.profile = state.runtime.knowledgeStore.getFragranceProfile();
+      state.profileMessage = rating >= 4
+        ? "Valoración guardada. El perfil buscará patrones con tus próximas valoraciones."
+        : "Preferencia negativa guardada. Las tendencias se aplicarán cuando haya repetición suficiente.";
+      state.adviceResult = buildFragranceAdvice({
+        products: state.products,
+        message: state.fragrancePrompt,
+        ...state.fragranceForm,
+        profile: state.profile,
+      });
+    } catch (error) {
+      state.profileMessage = error instanceof Error ? error.message : "No se pudo guardar la valoración.";
+    }
+    render();
   } else if (actionButton.dataset.action === "clear-search") {
     state.searchQuery = "";
     render();
@@ -667,6 +714,8 @@ app.addEventListener("input", event => {
     state.fragrancePrompt = event.target.value;
   } else if (event.target.id === "fragrance-notes") {
     state.fragranceForm.notes = event.target.value;
+  } else if (event.target.id === "fragrance-avoid-notes") {
+    state.fragranceForm.avoidNotes = event.target.value;
   } else if (event.target.id === "tech-model") {
     state.techModel = event.target.value;
     state.techLookupSelection = null;
@@ -696,6 +745,11 @@ app.addEventListener("input", event => {
 app.addEventListener("change", event => {
   if (event.target.matches('input[name="fragrance-family"]')) {
     state.fragranceForm.families = [...app.querySelectorAll('input[name="fragrance-family"]:checked')]
+      .map(input => input.value);
+    return;
+  }
+  if (event.target.matches('input[name="fragrance-avoid-family"]')) {
+    state.fragranceForm.avoidFamilies = [...app.querySelectorAll('input[name="fragrance-avoid-family"]:checked')]
       .map(input => input.value);
     return;
   }
@@ -739,11 +793,27 @@ app.addEventListener("submit", async event => {
     state.fragranceForm.families = [...event.target.querySelectorAll('input[name="fragrance-family"]:checked')]
       .map(input => input.value);
     state.fragranceForm.notes = event.target.querySelector("#fragrance-notes")?.value ?? state.fragranceForm.notes;
+    state.fragranceForm.avoidNotes = event.target.querySelector("#fragrance-avoid-notes")?.value ?? state.fragranceForm.avoidNotes;
+    state.fragranceForm.avoidFamilies = [...event.target.querySelectorAll('input[name="fragrance-avoid-family"]:checked')]
+      .map(input => input.value);
+    const toList = value => String(value ?? "").split(/[;,]/u).map(item => item.trim()).filter(Boolean);
     try {
+      state.profile = await state.runtime.knowledgeStore.saveFragranceProfile({
+        id: "local-default",
+        preferredFamilies: state.fragranceForm.families,
+        avoidFamilies: state.fragranceForm.avoidFamilies,
+        preferredNotes: toList(state.fragranceForm.notes),
+        avoidNotes: toList(state.fragranceForm.avoidNotes),
+        occasion: state.fragranceForm.occasion || null,
+        climate: state.fragranceForm.climate || null,
+        intensity: state.fragranceForm.intensity || null,
+      });
+      state.profileMessage = "Preferencias guardadas en tu perfil local.";
       state.adviceResult = buildFragranceAdvice({
         products: state.products,
         message: state.fragrancePrompt,
         ...state.fragranceForm,
+        profile: state.profile,
       });
     } catch (error) {
       state.adviceResult = { status: "error", error: error.message };
@@ -848,6 +918,18 @@ async function boot() {
   try {
     state.runtime = await initializeStorage();
     state.products = state.runtime.knowledgeStore.getProducts({ domain: DOMAINS.FRAGRANCE });
+    state.profile = state.runtime.knowledgeStore.getFragranceProfile();
+    if (state.profile) {
+      state.fragranceForm = {
+        occasion: state.profile.occasion ?? "",
+        families: [...state.profile.preferredFamilies],
+        avoidFamilies: [...state.profile.avoidFamilies],
+        notes: state.profile.preferredNotes.join(", "),
+        avoidNotes: state.profile.avoidNotes.join(", "),
+        climate: state.profile.climate ?? "",
+        intensity: state.profile.intensity ?? "",
+      };
+    }
     runtimeLabel.textContent = state.runtime.native ? "OFFLINE READY" : "PREVIEW MODE";
     runtimeLabel.parentElement.classList.toggle("is-preview", !state.runtime.native);
     render();
