@@ -181,6 +181,7 @@ function explain(values) {
     if (item.score === null || item.score < 60) continue;
     const descriptions = {
       scentFamilies: "Coincide con las familias olfativas que buscas.",
+      avoidFamilies: "No incluye las familias olfativas que quieres evitar.",
       notes: "Incluye notas que mencionaste.",
       characterTraits: "Su carácter coincide con tus preferencias.",
       occasion: "Su ficha lo relaciona con la ocasión indicada.",
@@ -215,6 +216,7 @@ export function matchFragrances({
   if (new Set(products.map(product => product.id)).size !== products.length) throw new TypeError("candidate IDs must be unique");
 
   const preferredFamilies = normalizeList(preferences.preferredFamilies, "preferredFamilies", value => alias(value, FAMILY_ALIASES));
+  const avoidedFamilies = normalizeList(preferences.avoidFamilies, "avoidFamilies", value => alias(value, FAMILY_ALIASES));
   const preferredNotes = normalizeList(preferences.preferredNotes, "preferredNotes", value => alias(value, NOTE_ALIASES));
   const avoidedNotes = normalizeList(preferences.avoidNotes, "avoidNotes", value => alias(value, NOTE_ALIASES));
   const preferredCharacters = normalizeList(preferences.preferredCharacters, "preferredCharacters", value => alias(value, CHARACTER_ALIASES));
@@ -230,6 +232,7 @@ export function matchFragrances({
 
   const requested = [];
   if (preferredFamilies.length) requested.push({ key: "scentFamilies", weight: 25 });
+  if (avoidedFamilies.length) requested.push({ key: "avoidFamilies", weight: 25 });
   if (preferredNotes.length) requested.push({ key: "notes", weight: 30 });
   if (avoidedNotes.length) requested.push({ key: "avoidNotes", weight: 25 });
   if (preferredCharacters.length) requested.push({ key: "characterTraits", weight: 15 });
@@ -263,6 +266,18 @@ export function matchFragrances({
       const actual = asList(attributes.scentFamilies, "scentFamilies", value => alias(value, FAMILY_ALIASES));
       const score = overlapScore(preferredFamilies, actual);
       add("scentFamilies", 25, score, ["scentFamilies"], score === null ? [] : actual);
+    }
+    if (avoidedFamilies.length) {
+      const actual = asList(attributes.scentFamilies, "scentFamilies", value => alias(value, FAMILY_ALIASES));
+      if (!actual.length) {
+        exclusions.push("family_avoidance_not_verifiable");
+        values.push({ key: "avoidFamilies", weight: 25, score: null, status: "not_verifiable", matched: [] });
+      } else if (avoidedFamilies.some(item => actual.includes(item))) {
+        const evidence = resolveEvidence(product, ["scentFamilies"], evidenceStore, allowReported);
+        exclusions.push(evidence.eligible ? "contains_avoided_families" : "family_avoidance_evidence_not_eligible");
+        values.push({ key: "avoidFamilies", weight: 25, score: evidence.eligible ? 0 : null,
+          status: evidence.eligible ? "constraint_failed" : evidence.status, matched: [] });
+      } else add("avoidFamilies", 25, 100, ["scentFamilies"]);
     }
     if (preferredNotes.length) {
       const score = overlapScore(preferredNotes, notes);
@@ -406,7 +421,7 @@ export function matchFragrances({
     minimumMatchCoverage,
     evidenceMode: evidenceStore ? (allowReported ? "strict_with_reported_opt_in" : "strict") : "not_assessed",
     requestedPreferences: Object.freeze({
-      preferredFamilies: Object.freeze(preferredFamilies), preferredNotes: Object.freeze(preferredNotes),
+      preferredFamilies: Object.freeze(preferredFamilies), avoidFamilies: Object.freeze(avoidedFamilies), preferredNotes: Object.freeze(preferredNotes),
       avoidNotes: Object.freeze(avoidedNotes), preferredCharacters: Object.freeze(preferredCharacters),
       avoidCharacters: Object.freeze(avoidedCharacters), occasion, climate, intensity, projection,
       maxIntensity, maxProjection, maxSillage, productTypes: Object.freeze(productTypes),

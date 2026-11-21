@@ -103,7 +103,7 @@ const evidence = (id, value) => ({
   note: null,
 });
 const snapshot = (id = "ev-1") => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   metadata: {
     createdAt: "2026-11-07T18:00:00.000Z",
     updatedAt: "2026-11-07T18:05:00.000Z",
@@ -113,6 +113,27 @@ const snapshot = (id = "ev-1") => ({
     records: [evidence(id, "256 GB")],
   },
   catalog: { schemaVersion: 1, products: [] },
+  profiles: {
+    schemaVersion: 1,
+    items: [{
+      id: "local-default",
+      displayName: "Mi perfil",
+      preferredFamilies: [],
+      avoidFamilies: [],
+      preferredNotes: [],
+      avoidNotes: [],
+      occasion: null,
+      climate: null,
+      intensity: null,
+      projection: null,
+      maxIntensity: null,
+      maxProjection: null,
+      maxSillage: null,
+      feedback: [],
+      createdAt: "2026-11-07T18:00:00.000Z",
+      updatedAt: "2026-11-07T18:00:00.000Z",
+    }],
+  },
 });
 
 test("initializes a versioned SQLite schema in one transaction", async () => {

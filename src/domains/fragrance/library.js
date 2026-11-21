@@ -1,6 +1,6 @@
 import { EvidenceStore } from "../../core/evidence-store.js";
 import { EVIDENCE_STATUSES, SOURCE_TYPES } from "../../core/evidence.js";
-import { validateKnowledgeSnapshot } from "../../knowledge/migrations.js";
+import { migrateKnowledgeSnapshot } from "../../knowledge/migrations.js";
 import { normalizeFragranceProduct } from "./adapter.js";
 
 export const SCENTO_DATASET = Object.freeze({
@@ -646,7 +646,7 @@ export function buildScentoFragranceBundle(options = {}) {
   if (Number.isNaN(importedDate.getTime())) throw new TypeError("importedAt must be a valid date-time");
   const timestamp = importedDate.toISOString();
   const built = buildLibrary({ ...options, withEvidence: true });
-  const snapshot = validateKnowledgeSnapshot({
+  const snapshot = migrateKnowledgeSnapshot({
     schemaVersion: 2,
     metadata: { createdAt: timestamp, updatedAt: timestamp },
     evidence: built.evidence.export(),

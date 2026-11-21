@@ -6,6 +6,7 @@ on:
       - main
       - feature/jb-advisor-engine
       - feature/jbae-standalone-android-app
+      - feature/jbae-olfactory-profile
   pull_request:
     branches:
       - main

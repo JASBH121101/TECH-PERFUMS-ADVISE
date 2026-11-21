@@ -6,12 +6,15 @@ The Knowledge Store provides a versioned persistence boundary for the local prod
 
 ## Snapshot schema
 
-Current JSON snapshot schema: `2`.
+Current JSON snapshot schema: `3`.
 
 - `schemaVersion`: KnowledgeStore snapshot version.
 - `metadata.createdAt` / `metadata.updatedAt`: canonical ISO 8601 timestamps.
 - `evidence`: versioned EvidenceStore export.
 - `catalog`: catalog schema version 1 and normalized fragrance/technology products.
+- `profiles`: profile schema version 1, with local olfactory preferences and bounded fragrance-rating history. Migration from v2 creates an empty `local-default` profile; product feedback references must resolve to fragrance products in the same snapshot.
+
+Profile writes use the same serialized KnowledgeStore commit and the same atomic SQLite snapshot transaction as catalog/evidence writes. Profiles are device-local; importing a catalog backup does not overwrite the destination device's profile.
 
 Migrations run in ascending version order and validate before writing. v0 migrates to v1 and then v2; v1 gains an empty catalog. Unknown future versions, missing migration steps, malformed products, duplicate product/evidence IDs and dangling product evidence references fail closed.
 

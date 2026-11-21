@@ -2,8 +2,10 @@ import { EvidenceStore } from "../core/evidence-store.js";
 import { DOMAINS } from "../core/domains.js";
 import { normalizeFragranceProduct } from "../domains/fragrance/adapter.js";
 import { normalizeTechnologyProduct } from "../domains/technology/adapter.js";
+import { createDefaultFragranceProfile, normalizeFragranceProfile } from "./fragrance-profiles.js";
 
-export const KNOWLEDGE_SCHEMA_VERSION = 2;
+export const KNOWLEDGE_SCHEMA_VERSION = 3;
+const PROFILE_SCHEMA_VERSION = 1;
 const EVIDENCE_SCHEMA_VERSION = 1;
 const CATALOG_SCHEMA_VERSION = 1;
 
@@ -53,6 +55,7 @@ export function createEmptyKnowledgeSnapshot({ clock = () => new Date() } = {}) 
     metadata: { createdAt: timestamp, updatedAt: timestamp },
     evidence: { schemaVersion: EVIDENCE_SCHEMA_VERSION, records: [] },
     catalog: { schemaVersion: CATALOG_SCHEMA_VERSION, products: [] },
+    profiles: { schemaVersion: PROFILE_SCHEMA_VERSION, items: [createDefaultFragranceProfile({ clock: () => timestamp })] },
   });
 }
 function migrateV0ToV1(snapshot, clock) {
@@ -75,7 +78,21 @@ function migrateV1ToV2(snapshot) {
     catalog: { schemaVersion: CATALOG_SCHEMA_VERSION, products: [] },
   };
 }
-const migrations = new Map([[0, migrateV0ToV1], [1, migrateV1ToV2]]);
+function migrateV2ToV3(snapshot) {
+  if (!isPlainObject(snapshot.metadata)) {
+    throw new TypeError("Knowledge snapshot metadata is required");
+  }
+  const createdAt = snapshot.metadata.createdAt;
+  return {
+    ...snapshot,
+    schemaVersion: 3,
+    profiles: {
+      schemaVersion: PROFILE_SCHEMA_VERSION,
+      items: [createDefaultFragranceProfile({ clock: () => createdAt })],
+    },
+  };
+}
+const migrations = new Map([[0, migrateV0ToV1], [1, migrateV1ToV2], [2, migrateV2ToV3]]);
 export function validateKnowledgeSnapshot(snapshot) {
   if (!isPlainObject(snapshot)) throw new TypeError("Knowledge snapshot must be an object");
   if (snapshot.schemaVersion !== KNOWLEDGE_SCHEMA_VERSION) {
@@ -89,23 +106,38 @@ export function validateKnowledgeSnapshot(snapshot) {
       !Array.isArray(snapshot.catalog.products)) {
     throw new TypeError("Knowledge snapshot catalog is missing or unsupported");
   }
+  if (!isPlainObject(snapshot.profiles) || snapshot.profiles.schemaVersion !== PROFILE_SCHEMA_VERSION ||
+      !Array.isArray(snapshot.profiles.items) || snapshot.profiles.items.length < 1 || snapshot.profiles.items.length > 20) {
+    throw new TypeError("Knowledge snapshot profiles are missing or unsupported");
+  }
   const ledger = EvidenceStore.fromExport(snapshot.evidence);
   const products = snapshot.catalog.products.map(normalizeCatalogProduct);
   const productIds = new Set();
+  const fragranceProductIds = new Set();
   for (const product of products) {
     if (productIds.has(product.id)) throw new Error(`Duplicate catalog product ID: ${product.id}`);
     productIds.add(product.id);
+    if (product.domain === DOMAINS.FRAGRANCE) fragranceProductIds.add(product.id);
     for (const evidenceId of iterateProductEvidenceIds(product.evidenceIds)) {
       if (!ledger.getById(evidenceId)) {
         throw new Error(`Catalog product ${product.id} references missing evidence: ${evidenceId}`);
       }
     }
   }
+  const profiles = snapshot.profiles.items.map(profile =>
+    normalizeFragranceProfile(profile, { productIds: fragranceProductIds }));
+  const profileIds = new Set();
+  for (const profile of profiles) {
+    if (profileIds.has(profile.id)) throw new Error(`Duplicate fragrance profile ID: ${profile.id}`);
+    profileIds.add(profile.id);
+  }
+  if (!profileIds.has("local-default")) throw new Error("Knowledge snapshot is missing the default local fragrance profile");
   return freezeDeep({
     schemaVersion: KNOWLEDGE_SCHEMA_VERSION,
     metadata: { createdAt, updatedAt },
     evidence: ledger.export(),
     catalog: { schemaVersion: CATALOG_SCHEMA_VERSION, products },
+    profiles: { schemaVersion: PROFILE_SCHEMA_VERSION, items: profiles },
   });
 }
 export function migrateKnowledgeSnapshot(snapshot, { clock = () => new Date() } = {}) {
