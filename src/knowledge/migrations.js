@@ -79,6 +79,9 @@ function migrateV1ToV2(snapshot) {
   };
 }
 function migrateV2ToV3(snapshot) {
+  if (!isPlainObject(snapshot.metadata)) {
+    throw new TypeError("Knowledge snapshot metadata is required");
+  }
   const createdAt = snapshot.metadata.createdAt;
   return {
     ...snapshot,
