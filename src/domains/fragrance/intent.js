@@ -64,11 +64,8 @@ function extractNotes(text, knownNotes = []) {
       avoidNotes.push(canonical);
       continue;
     }
-    const positive = new RegExp(
-      "\\b(?:me gusta|me gustan|prefiero|con|que tenga|notas de)\\s+(?:(?:el|la|los|las)\\s+)?(?:(?:nota|notas)\\s+de\\s+)?"+escapeRegExp(term)+"\\b",
-      "u",
-    );
-    if (positive.test(text)) preferredNotes.push(canonical);
+    const positive = /\\b(?:me gusta|me gustan|me encanta|me encantan|prefiero|busco|quiero|con|que tenga|notas? de)\\b/u.test(text);
+    if (positive) preferredNotes.push(canonical);
   }
   return { preferredNotes: [...new Set(preferredNotes)], avoidNotes: [...new Set(avoidNotes)] };
 }
