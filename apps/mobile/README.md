@@ -35,6 +35,10 @@ La vista previa web usa memoria temporal: al recargar o cerrar el navegador se p
 
 La distribución actual es descarga directa de APK desde GitHub Releases; no es una publicación en Google Play. La firma persistente existente es un keystore debug dedicado a JBAE, guardado como `~/.android/debug.keystore`; no es una clave de publicación de Play Store. No se debe borrar el marcador `.github/jbae-android-signing-key-persisted`, eliminar la caché de firma ni generar otra clave para una actualización.
 
+**Aviso de firma (21-11-2026):** el build integrado del Bloque 8 encontró que la caché `jbae-android-signing-v1-Linux` ya no estaba disponible. El pipeline se detuvo antes de compilar/fimar, y la Release pública sigue en `jbae-v0.4.83`; no existe todavía un APK actualizado con los bloques 1–8. No desinstales tu versión actual para intentar instalar un paquete alternativo.
+
+Si existe una copia externa del **keystore original**, conviértela a Base64 en un entorno local seguro y guárdala como secreto de repositorio `JBAE_ANDROID_SIGNING_KEYSTORE_BASE64` en GitHub → Settings → Secrets and variables → Actions. El workflow valida el alias `androiddebugkey` y la contraseña histórica `android`, restaura el archivo y vuelve a guardar la caché. No pegues el keystore, la cadena Base64 ni contraseñas en chats, issues o commits. Si no existe una copia del keystore original, no hay forma compatible de firmar una actualización con el certificado anterior; no se debe generar uno nuevo para sustituirlo.
+
 ## Desarrollo local
 
 Requisitos: Node.js 22.12 o posterior, Java 21 y Android SDK.
