@@ -103,7 +103,7 @@ test("builds a schema-valid knowledge snapshot with stable reported evidence", (
     materialsCsv: sampleMaterials,
     importedAt:"2026-10-29T00:00:00.000Z",
   });
-  assert.equal(bundle.snapshot.schemaVersion, 2);
+  assert.equal(bundle.snapshot.schemaVersion, 3);
   assert.equal(bundle.snapshot.catalog.products.length, 1);
   assert.ok(bundle.evidenceCount >= 10);
   const product = bundle.snapshot.catalog.products[0];
