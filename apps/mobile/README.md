@@ -30,14 +30,18 @@ La vista previa web usa memoria temporal: al recargar o cerrar el navegador se p
 1. Descarga siempre el APK desde [JBAE Releases](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/latest/download/JBAE.apk).
 2. Abre el archivo desde Descargas. Android mostrará el instalador del paquete.
 3. En una primera instalación, Android puede pedir permiso para instalar aplicaciones desde el navegador o administrador de archivos que abrió el APK. En Ajustes, activa «Permitir desde esta fuente» únicamente para esa aplicación de origen y confirma la instalación en Android.
-4. Para actualizar una instalación existente, instala la nueva versión **encima de la anterior**. No desinstales JBAE antes: la actualización conserva el almacenamiento local cuando coinciden el Application ID y el certificado.
-5. El actualizador integrado descarga el APK mediante DownloadManager, comprueba paquete, versión, tamaño y certificado, y deja la confirmación final al instalador de Android.
+4. La transición a la nueva firma requiere una instalación limpia: Android no permite instalar el APK nuevo encima de una versión que conserva el certificado histórico. Antes de desinstalar la versión antigua, tené presente que Android elimina sus datos privados locales, incluida la base SQLite. No hay migración automática de esos datos implementada.
+5. Una vez instalada la versión nueva, las siguientes actualizaciones podrán instalarse encima siempre que mantengan el mismo Application ID y el nuevo certificado.
 
-La distribución actual es descarga directa de APK desde GitHub Releases; no es una publicación en Google Play. La firma persistente existente es un keystore debug dedicado a JBAE, guardado como `~/.android/debug.keystore`; no es una clave de publicación de Play Store. No se debe borrar el marcador `.github/jbae-android-signing-key-persisted`, eliminar la caché de firma ni generar otra clave para una actualización.
+La distribución es descarga directa desde GitHub Releases; no es una publicación en Google Play. El certificado histórico de la versión 0.4.83 se conserva como referencia, pero la nueva identidad será un keystore PKCS#12 dedicado a JBAE, no una clave de Play Store.
 
-**Aviso de firma (21-11-2026):** el build integrado del Bloque 8 encontró que la caché `jbae-android-signing-v1-Linux` ya no estaba disponible. El pipeline se detuvo antes de compilar/fimar, y la Release pública sigue en `jbae-v0.4.83`; no existe todavía un APK actualizado con los bloques 1–8. No desinstales tu versión actual para intentar instalar un paquete alternativo.
+**Transición de firma (21-11-2026):** GitHub ya no conserva la caché de la clave histórica. Se autorizó reemplazarla. La última Release pública sigue siendo `jbae-v0.4.83`, firmada con el certificado anterior; todavía no se ha generado ni publicado un APK con la nueva identidad.
 
-Si existe una copia externa del **keystore original**, conviértela a Base64 en un entorno local seguro y guárdala como secreto de repositorio `JBAE_ANDROID_SIGNING_KEYSTORE_BASE64` en GitHub → Settings → Secrets and variables → Actions. El workflow valida el alias `androiddebugkey` y la contraseña histórica `android`, restaura el archivo y vuelve a guardar la caché. No pegues el keystore, la cadena Base64 ni contraseñas en chats, issues o commits. Si no existe una copia del keystore original, no hay forma compatible de firmar una actualización con el certificado anterior; no se debe generar uno nuevo para sustituirlo.
+Para crear la nueva identidad en Windows, ejecutá `scripts/create-android-signing-key.ps1` desde PowerShell. El script crea `%USERPROFILE%\\JBAE-signing-backup\\jbae-release.p12`, alias `jbae-release-2026`, RSA 3072 y vigencia de 10,000 días. Después guarda estos secretos en GitHub → Settings → Secrets and variables → Actions:
+- `JBAE_ANDROID_KEYSTORE_PASSWORD`
+- `JBAE_ANDROID_SIGNING_KEYSTORE_BASE64`
+
+El workflow valida el keystore PKCS#12, comprueba que la huella del APK coincida con la huella derivada de la clave protegida y utiliza los secretos en cada compilación. No depende de una caché de Actions. No compartas el archivo .p12, la cadena Base64 ni la contraseña por chat, issues o commits. Conservá una copia cifrada adicional del .p12 fuera del repositorio.
 
 ## Desarrollo local
 
@@ -69,9 +73,7 @@ cd android
 
 La versión base de la aplicación se mantiene en `apps/mobile/package.json`. El workflow Android deriva el número publicado como `MAJOR.MINOR.GITHUB_RUN_NUMBER`; por ejemplo, con la serie base `0.4.0` y el run 22, publica `0.4.22`. El mismo valor se usa en el bundle web, el `versionName`, el tag `jbae-v...` y el nombre del artefacto. `versionCode` sigue el número monotónico del workflow Android.
 
-Cada Release usa el mismo `applicationId` y una identidad de firma JBAE persistente almacenada en la caché protegida de GitHub Actions. La clave establecida no debe regenerarse, eliminarse ni rotarse: una firma distinta impediría actualizar la aplicación instalada. Esta identidad procede de un keystore de tipo debug persistente; no es una clave de publicación de Google Play. Android siempre solicita confirmación antes de instalar y no se admite instalación silenciosa.
-
-El workflow falla de forma cerrada si ya existe el marcador de identidad y la caché de firma no está disponible. No se debe eliminar ese control para forzar una compilación.
+Cada Release usa el mismo `applicationId` y el keystore PKCS#12 `jbae-release.p12`, reconstruido desde secretos protegidos de GitHub Actions. La identidad nueva no debe regenerarse ni perderse: las futuras actualizaciones dependen de conservar exactamente ese archivo y contraseña. La firma nueva no es compatible con la app antigua ya instalada; la transición requiere desinstalar la versión anterior y aceptar la pérdida de sus datos locales. Después de esa instalación limpia, las versiones firmadas con el nuevo keystore podrán actualizarse normalmente. Android siempre solicita confirmación antes de instalar y no se admite instalación silenciosa.
 
 ## Pendiente / no certificado en dispositivo
 
