@@ -1,6 +1,7 @@
 import { EvidenceStore } from "../core/evidence-store.js";
 import { DOMAINS } from "../core/domains.js";
 import { CatalogIndex } from "./catalog-index.js";
+import { createDefaultFragranceProfile, normalizeFragranceProfile } from "./fragrance-profiles.js";
 import {
   createEmptyKnowledgeSnapshot,
   migrateKnowledgeSnapshot,
@@ -120,6 +121,80 @@ export class KnowledgeStore {
     return validated;
   }
   getSnapshot() { return this.#snapshot; }
+  getFragranceProfiles() { return this.#snapshot.profiles.items; }
+  getFragranceProfile(id = "local-default") {
+    return this.#snapshot.profiles.items.find(profile => profile.id === id) ?? null;
+  }
+  saveFragranceProfile(input = {}) {
+    return this.#exclusive(async () => {
+      const id = input.id ?? "local-default";
+      const existing = this.getFragranceProfile(id);
+      const timestamp = nowIso(this.#clock);
+      const defaults = createDefaultFragranceProfile({ clock: () => timestamp });
+      const candidate = {
+        ...defaults,
+        ...(existing ?? {}),
+        ...input,
+        id,
+        createdAt: existing?.createdAt ?? input.createdAt ?? timestamp,
+        updatedAt: timestamp,
+      };
+      const productIds = new Set(this.#snapshot.catalog.products
+        .filter(product => product.domain === DOMAINS.FRAGRANCE)
+        .map(product => product.id));
+      const profile = normalizeFragranceProfile(candidate, { productIds });
+      const items = existing
+        ? this.#snapshot.profiles.items.map(item => item.id === id ? profile : item)
+        : [...this.#snapshot.profiles.items, profile];
+      if (items.length > 20) throw new Error("A maximum of 20 local fragrance profiles is supported");
+      await this.#commit({
+        ...this.#snapshot,
+        metadata: { ...this.#snapshot.metadata, updatedAt: timestamp },
+        profiles: { schemaVersion: 1, items },
+      });
+      return profile;
+    });
+  }
+  recordFragranceFeedback({ profileId = "local-default", productId, rating } = {}) {
+    return this.#exclusive(async () => {
+      if (typeof productId !== "string" || !this.#snapshot.catalog.products.some(product =>
+        product.id === productId && product.domain === DOMAINS.FRAGRANCE)) {
+        throw new Error("Feedback can only be recorded for a fragrance in the local catalog");
+      }
+      if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+        throw new TypeError("Fragrance feedback rating must be an integer from 1 to 5");
+      }
+      const existing = this.getFragranceProfile(profileId);
+      const timestamp = nowIso(this.#clock);
+      const defaults = createDefaultFragranceProfile({ clock: () => timestamp });
+      const current = existing ?? defaults;
+      const record = Object.freeze({
+        id: `${timestamp}:${productId}:${current.feedback.length + 1}`,
+        productId,
+        rating,
+        createdAt: timestamp,
+      });
+      const feedback = [...current.feedback, record].slice(-500);
+      const candidate = {
+        ...current,
+        feedback,
+        updatedAt: timestamp,
+      };
+      const productIds = new Set(this.#snapshot.catalog.products
+        .filter(product => product.domain === DOMAINS.FRAGRANCE)
+        .map(product => product.id));
+      const profile = normalizeFragranceProfile(candidate, { productIds });
+      const items = existing
+        ? this.#snapshot.profiles.items.map(item => item.id === profileId ? profile : item)
+        : [...this.#snapshot.profiles.items, profile];
+      await this.#commit({
+        ...this.#snapshot,
+        metadata: { ...this.#snapshot.metadata, updatedAt: timestamp },
+        profiles: { schemaVersion: 1, items },
+      });
+      return record;
+    });
+  }
   getEvidenceStore() { return EvidenceStore.fromExport(this.#snapshot.evidence); }
   queryEvidence(filters = {}) { return this.getEvidenceStore().query(filters); }
   conflicts(filters) { return this.getEvidenceStore().conflicts(filters); }
