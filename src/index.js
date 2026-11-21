@@ -65,6 +65,7 @@ export {
   KnowledgeStore,
   MemoryKnowledgeAdapter,
 } from "./knowledge/knowledge-store.js";
+export { createDefaultFragranceProfile, normalizeFragranceProfile } from "./knowledge/fragrance-profiles.js";
 export {
   CapacitorSQLiteKnowledgeAdapter,
   CAPACITOR_SQLITE_SCHEMA_VERSION,
