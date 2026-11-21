@@ -5,6 +5,7 @@ const PROFILE_LIST_FIELDS = Object.freeze([
   "preferredNotes",
   "avoidNotes",
 ]);
+const COLLECTION_STATUSES = new Set(["wishlist", "owned", "sampled"]);
 
 function isPlainObject(value) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
@@ -21,18 +22,22 @@ function canonicalTimestamp(value, field) {
   return value;
 }
 
-function normalizeStringList(value, field) {
-  if (!Array.isArray(value) || value.length > 100 ||
-      value.some(item => typeof item !== "string" || !item.trim() || item.trim().length > 100)) {
-    throw new TypeError(`${field} must be an array of up to 100 non-empty strings`);
+function normalizeStringList(value, field, productIds) {
+  if (!Array.isArray(value) || value.length > 500 ||
+      value.some(item => typeof item !== "string" || !item.trim() || item.trim().length > 200)) {
+    throw new TypeError(`${field} must be an array of up to 500 non-empty product IDs`);
   }
-  return [...new Set(value.map(item => item.trim()))];
+  const normalized = [...new Set(value.map(item => item.trim()))];
+  for (const id of normalized) {
+    if (!productIds.has(id)) throw new TypeError(`${field} references an unknown fragrance product: ${id}`);
+  }
+  return normalized;
 }
 
-function normalizeOptionalText(value, field) {
+function normalizeOptionalText(value, field, maxLength = 80) {
   if (value === undefined || value === null || value === "") return null;
-  if (typeof value !== "string" || !value.trim() || value.trim().length > 80) {
-    throw new TypeError(`${field} must be null or a non-empty string up to 80 characters`);
+  if (typeof value !== "string" || !value.trim() || value.trim().length > maxLength) {
+    throw new TypeError(`${field} must be null or a non-empty string up to ${maxLength} characters`);
   }
   return value.trim();
 }
@@ -55,6 +60,8 @@ export function createDefaultFragranceProfile({ clock = () => new Date() } = {})
     maxProjection: null,
     maxSillage: null,
     feedback: Object.freeze([]),
+    favorites: Object.freeze([]),
+    collection: Object.freeze([]),
     createdAt: timestamp,
     updatedAt: timestamp,
   });
@@ -96,8 +103,35 @@ export function normalizeFragranceProfile(input, { productIds = new Set() } = {}
       createdAt: canonicalTimestamp(item.createdAt, `profile.feedback[${index}].createdAt`),
     });
   });
+  const favorites = normalizeStringList(input.favorites ?? [], "profile.favorites", productIds);
+  const collection = input.collection ?? [];
+  if (!Array.isArray(collection) || collection.length > 500) {
+    throw new TypeError("Fragrance profile collection must be an array of up to 500 items");
+  }
+  const collectionIds = new Set();
+  const normalizedCollection = collection.map((item, index) => {
+    if (!isPlainObject(item)) throw new TypeError(`profile.collection[${index}] must be an object`);
+    const productId = typeof item.productId === "string" ? item.productId.trim() : "";
+    if (!productId || !productIds.has(productId)) {
+      throw new TypeError(`Fragrance collection references an unknown product: ${productId || "empty"}`);
+    }
+    if (collectionIds.has(productId)) {
+      throw new TypeError(`Fragrance collection contains duplicate product: ${productId}`);
+    }
+    if (!COLLECTION_STATUSES.has(item.status)) {
+      throw new TypeError("Fragrance collection status must be wishlist, owned or sampled");
+    }
+    collectionIds.add(productId);
+    return Object.freeze({
+      productId,
+      status: item.status,
+      note: normalizeOptionalText(item.note, `profile.collection[${index}].note`, 240),
+      createdAt: canonicalTimestamp(item.createdAt, `profile.collection[${index}].createdAt`),
+      updatedAt: canonicalTimestamp(item.updatedAt, `profile.collection[${index}].updatedAt`),
+    });
+  });
   const lists = Object.fromEntries(PROFILE_LIST_FIELDS.map(field => [
-    field, Object.freeze(normalizeStringList(input[field] ?? [], `profile.${field}`)),
+    field, Object.freeze(normalizeStringList(input[field] ?? [], `profile.${field}`, new Set(["*"]))),
   ]));
   return Object.freeze({
     id,
@@ -111,6 +145,8 @@ export function normalizeFragranceProfile(input, { productIds = new Set() } = {}
     maxProjection: normalizeOptionalText(input.maxProjection, "profile.maxProjection"),
     maxSillage: normalizeOptionalText(input.maxSillage, "profile.maxSillage"),
     feedback: Object.freeze(normalizedFeedback),
+    favorites: Object.freeze(favorites),
+    collection: Object.freeze(normalizedCollection),
     createdAt,
     updatedAt,
   });
