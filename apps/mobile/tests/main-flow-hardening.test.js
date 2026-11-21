@@ -40,3 +40,9 @@ test("collection UI delegates status filters, accent-insensitive search and max-
   assert.match(main, /setComparisonSelection\(/u);
   assert.match(main, /data-action="open-collection-comparison"/u);
 });
+
+test("TECH model edits remove stale comparison output before a replacement query", async () => {
+  const main = await readMain();
+  assert.match(main, /function clearTechComparisonOutput\(\) \{[\s\S]*?\.tech-comparison-results\)\?\.remove\(\)/u);
+  assert.match(main, /event\.target\.id\.startsWith\("tech-compare-model-"\)[\s\S]{0,180}clearTechComparisonOutput\(\)/u);
+});
