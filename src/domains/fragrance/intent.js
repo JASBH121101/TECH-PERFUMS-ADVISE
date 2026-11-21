@@ -64,7 +64,7 @@ function extractNotes(text, knownNotes = []) {
       avoidNotes.push(canonical);
       continue;
     }
-    const positive = /\\b(?:me gusta|me gustan|me encanta|me encantan|prefiero|busco|quiero|con|que tenga|notas? de)\\b/u.test(text);
+    const positive = /\b(?:me gusta|me gustan|me encanta|me encantan|prefiero|busco|quiero|con|que tenga|notas? de)\b/u.test(text);
     if (positive) preferredNotes.push(canonical);
   }
   return { preferredNotes: [...new Set(preferredNotes)], avoidNotes: [...new Set(avoidNotes)] };
