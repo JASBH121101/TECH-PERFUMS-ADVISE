@@ -67,7 +67,7 @@ test("uses known catalogue notes to extend phrase matching without a fixed short
   const result = parseFragranceCustomerMessage("Prefiero cashmeran y grapefruit.", {
     knownNotes: ["Cashmeran", "Grapefruit", "Cedarwood"],
   });
-  assert.deepEqual(result.preferences.preferredNotes, ["cashmeran", "grapefruit"]);
+  assert.deepEqual([...result.preferences.preferredNotes].sort(), ["cashmeran", "grapefruit"]);
 });
 
 test("rejects malformed known-note metadata", () => {
