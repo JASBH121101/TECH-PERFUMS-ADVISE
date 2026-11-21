@@ -739,6 +739,11 @@ function renderTechComparisonForm() {
   ${state.techComparisonStatus==="loading"?'<div class="loading-inline">Consultando fuentes para cada dispositivo...</div>':renderTechComparisonResults()}`;
 }
 
+function clearTechComparisonOutput() {
+  app.querySelector(".tech-comparison-results")?.remove();
+  app.querySelector(".comparison-incomplete")?.remove();
+}
+
 function renderTechComparisonResults() {
   const result=state.techComparisonResult;
   if(!result)return "";
@@ -908,6 +913,7 @@ app.addEventListener("click", async event => {
     techComparisonGuard.invalidate();
     state.techComparisonStatus = "idle";
     state.techComparisonResult = null;
+    clearTechComparisonOutput();
     const index = Number(actionButton.dataset.index);
     if (!Number.isInteger(index) || index < 0 || index > 3) return;
     const item = { name: actionButton.dataset.name, slug: actionButton.dataset.slug, resource: actionButton.dataset.resource };
@@ -1111,6 +1117,7 @@ app.addEventListener("input", event => {
     techComparisonGuard.invalidate();
     state.techComparisonStatus = "idle";
     state.techComparisonResult = null;
+    clearTechComparisonOutput();
     const index = Number(event.target.id.split("-").at(-1)) - 1;
     if (index < 0 || index > 3) return;
     state.techCompareModels[index] = event.target.value;
