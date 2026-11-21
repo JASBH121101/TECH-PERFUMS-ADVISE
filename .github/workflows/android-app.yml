@@ -6,6 +6,7 @@ on:
       - feature/jbae-standalone-android-app
     paths:
       - "apps/mobile/**"
+      - "!apps/mobile/README.md"
       - "src/**"
       - "data/fragrance/**"
   workflow_dispatch:
@@ -225,7 +226,7 @@ jobs:
           JBAE Android release
           App version: $APP_VERSION
           versionCode: $VERSION_CODE
-          Source commit: $GITHUB_SHA
+          Source commit: $(git rev-parse HEAD)
           Package: com.jb.advisor.mobile
           Contents: integrated FRAGRANCE and TECH flows, local SQLite profile/collection, and the JBAE Android updater.
           Build checks: engine/mobile tests, signed APK package/version verification, and published-asset byte comparison.
