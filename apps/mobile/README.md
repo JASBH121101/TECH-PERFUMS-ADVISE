@@ -5,7 +5,8 @@ JBAE es una aplicación Android y una vista previa web independientes que consum
 ## Implementado
 
 - Aplicación Capacitor con navegación principal entre Inicio, FRAGRANCE, TECH y Biblioteca.
-- FRAGRANCE: búsqueda offline, fichas de perfumes y asesor personalizado en español.
+- FRAGRANCE: búsqueda offline, fichas de perfumes y asesor personalizado en español. El perfil olfativo conserva familias/notas preferidas y evitadas, ocasión y clima; las valoraciones positivas/negativas contribuyen al aprendizaje tras repetirse en al menos dos fragancias distintas.
+- Perfil local persistente en SQLite nativo, con historial de hasta 500 valoraciones por perfil y validación de referencias contra el catálogo. La vista previa web sigue siendo temporal.
 - Biblioteca inicial construida desde el snapshot Scento del repositorio; la procedencia permanece como reportada y no equivale a verificación sensorial.
 - TECH: consulta exacta por modelo a CoreInfo y TechAPI para smartphones, tablets, laptops, smartwatches y monitores. Incluye comparación visual de 2–4 equipos, normalización de unidades y variantes con IDs por configuración, detección de conflictos entre fuentes y perfil "Uso general (equilibrado)" con ponderación de varias dimensiones y desglose de cobertura, además de criterios individuales. Los resultados siguen siendo candidatos sin verificar y no se guardan automáticamente.
 - SQLite nativo mediante `@capacitor-community/sqlite`, con importación inicial del seed y uso de `CapacitorSQLiteKnowledgeAdapter`.
@@ -62,7 +63,7 @@ El workflow falla de forma cerrada si ya existe el marcador de identidad y la ca
 
 - El perfil "Uso general" es un índice relativo de especificaciones comunes (RAM, almacenamiento, batería, resolución de cámara principal y peso); exige al menos tres dimensiones y 60% de cobertura. El procesador/GPU se muestra sin puntuar por nombre si no hay benchmarks comparables. Megapíxeles no equivalen a calidad fotográfica y mAh/Wh no equivalen directamente a horas de autonomía.
 - La revisión humana sigue siendo necesaria para promover datos `reported` a `verified` o `cross_checked`; el botón de guardado no verifica la exactitud de los proveedores.
-- Pruebas en emulador y teléfono físico: primera importación SQLite, cierre/reapertura, recuperación tras terminación del proceso y restauración de backup.
+- Pruebas en emulador y teléfono físico: primera importación SQLite, cierre/reapertura, recuperación tras terminación del proceso y restauración de backup. Las pruebas automatizadas del perfil usan el adaptador SQLite simulado y no sustituyen esta certificación física.
 - SQLCipher no está habilitado en esta fase.
 - PWA: shell, manifiesto, iconos y precarga offline de HTML, JS/CSS y recursos estáticos implementados para Pages. La vista previa web todavía usa memoria temporal y no conserva el estado de conocimiento después de recargar; eso es independiente de la caché del service worker.
 - Ampliar cobertura de FRAGRANCE a body mists, body sprays, aceites y lociones antes de afirmar que el dataset los cubre ampliamente.
