@@ -35,7 +35,7 @@ async function readSeed() {
   if (
     seed?.format !== "jbae-fragrance-seed" ||
     seed?.seedVersion !== 1 ||
-    seed?.snapshot?.schemaVersion !== 3
+    seed?.snapshot?.schemaVersion !== 4
   ) throw new Error("La biblioteca incluida en la aplicación tiene un formato no compatible.");
   return seed;
 }

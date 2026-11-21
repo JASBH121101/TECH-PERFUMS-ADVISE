@@ -120,7 +120,7 @@ test("migrates version zero flat evidence snapshots through to version three", (
     schemaVersion: 0,
     records: [evidence("legacy-001")],
   }, { clock: fixedClock });
-  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.schemaVersion, 4);
   assert.equal(migrated.evidence.records.length, 1);
   assert.equal(migrated.metadata.createdAt, "2026-11-07T18:00:00.000Z");
 });
@@ -158,7 +158,7 @@ test("persists a valid legacy migration and rejects corrupt stored snapshots", a
   };
   const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
   assert.equal(store.queryEvidence()[0].id, "legacy-persisted");
-  assert.equal(persisted.schemaVersion, 3);
+  assert.equal(persisted.schemaVersion, 4);
 
   let writes = 0;
   const corruptAdapter = {
@@ -246,7 +246,7 @@ test("migrates version one evidence snapshots through to version three with an e
     },
     evidence: { schemaVersion: 1, records: [] },
   }, { clock: fixedClock });
-  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.schemaVersion, 4);
   assert.deepEqual(migrated.catalog.products, []);
   assert.equal(migrated.profiles.items[0].id, "local-default");
 });
@@ -295,7 +295,7 @@ test("migrates schema v2 snapshots to v3 with a default local fragrance profile"
     evidence: { schemaVersion: 1, records: [] },
     catalog: { schemaVersion: 1, products: [] },
   }, { clock: fixedClock });
-  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.schemaVersion, 4);
   assert.equal(migrated.profiles.items[0].id, "local-default");
   assert.deepEqual(migrated.profiles.items[0].preferredFamilies, []);
 });
@@ -398,4 +398,115 @@ test("does not record feedback against an unknown local profile ID", async () =>
     /Unknown local fragrance profile ID/,
   );
   assert.equal(store.getFragranceProfile().feedback.length, 0);
+});
+
+
+test("migrates schema v3 profiles by adding empty favorites and collection without losing preferences", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  await store.saveFragranceProfile({
+    preferredFamilies: ["woody"],
+    avoidNotes: ["coconut"],
+  });
+  const snapshot = store.getSnapshot();
+  const legacyProfile = { ...snapshot.profiles.items[0] };
+  delete legacyProfile.favorites;
+  delete legacyProfile.collection;
+  const migrated = migrateKnowledgeSnapshot({
+    ...snapshot,
+    schemaVersion: 3,
+    profiles: { schemaVersion: 1, items: [legacyProfile] },
+  }, { clock: fixedClock });
+  assert.equal(migrated.schemaVersion, 4);
+  assert.deepEqual(migrated.profiles.items[0].preferredFamilies, ["woody"]);
+  assert.deepEqual(migrated.profiles.items[0].avoidNotes, ["coconut"]);
+  assert.deepEqual(migrated.profiles.items[0].favorites, []);
+  assert.deepEqual(migrated.profiles.items[0].collection, []);
+});
+
+test("persists favorites and personal collection states across KnowledgeStore reopen", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const first = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  for (const [id, name] of [["fragrance-owned", "Owned"], ["fragrance-wanted", "Wanted"]]) {
+    await first.addProduct({
+      id,
+      domain: "fragrance",
+      name,
+      brand: "Example House",
+      productType: "perfume",
+      attributes: {},
+      evidenceIds: {},
+    });
+  }
+  assert.equal(await first.setFragranceFavorite({ productId: "fragrance-owned" }), true);
+  await first.saveFragranceCollectionItem({
+    productId: "fragrance-owned",
+    status: "owned",
+    note: "Botella de 100 ml",
+  });
+  await first.saveFragranceCollectionItem({
+    productId: "fragrance-wanted",
+    status: "wishlist",
+  });
+  const updated = await first.saveFragranceCollectionItem({
+    productId: "fragrance-wanted",
+    status: "sampled",
+  });
+  assert.equal(updated.status, "sampled");
+
+  const reopened = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  const profile = reopened.getFragranceProfile();
+  assert.deepEqual(profile.favorites, ["fragrance-owned"]);
+  assert.equal(profile.collection.length, 2);
+  assert.equal(profile.collection.find(item => item.productId === "fragrance-owned").status, "owned");
+  assert.equal(profile.collection.find(item => item.productId === "fragrance-owned").note, "Botella de 100 ml");
+  assert.equal(profile.collection.find(item => item.productId === "fragrance-wanted").status, "sampled");
+});
+
+test("removing a collection item leaves its independent favorite intact", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  await store.addProduct({
+    id: "fragrance-fav-collection",
+    domain: "fragrance",
+    name: "Favorite Collection",
+    brand: "Example House",
+    productType: "perfume",
+    attributes: {},
+    evidenceIds: {},
+  });
+  await store.setFragranceFavorite({ productId: "fragrance-fav-collection" });
+  await store.saveFragranceCollectionItem({ productId: "fragrance-fav-collection", status: "owned" });
+  assert.equal(await store.removeFragranceCollectionItem({ productId: "fragrance-fav-collection" }), true);
+  assert.equal(await store.removeFragranceCollectionItem({ productId: "fragrance-fav-collection" }), false);
+  assert.deepEqual(store.getFragranceProfile().favorites, ["fragrance-fav-collection"]);
+  assert.deepEqual(store.getFragranceProfile().collection, []);
+});
+
+test("rejects favorites or collection statuses outside the validated fragrance catalog contract", async () => {
+  const adapter = new MemoryKnowledgeAdapter();
+  const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
+  await assert.rejects(
+    () => store.setFragranceFavorite({ productId: "missing" }),
+    /local catalog/,
+  );
+  await assert.rejects(
+    () => store.saveFragranceCollectionItem({ productId: "missing", status: "owned" }),
+    /local catalog/,
+  );
+  await store.addProduct({
+    id: "fragrance-status-check",
+    domain: "fragrance",
+    name: "Status Check",
+    brand: "Example House",
+    productType: "perfume",
+    attributes: {},
+    evidenceIds: {},
+  });
+  await assert.rejects(
+    () => store.saveFragranceCollectionItem({ productId: "fragrance-status-check", status: "invented" }),
+    /wishlist, owned or sampled/,
+  );
+  assert.deepEqual(store.getFragranceProfile().favorites, []);
+  assert.deepEqual(store.getFragranceProfile().collection, []);
 });

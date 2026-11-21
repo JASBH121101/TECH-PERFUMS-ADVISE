@@ -6,7 +6,7 @@ JBAE es una aplicación Android y una vista previa web independientes que consum
 
 - Aplicación Capacitor con navegación principal entre Inicio, FRAGRANCE, TECH y Biblioteca.
 - FRAGRANCE: búsqueda offline, fichas de perfumes y asesor personalizado en español. El perfil olfativo conserva familias/notas preferidas y evitadas, ocasión y clima; las valoraciones positivas/negativas contribuyen al aprendizaje tras repetirse en al menos dos fragancias distintas.
-- Perfil local persistente en SQLite nativo, con historial de hasta 500 valoraciones por perfil y validación de referencias contra el catálogo. La vista previa web sigue siendo temporal.
+- Perfil local persistente en SQLite nativo, con preferencias, historial de hasta 500 valoraciones, favoritos y colección personal (por probar, en posesión y probado). Las referencias se validan contra el catálogo. También se puede comparar de 2 a 4 perfumes sin generar un ganador artificial. La vista previa web sigue siendo temporal.
 - Biblioteca inicial construida desde el snapshot Scento del repositorio; la procedencia permanece como reportada y no equivale a verificación sensorial.
 - TECH: consulta exacta por modelo a CoreInfo y TechAPI para smartphones, tablets, laptops, smartwatches y monitores. Incluye comparación visual de 2–4 equipos, normalización de unidades y variantes con IDs por configuración, detección de conflictos entre fuentes y perfil "Uso general (equilibrado)" con ponderación de varias dimensiones y desglose de cobertura, además de criterios individuales. Los resultados siguen siendo candidatos sin verificar y no se guardan automáticamente.
 - SQLite nativo mediante `@capacitor-community/sqlite`, con importación inicial del seed y uso de `CapacitorSQLiteKnowledgeAdapter`.

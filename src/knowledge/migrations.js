@@ -4,8 +4,9 @@ import { normalizeFragranceProduct } from "../domains/fragrance/adapter.js";
 import { normalizeTechnologyProduct } from "../domains/technology/adapter.js";
 import { createDefaultFragranceProfile, normalizeFragranceProfile } from "./fragrance-profiles.js";
 
-export const KNOWLEDGE_SCHEMA_VERSION = 3;
-const PROFILE_SCHEMA_VERSION = 1;
+export const KNOWLEDGE_SCHEMA_VERSION = 4;
+const LEGACY_PROFILE_SCHEMA_VERSION = 1;
+const PROFILE_SCHEMA_VERSION = 2;
 const EVIDENCE_SCHEMA_VERSION = 1;
 const CATALOG_SCHEMA_VERSION = 1;
 
@@ -87,12 +88,40 @@ function migrateV2ToV3(snapshot) {
     ...snapshot,
     schemaVersion: 3,
     profiles: {
-      schemaVersion: PROFILE_SCHEMA_VERSION,
+      schemaVersion: LEGACY_PROFILE_SCHEMA_VERSION,
       items: [createDefaultFragranceProfile({ clock: () => createdAt })],
     },
   };
 }
-const migrations = new Map([[0, migrateV0ToV1], [1, migrateV1ToV2], [2, migrateV2ToV3]]);
+function migrateV3ToV4(snapshot) {
+  if (!isPlainObject(snapshot.metadata)) {
+    throw new TypeError("Knowledge snapshot metadata is required");
+  }
+  if (!isPlainObject(snapshot.profiles) ||
+      snapshot.profiles.schemaVersion !== LEGACY_PROFILE_SCHEMA_VERSION ||
+      !Array.isArray(snapshot.profiles.items) ||
+      snapshot.profiles.items.length < 1 || snapshot.profiles.items.length > 20) {
+    throw new TypeError("Knowledge snapshot legacy profiles are missing or unsupported");
+  }
+  return {
+    ...snapshot,
+    schemaVersion: 4,
+    profiles: {
+      schemaVersion: PROFILE_SCHEMA_VERSION,
+      items: snapshot.profiles.items.map(profile => ({
+        ...profile,
+        favorites: profile.favorites ?? [],
+        collection: profile.collection ?? [],
+      })),
+    },
+  };
+}
+const migrations = new Map([
+  [0, migrateV0ToV1],
+  [1, migrateV1ToV2],
+  [2, migrateV2ToV3],
+  [3, migrateV3ToV4],
+]);
 export function validateKnowledgeSnapshot(snapshot) {
   if (!isPlainObject(snapshot)) throw new TypeError("Knowledge snapshot must be an object");
   if (snapshot.schemaVersion !== KNOWLEDGE_SCHEMA_VERSION) {

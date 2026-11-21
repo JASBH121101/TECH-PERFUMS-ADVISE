@@ -103,7 +103,7 @@ const evidence = (id, value) => ({
   note: null,
 });
 const snapshot = (id = "ev-1") => ({
-  schemaVersion: 3,
+  schemaVersion: 4,
   metadata: {
     createdAt: "2026-11-07T18:00:00.000Z",
     updatedAt: "2026-11-07T18:05:00.000Z",
@@ -114,7 +114,7 @@ const snapshot = (id = "ev-1") => ({
   },
   catalog: { schemaVersion: 1, products: [] },
   profiles: {
-    schemaVersion: 1,
+    schemaVersion: 2,
     items: [{
       id: "local-default",
       displayName: "Mi perfil",
@@ -130,6 +130,8 @@ const snapshot = (id = "ev-1") => ({
       maxProjection: null,
       maxSillage: null,
       feedback: [],
+      favorites: [],
+      collection: [],
       createdAt: "2026-11-07T18:00:00.000Z",
       updatedAt: "2026-11-07T18:00:00.000Z",
     }],

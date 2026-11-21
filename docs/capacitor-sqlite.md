@@ -21,13 +21,13 @@ The plugin documentation assigns DDL to `execute`, parameterized writes to `run`
 
 ## Durable schema
 
-SQLite `PRAGMA user_version` is independent of the JSON KnowledgeStore schema version. Physical SQLite schema version 1 creates a singleton table. This physical SQLite schema version is independent of the JSON KnowledgeStore snapshot schema, currently version 3:
+SQLite `PRAGMA user_version` is independent of the JSON KnowledgeStore schema version. Physical SQLite schema version 1 creates a singleton table. This physical SQLite schema version is independent of the JSON KnowledgeStore snapshot schema, currently version 4:
 
 - `singleton`: primary key constrained to 1.
 - `snapshot_json`: complete validated KnowledgeStore snapshot.
 - `updated_at`: snapshot update timestamp.
 
-The profile schema is part of the JSON KnowledgeStore snapshot. Adding it does not change the physical SQLite schema, so `PRAGMA user_version` remains 1; v2 JSON snapshots are migrated in place to v3 during store initialization.
+The profile schema is part of the JSON KnowledgeStore snapshot. Favorites and the personal collection were added through JSON schema v3 -> v4 migration; this does not change the physical SQLite schema, so `PRAGMA user_version` remains 1. Existing v2 and v3 JSON snapshots are migrated in place during store initialization.
 
 The adapter refuses a database version newer than supported and refuses a current-version database missing the expected state table. Physical schema migrations must increment the SQLite schema version and preserve existing user data.
 
