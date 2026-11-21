@@ -485,11 +485,26 @@ function renderFragrance() {
 
 function renderFragranceDetail(product) {
   const attributes = product.attributes ?? {};
+  const profile = state.profile ?? state.runtime.knowledgeStore.getFragranceProfile();
+  const favorite = (profile?.favorites ?? []).includes(product.id);
+  const collectionItem = (profile?.collection ?? []).find(item => item.productId === product.id);
+  const collectionStatus = collectionItem ? COLLECTION_STATUS_LABELS[collectionItem.status] : "No está en tu colección";
   return `
     <section class="detail-top"><button type="button" class="back-link" data-action="back-to-fragrance">← Volver a fragancias</button>
       <span class="kicker">FICHA DE FRAGANCIA</span><div class="detail-monogram">F</div>
       <h1>${escapeHtml(product.name)}</h1><p class="detail-brand">${escapeHtml(product.brand)}</p>
       <div class="tag-row"><span>${escapeHtml(formatFragranceConcentration(attributes.concentrationLabel))}</span><span>${escapeHtml(attributes.releaseYear ?? "Año no indicado")}</span></div>
+      <div class="detail-actions">
+        <div><span>Tu estado</span><strong>${escapeHtml(collectionStatus)}</strong></div>
+        <button type="button" data-action="toggle-favorite" data-id="${encodeURIComponent(product.id)}"
+          data-favorite="${favorite ? "false" : "true"}">${favorite ? "★ Quitar de favoritos" : "☆ Agregar a favoritos"}</button>
+        <div class="detail-collection-actions">
+          <button type="button" data-action="collection-status" data-id="${encodeURIComponent(product.id)}" data-status="wishlist">Por probar</button>
+          <button type="button" data-action="collection-status" data-id="${encodeURIComponent(product.id)}" data-status="owned">Lo tengo</button>
+          <button type="button" data-action="collection-status" data-id="${encodeURIComponent(product.id)}" data-status="sampled">Ya lo probé</button>
+          ${collectionItem ? `<button type="button" data-action="remove-collection" data-id="${encodeURIComponent(product.id)}">Quitar de colección</button>` : ""}
+        </div>
+      </div>
     </section>
     <section class="detail-block"><span class="kicker">PERFIL OLFATIVO</span><h2>Familias y carácter</h2>
       <p>${displayList(attributes.scentFamilies, "family")}</p>
