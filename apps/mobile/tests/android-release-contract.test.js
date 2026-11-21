@@ -108,7 +108,6 @@ test("release channel and direct APK distribution are documented without claimin
 
 test("new signing identity is restored from protected PKCS12 secrets and fingerprint-pinned at build time", async () => {
   const workflow = await read("../../.github/workflows/android-app.yml");
-  const script = await read("scripts/create-android-signing-key.ps1");
   assert.ok(workflow.includes("JBAE_ANDROID_SIGNING_KEYSTORE_BASE64"));
   assert.ok(workflow.includes("JBAE_ANDROID_KEYSTORE_PASSWORD"));
   assert.ok(workflow.includes("keytool -list -storetype PKCS12"));
@@ -117,10 +116,8 @@ test("new signing identity is restored from protected PKCS12 secrets and fingerp
   assert.ok(workflow.includes("The APK certificate fingerprint does not match"));
   assert.equal(workflow.includes("actions/cache/restore@v4"), false);
   assert.equal(workflow.includes("actions/cache/save@v4"), false);
-  assert.match(script, /-storetype PKCS12/u);
-  assert.match(script, /-keysize 3072/u);
-  assert.match(script, /JBAE_ANDROID_SIGNING_KEYSTORE_BASE64/u);
-  assert.match(script, /JBAE_ANDROID_KEYSTORE_PASSWORD/u);
+  assert.match(workflow, /storeType "PKCS12"/u);
+  assert.match(workflow, /JBAE_SIGNING_CERT_SHA256/u);
 });
 
 test("manual APK release dispatch builds from the integrated certification branch", async () => {
