@@ -120,7 +120,7 @@ test("migrates version zero flat evidence snapshots through to version three", (
     schemaVersion: 0,
     records: [evidence("legacy-001")],
   }, { clock: fixedClock });
-  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.schemaVersion, 4);
   assert.equal(migrated.evidence.records.length, 1);
   assert.equal(migrated.metadata.createdAt, "2026-11-07T18:00:00.000Z");
 });
@@ -158,7 +158,7 @@ test("persists a valid legacy migration and rejects corrupt stored snapshots", a
   };
   const store = await KnowledgeStore.open({ adapter, clock: fixedClock });
   assert.equal(store.queryEvidence()[0].id, "legacy-persisted");
-  assert.equal(persisted.schemaVersion, 3);
+  assert.equal(persisted.schemaVersion, 4);
 
   let writes = 0;
   const corruptAdapter = {
@@ -246,7 +246,7 @@ test("migrates version one evidence snapshots through to version three with an e
     },
     evidence: { schemaVersion: 1, records: [] },
   }, { clock: fixedClock });
-  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.schemaVersion, 4);
   assert.deepEqual(migrated.catalog.products, []);
   assert.equal(migrated.profiles.items[0].id, "local-default");
 });
@@ -295,7 +295,7 @@ test("migrates schema v2 snapshots to v3 with a default local fragrance profile"
     evidence: { schemaVersion: 1, records: [] },
     catalog: { schemaVersion: 1, products: [] },
   }, { clock: fixedClock });
-  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.schemaVersion, 4);
   assert.equal(migrated.profiles.items[0].id, "local-default");
   assert.deepEqual(migrated.profiles.items[0].preferredFamilies, []);
 });
