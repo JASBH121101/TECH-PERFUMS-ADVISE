@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/jbae-standalone-android-app
   workflow_dispatch:
 
 permissions:
