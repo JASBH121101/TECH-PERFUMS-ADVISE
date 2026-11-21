@@ -28,7 +28,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && 'feature/jbae-android-certification' || github.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'feature/jbae-android-certification' || (contains(github.event.head_commit.message, '[JBAE_BLOCK8_RELEASE]') && 'feature/jbae-android-certification') || github.sha }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -203,7 +203,7 @@ jobs:
           JBAE Android release
           App version: $APP_VERSION
           versionCode: $VERSION_CODE
-          Source commit: $GITHUB_SHA
+          Source commit: $(git rev-parse HEAD)
           Package: com.jb.advisor.mobile
           Contents: integrated FRAGRANCE and TECH flows, local SQLite profile/collection, and the JBAE Android updater.
           Build checks: engine/mobile tests, signed APK package/version verification, and published-asset byte comparison.
