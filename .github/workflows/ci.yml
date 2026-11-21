@@ -10,6 +10,7 @@ on:
       - feature/jbae-fragrance-collection
       - feature/jbae-collection-management
       - feature/jbae-integrated-flow-hardening
+      - feature/jbae-integration-audit
   pull_request:
     branches:
       - main
