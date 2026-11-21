@@ -403,3 +403,40 @@ button { color: inherit; }
 .family-choice:has(input:checked) { border-color: rgba(179,162,255,.48); color: var(--text); background: rgba(179,162,255,.1); }
 .partial-advice-card { border-style: dashed; }
 .partial-advice-card .evidence-inline { color: var(--muted); }
+
+
+/* Local olfactory profile and explicit preference feedback. */
+.profile-panel {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(117, 225, 209, .09), rgba(17, 25, 35, .82));
+}
+.profile-panel > div { display: grid; gap: 5px; }
+.profile-panel > div > strong { font-size: 1rem; }
+.profile-panel p { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.5; }
+.profile-panel small { color: var(--cyan); font-size: .76rem; line-height: 1.45; }
+.advice-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 4px 14px;
+}
+.advice-feedback span { margin-right: auto; color: var(--muted); font-size: .78rem; }
+.advice-feedback button {
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: .76rem;
+  cursor: pointer;
+}
+.advice-feedback button:first-of-type { border-color: rgba(117, 225, 209, .42); color: var(--cyan); }
+.advice-feedback button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
