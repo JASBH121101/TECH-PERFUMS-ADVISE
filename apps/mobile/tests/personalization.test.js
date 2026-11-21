@@ -147,3 +147,19 @@ test("no aprende una familia desde una sola valoración aislada", () => {
   assert.deepEqual(advice.learnedPreferences.preferredFamilies, []);
   assert.equal(advice.status, "needs_preferences");
 });
+
+
+test("does not learn a family when repeated ratings are evenly split", () => {
+  const profile = {
+    feedback: [
+      { productId: "woody-daily", rating: 5 },
+      { productId: "citrus-woody", rating: 5 },
+      { productId: "woody-daily", rating: 1 },
+      { productId: "citrus-woody", rating: 1 },
+    ],
+  };
+  const advice = buildFragranceAdvice({ products, profile, message: "Hola" });
+  assert.deepEqual(advice.learnedPreferences.preferredFamilies, []);
+  assert.deepEqual(advice.learnedPreferences.avoidFamilies, []);
+  assert.equal(advice.status, "needs_preferences");
+});
