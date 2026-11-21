@@ -765,7 +765,11 @@ function render() {
   app.innerHTML = (views[state.route] ?? renderHome)();
   if (state.route === "fragrance") {
     if (state.fragranceMode === "search") renderFragranceSearchResults();
-    else renderAdviceResults();
+    else if (state.fragranceMode === "advisor") renderAdviceResults();
+    else if (state.fragranceMode === "compare") {
+      renderComparisonSearchResults();
+      renderComparisonSelection();
+    }
   }
 }
 
