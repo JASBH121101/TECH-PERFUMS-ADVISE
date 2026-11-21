@@ -440,3 +440,105 @@ button { color: inherit; }
 }
 .advice-feedback button:first-of-type { border-color: rgba(117, 225, 209, .42); color: var(--cyan); }
 .advice-feedback button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+
+/* Personal fragrance collection and side-by-side comparison. */
+#app:has(.fragrance-intro) .fragrance-mode-tabs { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+#app:has(.fragrance-intro) .fragrance-mode-tabs .mode-tab { min-height: 43px; font-size: 11px; }
+.collection-summary {
+  display: grid;
+  gap: 9px;
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: linear-gradient(140deg, rgba(117,225,209,.08), rgba(17,25,35,.92));
+}
+.collection-summary h2 { margin: 0; font-size: 21px; letter-spacing: -.035em; }
+.collection-summary p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.collection-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; margin-top: 7px; }
+.collection-stats > div { display: grid; gap: 4px; min-width: 0; padding: 10px 7px; border-radius: 11px; background: rgba(0,0,0,.16); text-align: center; }
+.collection-stats strong { color: var(--cyan); font-size: 19px; }
+.collection-stats small { color: var(--muted); font-size: 9px; line-height: 1.3; }
+.collection-section { display: grid; gap: 10px; margin: 18px 0 23px; }
+.collection-list { display: grid; gap: 10px; }
+.collection-card { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 15px; background: rgba(17,25,35,.9); }
+.collection-open { display: flex; align-items: center; gap: 11px; width: 100%; padding: 2px; border: 0; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.collection-open .result-copy { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.collection-open .result-copy strong { font-size: 13px; line-height: 1.35; }
+.collection-open .result-copy small { color: var(--muted); font-size: 10px; }
+.collection-open .result-copy em { color: var(--dim); font-size: 10px; font-style: normal; }
+.collection-status { display: flex; justify-content: space-between; gap: 10px; padding: 8px 3px 0; border-top: 1px solid var(--line); font-size: 10px; }
+.collection-status span { color: var(--dim); }
+.collection-status strong { color: var(--cyan); }
+.collection-card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.collection-card-actions button,
+.detail-actions button,
+.detail-collection-actions button,
+.comparison-selector-actions button {
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--muted);
+  background: rgba(0,0,0,.16);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.collection-card-actions button:first-child,
+.detail-actions > button { color: var(--cyan); border-color: rgba(117,225,209,.28); }
+.collection-card-actions .collection-remove,
+.detail-collection-actions button:last-child { color: #ff9ca6; }
+.detail-actions { display: grid; gap: 10px; margin: 15px 0 5px; padding: 13px; border: 1px solid var(--line); border-radius: 15px; background: var(--panel); text-align: left; }
+.detail-actions > div:first-child { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; }
+.detail-actions > div:first-child strong { color: var(--cyan); }
+.detail-collection-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.comparison-selector { display: grid; gap: 10px; padding: 15px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
+.comparison-selector > label { color: var(--dim); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.comparison-selector > input { width: 100%; min-height: 46px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: #0b1118; font: inherit; font-size: 13px; }
+.comparison-options { display: grid; gap: 6px; max-height: 310px; overflow-y: auto; }
+.comparison-option { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 11px; border: 1px solid var(--line); border-radius: 11px; background: rgba(0,0,0,.12); cursor: pointer; }
+.comparison-option.selected { border-color: rgba(117,225,209,.42); background: rgba(117,225,209,.07); }
+.comparison-option input { width: 17px; height: 17px; flex: 0 0 17px; margin: 0; accent-color: var(--cyan); }
+.comparison-option > span { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.comparison-option strong { overflow-wrap: anywhere; color: var(--text); font-size: 11px; line-height: 1.4; }
+.comparison-option small { color: var(--muted); font-size: 9px; }
+.comparison-option em { color: var(--cyan); font-size: 9px; font-style: normal; }
+.comparison-selected-head { display: flex; justify-content: space-between; gap: 10px; color: var(--text); font-size: 11px; }
+.comparison-selected-head small { color: var(--muted); }
+.comparison-selected-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.comparison-selected-list > span { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; padding: 6px 8px; border-radius: 8px; color: var(--text); background: rgba(117,225,209,.1); font-size: 10px; overflow-wrap: anywhere; }
+.comparison-selected-list button { width: 20px; height: 20px; border: 0; border-radius: 6px; color: var(--text); background: rgba(255,255,255,.09); font-size: 15px; cursor: pointer; }
+.comparison-selected-list > small { color: var(--dim); font-size: 10px; }
+.comparison-selector-actions { display: flex; gap: 8px; }
+.comparison-selector-actions button:first-child { color: var(--cyan); border-color: rgba(117,225,209,.32); }
+.comparison-selector-actions button:disabled { opacity: .4; cursor: not-allowed; }
+.fragrance-comparison-result { display: grid; gap: 12px; margin: 20px 0; }
+.fragrance-comparison-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 13px; background: rgba(17,25,35,.92); }
+.fragrance-comparison-table { width: 100%; min-width: 650px; border-collapse: collapse; font-size: 10px; }
+.fragrance-comparison-table th,
+.fragrance-comparison-table td { min-width: 130px; max-width: 220px; padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; line-height: 1.55; overflow-wrap: anywhere; }
+.fragrance-comparison-table thead th { color: var(--text); background: rgba(117,225,209,.06); }
+.fragrance-comparison-table thead th:first-child,
+.fragrance-comparison-table tbody th { min-width: 125px; color: var(--muted); }
+.fragrance-comparison-table th strong { display: block; color: var(--text); font-size: 11px; }
+.fragrance-comparison-table th small { display: block; margin-top: 4px; color: var(--dim); font-size: 9px; font-weight: 500; }
+.fragrance-comparison-table tbody tr:last-child th,
+.fragrance-comparison-table tbody tr:last-child td { border-bottom: 0; }
+.fragrance-comparison-table td { color: var(--text); }
+.comparison-missing { color: var(--dim); font-size: 9px; font-style: italic; }
+.comparison-coverage-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.comparison-coverage-grid > div { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.comparison-coverage-grid span { overflow: hidden; color: var(--text); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.comparison-coverage-grid strong { color: var(--cyan); font-size: 11px; }
+.comparison-coverage-grid small { grid-column: 1 / -1; color: var(--dim); font-size: 9px; }
+.fragrance-comparison-result .result-disclaimer { padding: 11px; }
+.fragrance-comparison-result .result-disclaimer p { margin: 5px 0; }
+@media(max-width:370px) {
+  .collection-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .comparison-coverage-grid { grid-template-columns: 1fr; }
+  .comparison-selector { padding: 12px; }
+  .collection-card-actions button { font-size: 9px; }
+}
