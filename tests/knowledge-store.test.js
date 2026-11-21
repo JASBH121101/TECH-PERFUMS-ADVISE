@@ -339,9 +339,18 @@ test("profile feedback rejects unknown products and invalid ratings without chan
     () => store.recordFragranceFeedback({ productId: "missing", rating: 5 }),
     /only be recorded for a fragrance/,
   );
+  await store.addProduct({
+    id: "fragrance-rating-check",
+    domain: "fragrance",
+    name: "Rating Check",
+    brand: "Example House",
+    productType: "perfume",
+    attributes: {},
+    evidenceIds: {},
+  });
   await assert.rejects(
-    () => store.recordFragranceFeedback({ productId: "missing", rating: 6 }),
-    /only be recorded for a fragrance/,
+    () => store.recordFragranceFeedback({ productId: "fragrance-rating-check", rating: 6 }),
+    /integer from 1 to 5/,
   );
   assert.equal(store.getFragranceProfile().feedback.length, 0);
 });
