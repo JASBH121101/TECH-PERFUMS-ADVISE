@@ -304,3 +304,20 @@ test("maps explicit comparative directions into auditable fragrance criteria", (
   assert.ok(result.preferences.avoidFamilies.includes("woody"));
   assert.deepEqual(result.applied, ["fresher_or_less_sweet", "less_woody"]);
 });
+
+
+test("blocks a note that is both requested and rejected in separate phrases", () => {
+  const result = parseFragranceCustomerMessage("Me gustan las notas de bergamota, pero no quiero nada de bergamota.");
+  assert.equal(result.needsClarification, true);
+  assert.ok(result.conflicts.some(item => item.field === "preferredNotes"));
+  assert.equal(result.preferences.preferredNotes, undefined);
+  assert.equal(result.preferences.avoidNotes, undefined);
+});
+
+test("blocks a character that is both preferred and rejected", () => {
+  const result = parseFragranceCustomerMessage("Quiero una fragancia fresca, pero no quiero nada fresco.");
+  assert.equal(result.needsClarification, true);
+  assert.ok(result.conflicts.some(item => item.field === "preferredCharacters"));
+  assert.equal(result.preferences.preferredCharacters, undefined);
+  assert.equal(result.preferences.avoidCharacters, undefined);
+});
