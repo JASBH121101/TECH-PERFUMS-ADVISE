@@ -1,5 +1,5 @@
 # JBAE — CHECKPOINT DE PROYECTO
-## Bloques 17–20: IMPLEMENTACIÓN COMPLETADA / CERTIFICACIÓN PENDIENTE
+## Bloques 17–20: IMPLEMENTACIÓN COMPLETADA / CERTIFICACIÓN AUTOMÁTICA APROBADA / VALIDACIÓN FÍSICA PENDIENTE
 
 Fecha de checkpoint: 2026-11-27 (UTC)
 
@@ -11,7 +11,8 @@ Fecha de checkpoint: 2026-11-27 (UTC)
 - PR: #7 — OPEN / DRAFT / NOT MERGED.
 - Rama base del PR: `feature/jbae-standalone-android-app`.
 - `main`: intacta; SHA verificado: `b6b75050f63825c217e81a15957b9dd83a8745ca`.
-- Commit fuente que contiene la implementación de los bloques 19–20: `dd63fe6f20f1fbbc8db1769215af3ea3026c7ed0`.
+- Commit fuente de la implementación de los bloques 19–20: `dd63fe6f20f1fbbc8db1769215af3ea3026c7ed0`.
+- Commit de código/workflows certificado automáticamente: `44a8a0941d7f8498021cb90e10a42635ef0557d4`.
 - No cambiar de rama, no cerrar ni fusionar el PR y no modificar `main` sin autorización expresa.
 
 ## 2. Alcance obligatorio
@@ -32,7 +33,7 @@ JBAE es exclusivamente un asesor de perfumería y catálogo de fragancias.
 - APK: https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/download/jbae-v0.4.138/JBAE.apk
 - SHA-256: `1c75aa2e4ece5c4983b86ad83f338535f77d2a57add500dd5383c3a406aafc1a`.
 
-Esta release es únicamente la referencia anterior. **No existe una nueva APK declarada como certificada para los bloques 17–20.**
+Esta release continúa siendo la última Release pública. La versión `0.4.161` se construyó y firmó para certificación y quedó como artefacto privado de GitHub Actions; no se publicó una Release pública.
 
 ## 4. Bloques 17–18 — completados en la fase anterior
 
@@ -80,29 +81,70 @@ Implementado mediante `resolveFragranceReferenceModifiers()`, exportado desde `s
 
 ## 7. Pruebas de regresión añadidas
 
-Añadidas, pero **no ejecutadas todavía como certificación**:
+Añadidas y ejecutadas como parte de la certificación automática:
 
 - `tests/fragrance-intent.test.js`: 10 regresiones de contradicciones por ocasión, familia, nota, carácter, clima e intensidad, además de modificadores relativos con y sin atributos de referencia.
 - `apps/mobile/tests/personalization.test.js`: 3 regresiones para bloqueo de recomendaciones, aplicación de límites comparativos y comportamiento ante datos insuficientes.
 - `apps/mobile/tests/main-flow-hardening.test.js`: 2 contratos de interfaz para mostrar aclaraciones y transparentar modificadores aplicados/no verificables.
 
-No presentar estos tests como aprobados hasta ejecutar la etapa de certificación y revisar los resultados reales.
+Resultado de la ejecución: todas las suites relacionadas finalizaron con éxito; el detalle de runs y artefactos está en la sección 10.
 
 ## 8. Orden obligatorio de las siguientes etapas
 
-1. **Terminar la implementación de los bloques** — esta etapa deja implementados los bloques 17, 18, 19 y 20 y sus regresiones.
-2. **Certificar el lote completo** — ejecutar pruebas del motor, pruebas móviles, build y workflow Android firmado; verificar versión, certificado, artefacto y correspondencia del APK publicado.
-3. **Reparar cualquier fallo** — corregir la causa raíz y volver a ejecutar la certificación afectada y las regresiones relacionadas. No avanzar con fallos abiertos.
-4. **Implementación/publicación y fusión** — únicamente después de la certificación satisfactoria, revisión del artefacto y autorización correspondiente. No fusionar automáticamente.
+1. **Terminar la implementación de los bloques** — completado para los bloques 17–20.
+2. **Certificación automática integral** — CI y build Android firmado completados con éxito; consultar la sección 10.
+3. **Validación física** — pendiente instalación y pruebas reales en un dispositivo Android, incluyendo primer arranque, persistencia SQLite, navegación offline y flujo de actualización.
+4. **Implementación/publicación y fusión** — no iniciadas. Solo después de aprobar la validación física y con autorización expresa; no fusionar automáticamente.
 
 Pendiente además la revisión visual en un Android físico; una aprobación de CI no la sustituye.
 
 ## 9. Estado al cierre
 
 - Bloques 17–20: IMPLEMENTACIÓN COMPLETADA.
-- Regresiones: AÑADIDAS / EJECUCIÓN DE CERTIFICACIÓN PENDIENTE.
-- Nueva APK: NO DECLARADA.
-- Release certificada vigente: v0.4.138.
+- CI integral: SUCCESS; 476/476 pruebas del motor/root y 153/153 pruebas móviles aprobadas.
+- Android Release workflow: SUCCESS; APK 0.4.161 firmada y verificada, subida como artefacto privado de Actions.
+- Release pública vigente: v0.4.138; no se publicó una nueva Release.
+- Validación física en Android: PENDIENTE.
 - PR #7: OPEN / DRAFT / NOT MERGED.
-- `main`: sin modificaciones.
-- Siguiente actividad: iniciar certificación del lote 17–20; reparar y volver a certificar si alguna comprobación falla.
+- `main`: sin modificaciones, SHA `b6b75050f63825c217e81a15957b9dd83a8745ca`.
+- Siguiente actividad: validación física; no iniciar publicación/implementación/merge hasta que cierre correctamente.
+
+
+## 10. Certificación automática — 2026-11-27
+
+### Engine / CI
+- Workflow: [JB Advisor Engine CI #45949795119](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/45949795119) — SUCCESS.
+- Commit examinado: `44a8a0941d7f8498021cb90e10a42635ef0557d4`.
+- Sintaxis JavaScript: SUCCESS.
+- Tests motor/root: 476 passed / 0 failed.
+- Tests aplicación móvil: 153 passed / 0 failed.
+- Build del bundle web: SUCCESS.
+- Construcción del seed completo de conocimiento olfativo: SUCCESS.
+- Artefacto del informe de cobertura: [fragrance-library-coverage](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/45949795119/artifacts/15175294160).
+
+### Android — compilación y firma
+- Workflow: [JBAE Android Release #45949795137](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/45949795137) — SUCCESS.
+- Run number / versionCode: `161`.
+- versionName: `0.4.161`.
+- Package: `com.jb.advisor.mobile`.
+- Gradle: `BUILD SUCCESSFUL`; ensamblado `assembleRelease` aprobado.
+- Huella SHA-256 del certificado APK: `4A0CD130AF30B9D6EEE5FF1D10F725E5B3DAB26199622782ACE243F980052CC1`.
+- La huella coincide con la identidad PKCS#12 protegida `jbae-release-2026`.
+- SHA-256 del APK firmado: `004ba03eca43974ee46216feaaa41d56d4be72d66170b9c61ef0d4187a922b9d`.
+- Verificación del identificador, versión y versionCode: SUCCESS.
+
+### Artefacto privado y no publicación
+- Artefacto: [JBAE-Android-v0.4.161](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/45949795137/artifacts/15176298216).
+- Artifact ID: `15176298216`.
+- ZIP: 8,876,593 bytes; digest del ZIP: `sha256:fed650328df37ceb93caef4bcb214245381b824738e49cd0431ad42733259121`.
+- El APK fue subido como artefacto de Actions con retención de 14 días.
+- Los pasos «Publish installable APK release» y «Verify published APK asset» quedaron SKIPPED intencionalmente en `feature/jbae-android-certification`.
+- La Release pública más reciente continúa siendo `jbae-v0.4.138`; su asset y hash no se modificaron.
+
+### Pendiente antes de la implementación/publicación
+- Instalación real de la APK certificada en un dispositivo Android.
+- Primer arranque y navegación en FRAGRANCE.
+- Persistencia SQLite, cierre/reapertura y reinicio.
+- Modo offline y funcionamiento de actualización/instalador.
+- Revisión visual de tipografía, espaciado y controles táctiles.
+- Solo después de cerrar estos puntos se podrá autorizar la publicación y la fusión. PR #7 continúa OPEN / DRAFT / NOT MERGED; `main` permanece intacta.
