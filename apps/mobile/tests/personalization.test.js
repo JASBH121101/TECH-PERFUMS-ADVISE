@@ -163,3 +163,48 @@ test("does not learn a family when repeated ratings are evenly split", () => {
   assert.deepEqual(advice.learnedPreferences.avoidFamilies, []);
   assert.equal(advice.status, "needs_preferences");
 });
+
+
+const activityProducts = [
+  {
+    id: "fresh-gym", name: "Fresh Gym", domain: "fragrance", productType: "perfume",
+    attributes: { characterTraits: ["fresh", "clean", "citrusy"], timesOfDay: ["day"], allNotes: ["Bergamot", "Lemon"] },
+  },
+  {
+    id: "herbal-day", name: "Herbal Day", domain: "fragrance", productType: "perfume",
+    attributes: { characterTraits: ["herbal", "fresh"], timesOfDay: ["day"], allNotes: ["Rosemary", "Lemon"] },
+  },
+  {
+    id: "sweet-night", name: "Sweet Night", domain: "fragrance", productType: "perfume",
+    attributes: { characterTraits: ["sweet", "warm"], timesOfDay: ["night"], allNotes: ["Vanilla", "Amber"] },
+  },
+];
+
+test("un pedido breve para gimnasio devuelve coincidencias frescas sin asumir solo familia cítrica", () => {
+  const advice = buildFragranceAdvice({ products: activityProducts, message: "Para gimnasio" });
+  assert.equal(advice.status, "matched");
+  assert.equal(advice.usageContext, "gym");
+  assert.equal(advice.usageContextLabel, "Gimnasio");
+  assert.match(advice.contextSummary, /fresco, limpio y cítrico/u);
+  assert.equal(advice.recommendations[0].id, "fresh-gym");
+  assert.ok(advice.preferences.preferredCharacters.includes("citrusy"));
+});
+
+test("trabajo físico y trabajo tranquilo producen perfiles distintos", () => {
+  const heavy = buildFragranceAdvice({ products: activityProducts, message: "Para trabajo pesado" });
+  assert.equal(heavy.usageContext, "physical_work");
+  assert.ok(heavy.preferences.preferredCharacters.includes("herbal"));
+  assert.equal(heavy.preferences.occasion, "day");
+
+  const light = buildFragranceAdvice({ products: activityProducts, message: "Para trabajo leve" });
+  assert.equal(light.usageContext, "light_work");
+  assert.deepEqual(light.preferences.preferredCharacters, ["clean", "fresh"]);
+  assert.equal(light.preferences.occasion, "office");
+});
+
+test("una solicitud genérica para salir pide horario en vez de inventar un estilo", () => {
+  const advice = buildFragranceAdvice({ products: activityProducts, message: "Para salir" });
+  assert.equal(advice.status, "needs_preferences");
+  assert.equal(advice.usageContext, "social_outing");
+  assert.equal(advice.clarificationPrompt, "¿La salida será de día o de noche?");
+});
