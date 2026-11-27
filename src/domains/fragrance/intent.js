@@ -350,8 +350,9 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
     .some(term => classifyTermMentions(text, normalizeText(term)).positive);
   const explicitDay = ["de dia", "durante el dia", "salida diurna", "en el dia", "daytime"]
     .some(term => classifyTermMentions(text, normalizeText(term)).positive);
-  const explicitOffice = includesAny(text, ["oficina", "office", "escritorio", "trabajo sentado", "trabajo administrativo"]);
-  const daytimeIntent = daily || explicitDay || usageContext === "campus" || usageContext === "gym" || usageContext === "physical_work" || usageContext === "light_work" || explicitOffice;
+  const explicitOffice = ["oficina", "office", "escritorio", "trabajo sentado", "trabajo administrativo"]
+    .some(term => classifyTermMentions(text, normalizeText(term)).positive);
+  const daytimeIntent = daily || explicitDay || usageContext === "campus" || usageContext === "gym" || usageContext === "physical_work";
   if (evening && daytimeIntent) {
     conflicts.push(Object.freeze({ field: "occasion", label: "Momento de uso", question: "¿La fragancia se usará de día, de noche o buscás una opción versátil para ambos momentos?" }));
     signals.push("conflict:occasion");
