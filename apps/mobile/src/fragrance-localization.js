@@ -133,8 +133,6 @@ const TRANSLATIONS = Object.freeze({
     "floral fruity": "Floral frutal",
     "fruity floral": "Frutal floral",
     "floral woody": "Floral amaderada",
-    "orchard fruit": "Frutas de huerto",
-    "sunlit citrus": "Cítricos soleados",
   }),
   season: Object.freeze({
     "spring": "Primavera",
