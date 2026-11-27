@@ -94,8 +94,20 @@ const TRANSLATIONS = Object.freeze({
     "orange flower": "Flor de azahar",
   }),
   family: Object.freeze({
-    "velvet sweet": "Dulzor aterciopelado",
-    "petal garden": "Jardín de pétalos",
+    "velvet sweet": "Dulce / gourmand",
+    "petal garden": "Floral",
+    "white bloom": "Floral blanca",
+    "sunlit citrus": "Cítrica",
+    "spice route": "Especiada",
+    "orchard fruit": "Frutal",
+    "wood & root": "Amaderada",
+    "amber & resin": "Ambarada",
+    "oud court": "Oud",
+    "powder veil": "Empolvada",
+    "green leaf": "Verde / herbal",
+    "salt & mineral": "Mineral / salina",
+    "skin musk": "Almizclada",
+    "smoke & leather": "Cuero / ahumada",
     "floral": "Floral",
     "woody": "Amaderada",
     "woody floral": "Floral amaderada",
@@ -171,6 +183,18 @@ export function localizeFragranceList(values, type = "note") {
   return values.map(value => localizeFragranceTerm(value, type)).join(", ");
 }
 
+
+
+/** Convert the source's editorial family labels into recognizable olfactory families. */
+export function displayFragranceFamily(value) {
+  if (typeof value !== "string" || !value.trim()) return "Familia no indicada";
+  return localizeFragranceTerm(value, "family");
+}
+
+export function displayFragranceFamilies(values) {
+  if (!Array.isArray(values) || values.length === 0) return "Familia no indicada";
+  return values.map(displayFragranceFamily).join(", ");
+}
 
 const BRAND_CANONICAL = Object.freeze({
   "yves saint laurent": "Yves Saint Laurent (YSL)",
