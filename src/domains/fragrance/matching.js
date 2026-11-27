@@ -397,9 +397,9 @@ export function matchFragrances({
         : eligibility === "insufficient_coverage" ? "partial_match"
           : score >= 75 ? "strong_match" : score >= 55 ? "partial_match" : "weak_match";
     const tierHeadline = matchTier === "strong_match"
-      ? "Coincidencia sólida con los criterios disponibles."
+      ? "Esta opción coincide de forma sólida con los criterios disponibles."
       : matchTier === "partial_match"
-        ? "Coincidencia parcial: hay diferencias o faltan datos para validar todo el pedido."
+        ? "Esta opción coincide parcialmente: cumple parte de lo solicitado, con diferencias o datos incompletos."
         : matchTier === "excluded"
           ? "Esta opción incumple una restricción indicada."
           : matchTier === "weak_match"

@@ -301,7 +301,8 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
     light_work: ["clean", "fresh"],
   }[usageContext] ?? [];
   const resolvedAvoidedCharacters = [...new Set(avoidedCharacters)];
-  const resolvedPreferredCharacters = [...new Set([...preferredCharacters, ...contextCharacters])]
+  const compatibleFreshCharacters = preferredCharacters.includes("fresh") ? ["clean"] : [];
+  const resolvedPreferredCharacters = [...new Set([...preferredCharacters, ...compatibleFreshCharacters, ...contextCharacters])]
     .filter(value => !resolvedAvoidedCharacters.includes(value));
   if (resolvedPreferredCharacters.length) {
     preferences.preferredCharacters = resolvedPreferredCharacters;
