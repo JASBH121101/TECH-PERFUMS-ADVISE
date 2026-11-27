@@ -191,7 +191,7 @@ test("classifies recommendation strength while retaining eligibility and score t
     preferences: { preferredFamilies: ["citrica"], preferredNotes: ["bergamot"], preferredCharacters: ["fresh"] },
   });
   assert.equal(result.ranking[0].matchTier, "strong_match");
-  assert.equal(result.ranking[0].explanation.headline, "Coincide de forma sólida con los criterios disponibles.");
+  assert.equal(result.ranking[0].explanation.headline, "Esta opción coincide de forma sólida con los criterios disponibles.");
   assert.ok(["partial_match", "weak_match"].includes(result.ranking[1].matchTier));
   assert.equal(result.ranking[0].eligibility, "eligible");
 });
