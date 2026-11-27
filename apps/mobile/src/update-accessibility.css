@@ -712,3 +712,17 @@
   #app .compact-advisor-form { padding: 10px; }
   #app .recommendation-detail { margin-left: 34px; }
 }
+
+#app .intent-conflict-list {
+  display: grid;
+  gap: 7px;
+  margin: 8px 0 0;
+  padding-left: 17px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+#app .intent-conflict-list strong {
+  color: var(--text);
+  font-weight: 650;
+}
