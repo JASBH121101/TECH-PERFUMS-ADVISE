@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseFragranceCustomerMessage } from "../src/domains/fragrance/intent.js";
+import { parseFragranceCustomerMessage, resolveFragranceReferenceModifiers } from "../src/domains/fragrance/intent.js";
 
 test("understands a soft, non-hostigoso daily request in Spanish", () => {
   const result = parseFragranceCustomerMessage("Busco un perfume suave y que no sea hostigoso para el día a día.");
@@ -220,4 +220,87 @@ test("asks for preferences when a commercial reference cannot be found locally",
   assert.equal(result.referenceResolution, "not_found");
   assert.equal(result.needsClarification, true);
   assert.match(result.clarificationPrompt, /No encontré esa referencia/u);
+});
+
+
+test("blocks contradictory day and night intent instead of selecting one side", () => {
+  const result = parseFragranceCustomerMessage("Busco algo fresco para diario, pero también de noche.");
+  assert.equal(result.needsClarification, true);
+  assert.ok(result.conflicts.some(item => item.field === "occasion"));
+  assert.equal(result.preferences.occasion, undefined);
+  assert.match(result.clarificationPrompt, /día, de noche/u);
+});
+
+test("blocks a fragrance family that is both preferred and rejected in separate phrases", () => {
+  const result = parseFragranceCustomerMessage("Me gustan las fragancias amaderadas, pero no quiero nada amaderado.");
+  assert.equal(result.needsClarification, true);
+  assert.ok(result.conflicts.some(item => item.field === "preferredFamilies"));
+  assert.equal(result.preferences.preferredFamilies, undefined);
+  assert.equal(result.preferences.avoidFamilies, undefined);
+});
+
+test("detects warm and cold climate conflict without treating negated signals as positive", () => {
+  const conflict = parseFragranceCustomerMessage("Busco algo para clima caliente y también para clima frío.");
+  assert.equal(conflict.needsClarification, true);
+  assert.ok(conflict.conflicts.some(item => item.field === "climate"));
+
+  const clarified = parseFragranceCustomerMessage("Busco algo para diario, no para la noche, en clima caliente y no frío.");
+  assert.equal(clarified.preferences.occasion, "day");
+  assert.equal(clarified.preferences.climate, "hot_humid");
+  assert.equal(clarified.conflicts.length, 0);
+});
+
+test("does not treat an evening office request as a day-night contradiction", () => {
+  const result = parseFragranceCustomerMessage("Busco algo para oficina de noche.");
+  assert.equal(result.preferences.occasion, "evening");
+  assert.equal(result.conflicts.length, 0);
+});
+
+test("blocks contradictory soft and strong intensity wording", () => {
+  const result = parseFragranceCustomerMessage("Quiero algo suave, pero bastante fuerte e intenso.");
+  assert.equal(result.needsClarification, true);
+  assert.ok(result.conflicts.some(item => item.field === "intensity"));
+  assert.equal(result.preferences.intensity, undefined);
+});
+
+test("resolves softer-than-reference constraints only from available ordinal attributes", () => {
+  const result = resolveFragranceReferenceModifiers({
+    modifiers: ["softer"],
+    referenceAttributes: {
+      intensityLevel: "strong",
+      projectionLevel: "strong",
+      sillageLevel: "strong",
+    },
+    message: "Algo más suave",
+  });
+  assert.deepEqual(result.applied, ["softer"]);
+  assert.equal(result.preferences.maxIntensity, "moderate");
+  assert.equal(result.preferences.maxProjection, "moderate");
+  assert.equal(result.preferences.maxSillage, "moderate");
+  assert.deepEqual(result.unresolved, []);
+});
+
+test("reports missing comparable reference attributes instead of guessing a relative level", () => {
+  const result = resolveFragranceReferenceModifiers({
+    modifiers: ["softer"],
+    referenceAttributes: {},
+    message: "Algo más suave",
+  });
+  assert.deepEqual(result.applied, []);
+  assert.equal(result.unresolved.length, 3);
+  assert.ok(result.unresolved.every(item => item.reason === "reference_attribute_missing"));
+});
+
+test("maps explicit comparative directions into auditable fragrance criteria", () => {
+  const result = resolveFragranceReferenceModifiers({
+    modifiers: ["fresher_or_less_sweet", "less_woody"],
+    referenceAttributes: {},
+    message: "Más fresco, menos dulce y menos amaderado",
+  });
+  assert.ok(result.preferences.preferredCharacters.includes("fresh"));
+  assert.ok(result.preferences.preferredCharacters.includes("clean"));
+  assert.ok(result.preferences.avoidCharacters.includes("sweet"));
+  assert.ok(result.preferences.avoidCharacters.includes("gourmand"));
+  assert.ok(result.preferences.avoidFamilies.includes("woody"));
+  assert.deepEqual(result.applied, ["fresher_or_less_sweet", "less_woody"]);
 });
