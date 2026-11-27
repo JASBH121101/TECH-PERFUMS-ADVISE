@@ -240,7 +240,7 @@ test("match explanations identify matched dimensions and missing attributes sepa
   const item = result.ranking[0];
   assert.deepEqual(item.explanation.matchedDetails.families, ["citrus"]);
   assert.deepEqual(item.explanation.matchedDetails.notes, ["bergamot"]);
-  assert.deepEqual(item.explanation.missingCriteria.sort(), ["characterTraits", "occasion"]);
+  assert.deepEqual([...item.explanation.missingCriteria].sort(), ["characterTraits", "occasion"]);
   assert.ok(item.explanation.summary.includes("Cobertura de datos"));
   assert.equal(item.rankingScore, Number((item.score * item.coverage / 100).toFixed(1)));
 });

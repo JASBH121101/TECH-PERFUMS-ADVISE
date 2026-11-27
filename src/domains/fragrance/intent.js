@@ -88,8 +88,8 @@ function extractReferencePerfumes(text) {
 }
 function extractReferenceCue(text) {
   const patterns = [
-    /\\b(?:parecido a|parecida a|similar a|igual a|estilo de|inspirado en|inspirada en)\\s+(.+?)(?=\\b(?:pero|aunque|sin|mas|menos|para|quiero|busco)\\b|[,.;!?]|$)/u,
-    /\\bcomo\\s+(.+?)(?=\\b(?:pero|aunque|sin|mas|menos|para|quiero|busco)\\b|[,.;!?]|$)/u,
+    /\b(?:parecido a|parecida a|similar a|igual a|estilo de|inspirado en|inspirada en)\s+(.+?)(?=\b(?:pero|aunque|sin|mas|menos|para|quiero|busco)\b|[,.;!?]|$)/u,
+    /\bcomo\s+(.+?)(?=\b(?:pero|aunque|sin|mas|menos|para|quiero|busco)\b|[,.;!?]|$)/u,
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
@@ -339,7 +339,8 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
     signals.push("avoid_notes:" + notes.avoidNotes.join(","));
   }
 
-  if (includesAny(text, ["no dulce", "no tan dulce", "poco dulce", "no quiero dulce", "menos dulce", "no empalagoso", "no empalagosa", "que no empalague", "sin empalagar", "nada de dulce", "less sweet", "not sweet", "not too sweet"])) {
+  if (hasNegatedTerm(text, "dulce") || hasNegatedTerm(text, "gourmand") ||
+      includesAny(text, ["no dulce", "no tan dulce", "poco dulce", "no quiero dulce", "menos dulce", "no empalagoso", "no empalagosa", "que no empalague", "sin empalagar", "nada de dulce", "less sweet", "not sweet", "not too sweet"])) {
     preferences.avoidCharacters = [...new Set([...(preferences.avoidCharacters ?? []), "sweet", "gourmand"])];
     signals.push("avoid_character:sweet_gourmand");
   }
