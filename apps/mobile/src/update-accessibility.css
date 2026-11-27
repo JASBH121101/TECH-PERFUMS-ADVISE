@@ -71,3 +71,163 @@
   #jbae-update-notice .update-notice-primary,
   #jbae-update-notice .update-notice-close { font-size: 12px; }
 }
+
+
+/* JBAE app-wide mobile readability: raise tiny interface text to usable sizes. */
+#app p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+#app small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+#app label,
+#app legend,
+#app dt,
+#app dd {
+  font-size: 12px;
+  line-height: 1.5;
+}
+#app li {
+  font-size: 13px;
+  line-height: 1.6;
+}
+#app .eyebrow,
+#app .kicker,
+#app .module-code,
+#app .field-group label,
+#app .family-fieldset legend {
+  font-size: 11px;
+  letter-spacing: .1em;
+}
+#app .hero p,
+#app .page-intro p,
+#app .tech-intro > p {
+  font-size: 15px;
+  line-height: 1.7;
+}
+#app .module-card strong {
+  font-size: 18px;
+  line-height: 1.25;
+}
+#app .module-description,
+#app .module-link,
+#app .footnote,
+#app .hero-version,
+#app .result-summary,
+#app .loading-state,
+#app .loading-inline,
+#app .field-hint,
+#app .advice-reasons,
+#app .warning-panel,
+#app .result-disclaimer,
+#app .comparison-incomplete,
+#app .comparison-rank li,
+#app .comparison-source-card span,
+#app .comparison-source-card a,
+#app .technology-suggestion-status {
+  font-size: 13px;
+  line-height: 1.6;
+}
+#app .hero-status,
+#app .module-count,
+#app .home-stat span,
+#app .data-strip small,
+#app .nav-item small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+#app .data-strip strong,
+#app .home-note strong,
+#app .result-copy strong,
+#app .advice-card-copy strong,
+#app .tech-source-head strong,
+#app .collection-compare-tools strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+#app .mode-tab,
+#app .primary-action,
+#app .back-link,
+#app .collection-card-actions button,
+#app .collection-note-actions button,
+#app .collection-compare-tools button,
+#app .detail-actions button,
+#app .detail-collection-actions button,
+#app .comparison-selector-actions button,
+#app .advice-feedback button,
+#app .family-choice {
+  min-height: 44px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+#app input,
+#app select,
+#app textarea {
+  font-size: 16px;
+  line-height: 1.5;
+}
+#app .tag-row span,
+#app .note-grid small,
+#app .fact-list dt,
+#app .fact-list dd,
+#app .tech-fact dt,
+#app .tech-fact dd,
+#app .source-link,
+#app .profile-dimensions span,
+#app .comparison-coverage,
+#app .comparison-missing {
+  font-size: 12px;
+  line-height: 1.55;
+}
+#app .tech-comparison-table th,
+#app .tech-comparison-table td,
+#app .fragrance-comparison-table th,
+#app .fragrance-comparison-table td {
+  font-size: 12px;
+  line-height: 1.6;
+}
+#app .technology-suggestion-copy strong {
+  font-size: 14px;
+}
+#app .technology-suggestion-copy small {
+  font-size: 12px;
+}
+.bottom-nav .nav-item small {
+  font-size: 11px;
+}
+.runtime-pill {
+  font-size: 10px;
+}
+.brand-copy strong {
+  font-size: 14px;
+}
+.brand-copy small {
+  font-size: 10px;
+}
+
+/* The update prompt is intentionally larger than normal secondary interface text. */
+#jbae-update-notice .update-notice-copy strong {
+  font-size: 18px;
+}
+#jbae-update-notice .update-notice-copy p {
+  font-size: 15px;
+  line-height: 1.65;
+}
+#jbae-update-notice .update-notice-primary,
+#jbae-update-notice .update-notice-close {
+  font-size: 15px;
+  min-height: 46px;
+}
+@media (max-width: 370px) {
+  #app .hero p,
+  #app .page-intro p,
+  #app p {
+    font-size: 14px;
+  }
+  #jbae-update-notice .update-notice-copy strong { font-size: 17px; }
+  #jbae-update-notice .update-notice-copy p { font-size: 14px; }
+  #jbae-update-notice .update-notice-primary,
+  #jbae-update-notice .update-notice-close { font-size: 14px; }
+}
