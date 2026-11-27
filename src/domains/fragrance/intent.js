@@ -50,6 +50,21 @@ function hasNegatedTerm(text, term) {
   const optionalWords = "(?:(?:ningun|ninguna|ninguno|el|la|los|las|un|una|algo|aroma|aromas|nota|notas|fragancia|fragancias|perfume|perfumes|familia|familias|muy|tan|demasiado|tanto|tanta)\\s+){0,4}";
   return new RegExp("\\b" + prefix + "\\s+" + optionalWords + escapeRegExp(term) + "\\b", "u").test(text);
 }
+function classifyTermMentions(text, term) {
+  const pattern = new RegExp("\\b" + escapeRegExp(term) + "\\b", "gu");
+  let positive = false;
+  let negative = false;
+  let match;
+  while ((match = pattern.exec(text))) {
+    const before = text.slice(Math.max(0, match.index - 90), match.index);
+    const tail = before.split(/\s+/u).slice(-8).join(" ");
+    const isNegative = /(?:\bno\b(?:\s+\w+){0,6}|\bmenos\b(?:\s+\w+){0,4}|\bsin\b(?:\s+\w+){0,4}|\bnada\s+de(?:\s+\w+){0,3}|\bevitar?\b(?:\s+\w+){0,4}|\bnot\b(?:\s+\w+){0,4})\s*$/u.test(tail);
+    if (isNegative) negative = true;
+    else positive = true;
+  }
+  return { positive, negative };
+}
+
 function extractNotes(text, knownNotes = []) {
   const preferredNotes = [], avoidNotes = [];
   const terms = new Map(NOTE_TERMS);
@@ -57,14 +72,11 @@ function extractNotes(text, knownNotes = []) {
     const term = normalizeText(note);
     if (term) terms.set(term, term);
   }
+  const positiveIntent = /\b(?:me gusta|me gustan|me encanta|me encantan|prefiero|busco|quiero|con|que tenga|notas? de)\b/u.test(text);
   for (const [term, canonical] of terms) {
-    if (!new RegExp("\\b" + escapeRegExp(term) + "\\b", "u").test(text)) continue;
-    if (hasNegatedTerm(text, term)) {
-      avoidNotes.push(canonical);
-      continue;
-    }
-    const positive = /\b(?:me gusta|me gustan|me encanta|me encantan|prefiero|busco|quiero|con|que tenga|notas? de)\b/u.test(text);
-    if (positive) preferredNotes.push(canonical);
+    const mentions = classifyTermMentions(text, term);
+    if (mentions.negative) avoidNotes.push(canonical);
+    if (positiveIntent && mentions.positive) preferredNotes.push(canonical);
   }
   return { preferredNotes: [...new Set(preferredNotes)], avoidNotes: [...new Set(avoidNotes)] };
 }
@@ -407,10 +419,10 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
     { terms: ["herbal", "herbaceo", "herbacea", "hierbal", "a hierbas"], value: "herbal" },
   ];
   const preferredCharacters = characterTerms
-    .filter(item => item.terms.some(term => includesAny(text, [term]) && !hasNegatedTerm(text, term)))
+    .filter(item => item.terms.some(term => classifyTermMentions(text, normalizeText(term)).positive))
     .map(item => item.value);
   const avoidedCharacters = characterTerms
-    .filter(item => item.terms.some(term => includesAny(text, [term]) && hasNegatedTerm(text, term)))
+    .filter(item => item.terms.some(term => classifyTermMentions(text, normalizeText(term)).negative))
     .map(item => item.value);
   const contextCharacters = {
     gym: ["fresh", "clean", "citrusy"],
@@ -430,19 +442,20 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
     signals.push("avoid_character:" + resolvedAvoidedCharacters.join(","));
   }
 
-  const familyMatches = FAMILY_TERMS.filter(item => item.terms.some(term => includesAny(text, [term])));
-  const families = [...new Set(familyMatches
-    .filter(item => !item.terms.some(term => hasNegatedTerm(text, term)))
-    .map(item => item.value))];
-  const avoidedFamilies = [...new Set(familyMatches
-    .filter(item => item.terms.some(term => hasNegatedTerm(text, term)))
-    .map(item => item.value))];
-  if (families.length) {
-    preferences.preferredFamilies = families;
+  const families = [], avoidedFamilies = [];
+  for (const item of FAMILY_TERMS) {
+    const mentions = item.terms.map(term => classifyTermMentions(text, normalizeText(term)));
+    if (mentions.some(result => result.positive)) families.push(item.value);
+    if (mentions.some(result => result.negative)) avoidedFamilies.push(item.value);
+  }
+  const preferredFamilies = [...new Set(families)];
+  const excludedFamilies = [...new Set(avoidedFamilies)];
+  if (preferredFamilies.length) {
+    preferences.preferredFamilies = preferredFamilies;
     signals.push("families:" + preferences.preferredFamilies.join(","));
   }
-  if (avoidedFamilies.length) {
-    preferences.avoidFamilies = avoidedFamilies;
+  if (excludedFamilies.length) {
+    preferences.avoidFamilies = excludedFamilies;
     signals.push("avoid_families:" + preferences.avoidFamilies.join(","));
   }
 
