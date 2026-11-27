@@ -339,7 +339,7 @@ function renderManagedFragranceCard(product, {
     <article class="collection-card">
       <button type="button" class="collection-open" data-action="open-fragrance" data-id="${productId}">
         <span class="result-monogram">F</span>
-        <span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))}</small><em>${escapeHtml(family)}</em></span>
+        <span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))}</small><em>Familia: ${escapeHtml(displayFragranceFamily(family))}</em></span>
         <span class="result-arrow">↗</span>
       </button>
       ${collectionItem ? `<div class="collection-status"><span>Estado</span><strong>${escapeHtml(status)}</strong></div>` : ""}
@@ -871,7 +871,7 @@ function renderFragranceSearchResults() {
       const family = product.attributes.primaryScentFamily ?? product.attributes.scentFamilies?.[0] ?? "Familia no indicada";
       const concentration = product.attributes.concentrationLabel ?? "Concentración no indicada";
       return `<button class="result-card" type="button" data-action="open-fragrance" data-id="${encodeURIComponent(product.id)}">
-        <span class="result-monogram">F</span><span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))} · ${escapeHtml(concentration)}</small><em>${escapeHtml(family)}</em></span><span class="result-arrow">↗</span>
+        <span class="result-monogram">F</span><span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))} · ${escapeHtml(concentration)}</small><em>Familia: ${escapeHtml(displayFragranceFamily(family))}</em></span><span class="result-arrow">↗</span>
       </button>`;
     }).join("")}`
     : `<div class="empty-panel compact"><strong>No encontramos coincidencias</strong><p>Revisa la escritura o prueba con otra marca, familia o nota.</p></div>`;
