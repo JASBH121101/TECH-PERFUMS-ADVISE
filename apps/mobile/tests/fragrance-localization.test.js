@@ -158,7 +158,7 @@ function parseCsv(source) {
 
 test("audits the complete bundled 1,479-perfume source vocabulary without rewriting commercial names", async () => {
   const testDirectory = dirname(fileURLToPath(import.meta.url));
-  const sourcePath = join(testDirectory, "../../data/fragrance/sources/scento-2026-10-29/perfumes.csv");
+  const sourcePath = join(testDirectory, "../../../data/fragrance/sources/scento-2026-10-29/perfumes.csv");
   const records = parseCsv(await readFile(sourcePath, "utf8"));
   const products = records.map(record => ({
     id: record.id,

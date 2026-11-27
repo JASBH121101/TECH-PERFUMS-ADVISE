@@ -1,3 +1,5 @@
+import { displayFragranceBrand, localizeFragranceTerm } from "./fragrance-localization.js";
+
 export function normalizeSearchText(value) {
   return String(value ?? "")
     .normalize("NFD")
@@ -9,13 +11,33 @@ export function normalizeSearchText(value) {
 
 function productSearchText(product) {
   const attributes = product.attributes ?? {};
+  const families = attributes.scentFamilies ?? [];
+  const notes = [
+    ...(attributes.allNotes ?? []),
+    ...(attributes.topNotes ?? []),
+    ...(attributes.middleNotes ?? []),
+    ...(attributes.baseNotes ?? []),
+  ];
+  const characters = attributes.characterTraits ?? [];
   const values = [
-    product.name, product.brand, product.model, product.productType, product.deviceType,
-    attributes.concentrationLabel, attributes.concentration, attributes.primaryScentFamily,
-    ...(attributes.scentFamilies ?? []), ...(attributes.allNotes ?? []),
-    ...(attributes.topNotes ?? []), ...(attributes.middleNotes ?? []),
-    ...(attributes.baseNotes ?? []), ...(attributes.characterTraits ?? []),
-    attributes.processor, attributes.chipset, attributes.operatingSystem,
+    product.name,
+    product.brand,
+    displayFragranceBrand(product.brand),
+    product.model,
+    product.productType,
+    product.deviceType,
+    attributes.concentrationLabel,
+    attributes.concentration,
+    attributes.primaryScentFamily,
+    ...families,
+    ...families.map(value => localizeFragranceTerm(value, "family")),
+    ...notes,
+    ...notes.map(value => localizeFragranceTerm(value, "note")),
+    ...characters,
+    ...characters.map(value => localizeFragranceTerm(value, "character")),
+    attributes.processor,
+    attributes.chipset,
+    attributes.operatingSystem,
   ];
   return normalizeSearchText(values.filter(Boolean).join(" "));
 }
