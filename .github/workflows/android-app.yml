@@ -193,14 +193,16 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.jb.advisor.mobile' versionCode='$VERSION_CODE' versionName='$APP_VERSION'"
           sha256sum "$APK"
           echo "Verified JBAE signing certificate SHA-256: $ACTUAL_CERT_SHA256"
+      - name: Prepare signed APK artifact for certification
+        run: cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk JBAE.apk
       - name: Publish installable APK release
+        if: github.ref_name != 'feature/jbae-android-certification'
         env:
           APP_VERSION: ${{ steps.release-version.outputs.app_version }}
           VERSION_CODE: ${{ env.VERSION_CODE }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk JBAE.apk
           TAG="jbae-v$APP_VERSION"
           NOTES="$(cat <<EOF
           JBAE Android release
@@ -220,6 +222,7 @@ jobs:
             gh release create "$TAG" JBAE.apk --title "JBAE v$APP_VERSION" --notes "$NOTES" --target "$(git rev-parse HEAD)"
           fi
       - name: Verify published APK asset
+        if: github.ref_name != 'feature/jbae-android-certification'
         env:
           APP_VERSION: ${{ steps.release-version.outputs.app_version }}
           GH_TOKEN: ${{ github.token }}
