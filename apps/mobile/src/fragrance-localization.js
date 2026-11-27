@@ -172,6 +172,45 @@ export function localizeFragranceList(values, type = "note") {
 }
 
 
+const BRAND_CANONICAL = Object.freeze({
+  "yves saint laurent": "Yves Saint Laurent (YSL)",
+  "yes saint laurent": "Yves Saint Laurent (YSL)",
+  "ysl": "Yves Saint Laurent (YSL)",
+  "dolce gabbana": "Dolce&Gabbana",
+  "dolce and gabbana": "Dolce&Gabbana",
+  "d g": "Dolce&Gabbana",
+  "hermes": "Hermès",
+  "hermès": "Hermès",
+  "kilian": "Kilian Paris",
+  "initio parfums prives": "Initio Parfums Privés",
+  "maison francis kurkdjian": "Maison Francis Kurkdjian",
+  "maison margiela": "Maison Margiela Fragrances",
+  "rabanne": "Rabanne",
+  "roja": "Roja Parfums",
+  "tom ford": "Tom Ford",
+  "giorgio armani": "Giorgio Armani",
+  "bvlgari": "Bvlgari",
+  "van cleef and arpels": "Van Cleef & Arpels",
+  "viktor and rolf": "Viktor&Rolf",
+  "petal garden": "",
+  "sunlit citrus": "",
+});
+
+function normalizeBrandKey(value) {
+  return String(value ?? "").normalize("NFD").replace(/[\\u0300-\\u036f]/gu, "")
+    .toLowerCase().replace(/&/gu, " and ").replace(/[^a-z0-9]+/gu, " ").trim();
+}
+
+/** Keep commercial house names in their recognized branding; do not translate brands. */
+export function displayFragranceBrand(value) {
+  if (typeof value !== "string" || !value.trim()) return "Casa no indicada";
+  const key = normalizeBrandKey(value);
+  const canonical = BRAND_CANONICAL[key];
+  if (canonical !== undefined) return canonical || "Casa no indicada";
+  // Unknown brand names are preserved as supplied by the source, never machine-translated.
+  return value.trim();
+}
+
 export function formatFragranceConcentration(value) {
   if (typeof value !== "string" || !value.trim()) return "Concentración no indicada";
   return localizeFragranceTerm(value, "concentration");
