@@ -337,3 +337,40 @@
 .runtime-pill {
   font-size: 11px !important;
 }
+
+/* Customer-request advisor: concise quick prompts and explicit temporary reset. */
+#app .request-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+#app .request-examples button,
+#app .secondary-action {
+  min-height: 40px;
+  border: 1px solid rgba(117,225,209,.2);
+  border-radius: 12px;
+  padding: 9px 12px;
+  background: rgba(117,225,209,.06);
+  color: var(--cyan);
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  touch-action: manipulation;
+}
+#app .request-examples button:active,
+#app .secondary-action:active {
+  background: rgba(117,225,209,.14);
+}
+#app .advisor-actions {
+  display: grid;
+  gap: 10px;
+}
+#app .advisor-actions .primary-action {
+  width: 100%;
+}
+#app .advisor-actions .secondary-action {
+  width: 100%;
+  color: var(--text);
+  border-color: var(--line);
+  background: transparent;
+}
