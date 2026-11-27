@@ -76,3 +76,27 @@ test("rejects malformed known-note metadata", () => {
     /knownNotes must be an array/u,
   );
 });
+
+test("recognizes commercial perfume references and explicit softening modifiers without inventing a profile", () => {
+  const result = parseFragranceCustomerMessage("Algo parecido a Dior Sauvage, pero más suave para oficina.");
+  assert.deepEqual(result.referencePerfumes, ["Dior Sauvage"]);
+  assert.deepEqual(result.referenceModifiers, ["softer"]);
+  assert.equal(result.preferences.occasion, "office");
+  assert.equal(result.preferences.intensity, "soft");
+  assert.equal(result.preferences.projection, "close");
+  assert.equal(result.preferences.preferredFamilies, undefined);
+});
+
+test("recognizes multiple explicit reference names and directional modifiers", () => {
+  const result = parseFragranceCustomerMessage("Me gusta Bleu de Chanel, pero quiero algo más fresco y menos dulce.");
+  assert.deepEqual(result.referencePerfumes, ["Bleu de Chanel"]);
+  assert.deepEqual(result.referenceModifiers, ["fresher_or_less_sweet"]);
+  assert.deepEqual(result.preferences.avoidCharacters, ["sweet", "gourmand"]);
+});
+
+test("reference-only requests are not silently converted into unsupported scent facts", () => {
+  const result = parseFragranceCustomerMessage("Algo similar a Aventus.");
+  assert.deepEqual(result.referencePerfumes, ["Creed Aventus"]);
+  assert.equal(result.preferences.preferredFamilies, undefined);
+  assert.equal(result.needsClarification, true);
+});
