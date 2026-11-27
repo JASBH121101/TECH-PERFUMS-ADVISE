@@ -180,3 +180,11 @@ test("fragrance customer requests are ephemeral and old preference filters are c
   const submit = source.slice(source.indexOf('if (event.target.id === "fragrance-advisor-form")'), source.indexOf('if (event.target.id === "tech-compare-form")'));
   assert.doesNotMatch(submit, /saveFragranceProfile/u);
 });
+
+test("brand and family labels are displayed separately using commercial and standard names", async () => {
+  const source = await read("src/main.js");
+  assert.match(source, /displayFragranceBrand\(product\?\.brand\)/u);
+  assert.match(source, /Familia: \$\{escapeHtml\(displayFragranceFamily\(family\)\)\}/u);
+  assert.match(source, /displayFragranceFamilies\(attributes\.scentFamilies\)/u);
+  assert.doesNotMatch(source, /\$\{escapeHtml\(family\)\}/u);
+});
