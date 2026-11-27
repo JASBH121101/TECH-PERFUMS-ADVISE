@@ -120,10 +120,12 @@ test("new signing identity is restored from protected PKCS12 secrets and fingerp
   assert.match(workflow, /JBAE_SIGNING_CERT_SHA256/u);
 });
 
-test("manual APK release dispatch builds from the integrated certification branch", async () => {
+test("Android release builds the triggering commit and publishes an official update from main", async () => {
   const workflow = await read("../../.github/workflows/android-app.yml");
   assert.match(workflow, /workflow_dispatch:/u);
-  assert.ok(workflow.includes("ref: ${{ github.event_name == 'workflow_dispatch' && 'feature/jbae-android-certification' || github.sha }}"));
+  assert.ok(workflow.includes("ref: ${{ github.sha }}"));
+  assert.ok(workflow.includes("      - main"));
+  assert.ok(workflow.includes("if: github.ref_name != 'feature/jbae-android-certification'"));
   assert.doesNotMatch(workflow, /pull_request:/u);
   assert.match(workflow, /name: Publish installable APK release/u);
   assert.match(workflow, /name: Verify published APK asset/u);
