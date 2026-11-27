@@ -97,6 +97,56 @@ function extractReferenceModifiers(text) {
   return [...new Set(modifiers)];
 }
 
+
+const USAGE_CONTEXTS = Object.freeze({
+  gym: Object.freeze({
+    label: "Gimnasio",
+    summary: "Para gimnasio prioricé carácter fresco, limpio y cítrico, según las etiquetas reales del catálogo.",
+  }),
+  physical_work: Object.freeze({
+    label: "Trabajo físico",
+    summary: "Para trabajo físico prioricé carácter fresco, limpio, cítrico o herbal; no asumí un clima ni un rendimiento concreto.",
+  }),
+  light_work: Object.freeze({
+    label: "Trabajo tranquilo",
+    summary: "Para trabajo tranquilo prioricé carácter limpio y fresco, junto con fragancias catalogadas para el día.",
+  }),
+  daily: Object.freeze({
+    label: "Uso diario",
+    summary: "Para uso diario tomé en cuenta las fragancias catalogadas para el día, sin imponer una familia olfativa.",
+  }),
+  social_outing: Object.freeze({
+    label: "Salida",
+    summary: "Detecté una salida social. El estilo olfativo queda abierto hasta conocer si será de día o de noche.",
+  }),
+});
+
+function detectUsageContext(text) {
+  if (includesAny(text, [
+    "gimnasio", "gym", "entrenar", "entrenamiento", "hacer ejercicio",
+    "actividad fisica", "para deporte", "hacer deporte", "despues del gym",
+  ])) return "gym";
+  if (includesAny(text, [
+    "trabajo pesado", "trabajo fisico", "trabajo físico", "chamba pesada",
+    "labor fisica", "labor pesada", "trabajo bajo el sol", "trabajo al aire libre",
+    "trabajo demandante", "trabajo de fuerza", "cargar peso", "construccion",
+    "construccion", "obra pesada", "jornada pesada",
+  ])) return "physical_work";
+  if (includesAny(text, [
+    "trabajo leve", "trabajo ligero", "trabajo liviano", "trabajo tranquilo",
+    "trabajo de oficina", "trabajo en oficina", "trabajo sentado",
+    "ambiente de oficina", "oficina", "escritorio", "trabajo relajado",
+  ])) return "light_work";
+  if (includesAny(text, [
+    "diario", "dia a dia", "todos los dias", "uso diario", "everyday", "daily",
+  ])) return "daily";
+  if (includesAny(text, [
+    "salir", "salida", "para una cita", "cita", "fiesta", "evento",
+    "paseo", "reunion social", "cena especial", "going out",
+  ])) return "social_outing";
+  return null;
+}
+
 /**
  * Conservative phrase-based extraction for Spanish/English fragrance requests.
  * This is an intent helper, not a generative model: only explicit signals are emitted.
@@ -117,19 +167,25 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [] } = {})
   if (referencePerfumes.length) signals.push("reference_perfumes:" + referencePerfumes.join(","));
   if (referenceModifiers.length) signals.push("reference_modifiers:" + referenceModifiers.join(","));
 
+  const usageContext = detectUsageContext(text);
+  if (usageContext) signals.push("usage:" + usageContext);
   const evening = includesAny(text, ["noche", "nocturno", "nocturna", "cita nocturna", "evening", "night"]);
   const office = includesAny(text, ["oficina", "trabajo", "trabajar", "laboral", "work", "office"]);
   const daily = includesAny(text, ["diario", "dia a dia", "todos los dias", "uso diario", "everyday", "daily"]);
+  const explicitDay = includesAny(text, ["de dia", "durante el dia", "salida diurna", "daytime"]);
   if (evening) {
     preferences.occasion = "evening";
     signals.push("occasion:evening");
-  } else if (daily) {
-    // An explicit daily-use request remains the primary occasion when work is also mentioned.
+  } else if (daily || explicitDay) {
+    // An explicit daily/daytime request remains primary when work is also mentioned.
     preferences.occasion = "day";
     signals.push("occasion:day");
-  } else if (office) {
+  } else if (usageContext === "light_work" || (office && usageContext !== "gym" && usageContext !== "physical_work")) {
     preferences.occasion = "office";
     signals.push("occasion:office");
+  } else if (usageContext === "gym" || usageContext === "physical_work") {
+    preferences.occasion = "day";
+    signals.push("occasion:day");
   }
 
   if (includesAny(text, ["calor", "caluroso", "calurosa", "humedo", "humeda", "tropical", "clima caliente", "hot weather"])) {
@@ -172,8 +228,24 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [] } = {})
     signals.push("intensity:strong", "projection:strong");
   }
 
+  const contextCharacters = {
+    gym: ["fresh", "clean", "citrusy"],
+    physical_work: ["fresh", "clean", "citrusy", "herbal"],
+    light_work: ["clean", "fresh"],
+  }[usageContext] ?? [];
+  if (contextCharacters.length) {
+    preferences.preferredCharacters = [...new Set([
+      ...(preferences.preferredCharacters ?? []),
+      ...contextCharacters,
+    ])];
+    signals.push("character:usage_context:" + contextCharacters.join(","));
+  }
   if (includesAny(text, ["fresco", "fresca", "refrescante", "fresh", "clean", "limpio", "limpia"])) {
-    preferences.preferredCharacters = ["fresh", "clean"];
+    preferences.preferredCharacters = [...new Set([
+      ...(preferences.preferredCharacters ?? []),
+      "fresh",
+      "clean",
+    ])];
     signals.push("character:fresh_clean");
   }
 
@@ -206,12 +278,23 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [] } = {})
     signals.push("performance:long_lasting");
   }
 
+  const contextDetails = usageContext ? USAGE_CONTEXTS[usageContext] : null;
+  const needsClarification = Object.keys(preferences).length === 0;
+  const clarificationPrompt = usageContext === "social_outing" && !preferences.occasion
+    ? "¿La salida será de día o de noche?"
+    : needsClarification
+      ? "Describí la ocasión, el estilo o alguna nota para afinar la recomendación."
+      : null;
   return Object.freeze({
     preferences: Object.freeze(preferences),
     referencePerfumes: Object.freeze(referencePerfumes),
     referenceModifiers: Object.freeze(referenceModifiers),
+    usageContext,
+    usageContextLabel: contextDetails?.label ?? null,
+    contextSummary: contextDetails?.summary ?? null,
+    clarificationPrompt,
     signals: Object.freeze(signals),
-    needsClarification: Object.keys(preferences).length === 0,
+    needsClarification,
     note: "Only explicit, recognized customer signals are extracted. Unrecognized or ambiguous wording must be clarified rather than guessed.",
   });
 }
