@@ -153,6 +153,8 @@ test("editable text fields render blank and do not show example text inside cont
   assert.ok(source.includes('comparisonSearch: ""'));
   assert.ok(source.includes('techModel: ""'));
   assert.ok(source.includes('techCompareModels: ["", "", "", ""]'));
+  assert.ok(source.includes('<textarea id="collection-note-editor" name="note" maxlength="240" rows="3"></textarea>'));
+  assert.ok(source.includes('data-action="delete-collection-note"'));
 });
 
 
