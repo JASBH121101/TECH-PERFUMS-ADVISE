@@ -153,7 +153,7 @@ function renderFragranceAdvisorForm() {
       <div class="form-heading"><strong>Cuéntame qué estás buscando</strong><p>Escribe como lo dirías a un asesor. También puedes añadir filtros para que la recomendación respete tus preferencias.</p></div>
       <div class="field-group">
         <label for="fragrance-prompt">DESCRIBE TU PERFIL</label>
-        <textarea id="fragrance-prompt" name="message" maxlength="2000" placeholder="Ej.: Busco algo amaderado para uso diario, en clima caliente, fresco y que no sea hostigoso. Me gustan las notas de vainilla...">${escapeHtml(state.fragrancePrompt)}</textarea>
+        <textarea id="fragrance-prompt" name="message" maxlength="2000">${escapeHtml(state.fragrancePrompt)}</textarea>
         <span class="field-hint">El motor reconoce ocasión, familias, notas que te gustan o quieres evitar, carácter e intensidad cuando aparecen expresamente.</span>
       </div>
       <div class="field-group">
@@ -189,12 +189,12 @@ function renderFragranceAdvisorForm() {
       </fieldset>
       <div class="field-group">
         <label for="fragrance-notes">¿QUÉ NOTAS ESPECÍFICAS PREFIERES?</label>
-        <input id="fragrance-notes" name="notes" type="text" autocomplete="off" value="${escapeHtml(f.notes)}" placeholder="Ej.: cedro, bergamota, vetiver">
+        <input id="fragrance-notes" name="notes" type="text" autocomplete="off" value="${escapeHtml(f.notes)}">
         <span class="field-hint">Puedes escribir varias separadas por comas. El motor busca las notas presentes en la biblioteca.</span>
       </div>
       <div class="field-group">
         <label for="fragrance-avoid-notes">¿QUÉ NOTAS QUIERES EVITAR?</label>
-        <input id="fragrance-avoid-notes" name="avoidNotes" type="text" autocomplete="off" value="${escapeHtml(f.avoidNotes)}" placeholder="Ej.: coco, pachulí">
+        <input id="fragrance-avoid-notes" name="avoidNotes" type="text" autocomplete="off" value="${escapeHtml(f.avoidNotes)}">
         <span class="field-hint">Se excluyen las opciones que incluyan esas notas cuando la ficha permite comprobarlo.</span>
       </div>
       <div class="field-group">
@@ -303,7 +303,7 @@ function renderAdviceResults() {
 function renderFragranceSearch() {
   return `
     <section class="search-panel"><label for="fragrance-search">BUSCAR EN LA BIBLIOTECA OFFLINE</label>
-      <div class="search-field"><span>⌕</span><input id="fragrance-search" type="search" autocomplete="off" placeholder="Perfume, marca, familia o nota..." value="${escapeHtml(state.searchQuery)}"><button type="button" id="clear-search" data-action="clear-search" aria-label="Limpiar búsqueda">×</button></div>
+      <div class="search-field"><span>⌕</span><input id="fragrance-search" type="search" autocomplete="off" value="${escapeHtml(state.searchQuery)}"><button type="button" id="clear-search" data-action="clear-search" aria-label="Limpiar búsqueda">×</button></div>
     </section>
     <section id="fragrance-results" class="results-list"></section>
     <p class="footnote">Fuente: Scento Perfume Database, snapshot 29-10-2026, licencia CC BY 4.0. Sus afirmaciones permanecen como reportadas hasta una comprobación independiente.</p>`;
@@ -339,7 +339,7 @@ function renderManagedFragranceCard(product, {
           ${noteEditorOpen ? `
             <form id="collection-note-form" data-product-id="${productId}">
               <label for="collection-note-editor">TU NOTA (MÁXIMO 240 CARACTERES)</label>
-              <textarea id="collection-note-editor" name="note" maxlength="240" rows="3" placeholder="Ej.: Me gustó para noches frescas; revisar duración...">${escapeHtml(note)}</textarea>
+              <textarea id="collection-note-editor" name="note" maxlength="240" rows="3">${escapeHtml(note)}</textarea>
               <small><span id="collection-note-count">${note.length}</span>/240 caracteres · Solo se guarda en este perfil local</small>
               <div class="collection-note-actions">
                 <button type="submit">Guardar nota</button>
@@ -430,7 +430,7 @@ function renderFragranceCollection() {
     </section>
     <section class="collection-tools">
       <label for="collection-search">BUSCAR EN TUS LISTAS</label>
-      <input id="collection-search" type="search" autocomplete="off" placeholder="Perfume, casa o familia..." value="${escapeHtml(state.collectionSearch)}">
+      <input id="collection-search" type="search" autocomplete="off" value="${escapeHtml(state.collectionSearch)}">
       <label for="collection-filter">FILTRAR LISTA</label>
       <select id="collection-filter">
         <option value="all" ${state.collectionFilter === "all" ? "selected" : ""}>Toda mi colección y favoritos</option>
@@ -528,8 +528,7 @@ function renderFragranceComparison() {
     </section>
     <section class="comparison-selector">
       <label for="fragrance-compare-search">BUSCAR EN LA BIBLIOTECA OFFLINE</label>
-      <input id="fragrance-compare-search" type="search" autocomplete="off"
-        placeholder="Nombre o casa del perfume..." value="${escapeHtml(state.comparisonSearch)}">
+      <input id="fragrance-compare-search" type="search" autocomplete="off" value="${escapeHtml(state.comparisonSearch)}">
       <div id="fragrance-compare-results" class="comparison-options"></div>
       <div id="fragrance-compare-selected"></div>
     </section>
