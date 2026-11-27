@@ -187,13 +187,13 @@ export function resolveFragranceReferenceModifiers({
     for (const sourceField of ["intensityLevel", "projectionLevel", "sillageLevel"]) {
       const config = ORDINAL_MODIFIER_TARGETS[sourceField];
       const rawValue = referenceAttributes[sourceField];
-      const normalized = rawValue == null ? "" : normalizeText(String(rawValue)).replace(/\\s+/gu, "_");
+      const normalized = rawValue == null ? "" : normalizeText(String(rawValue)).replace(/\s+/gu, "_");
       const level = ORDINAL_MODIFIER_LEVELS[sourceField][normalized];
       const target = level ? config.values[level] : null;
       if (target) {
         const current = preferences[config.field];
         preferences[config.field] = current
-          ? (ORDINAL_MODIFIER_LEVELS[sourceField][String(current).replace(/\\s+/gu, "_")] <= level ? current : target)
+          ? (ORDINAL_MODIFIER_LEVELS[sourceField][String(current).replace(/\s+/gu, "_")] <= level ? current : target)
           : target;
         appliedAny = true;
       } else {
@@ -344,9 +344,12 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
 
   const usageContext = detectUsageContext(text);
   if (usageContext) signals.push("usage:" + usageContext);
-  const evening = includesAny(text, ["noche", "nocturno", "nocturna", "cita nocturna", "por la noche", "evening", "night"]);
-  const daily = includesAny(text, ["diario", "de diario", "pa diario", "pal diario", "dia a dia", "todos los dias", "uso diario", "everyday", "daily"]);
-  const explicitDay = includesAny(text, ["de dia", "durante el dia", "salida diurna", "en el dia", "daytime"]);
+  const evening = ["noche", "nocturno", "nocturna", "cita nocturna", "evening", "night"]
+    .some(term => classifyTermMentions(text, normalizeText(term)).positive);
+  const daily = ["diario", "de diario", "pa diario", "pal diario", "dia a dia", "todos los dias", "uso diario", "everyday", "daily"]
+    .some(term => classifyTermMentions(text, normalizeText(term)).positive);
+  const explicitDay = ["de dia", "durante el dia", "salida diurna", "en el dia", "daytime"]
+    .some(term => classifyTermMentions(text, normalizeText(term)).positive);
   const explicitOffice = includesAny(text, ["oficina", "office", "escritorio", "trabajo sentado", "trabajo administrativo"]);
   const daytimeIntent = daily || explicitDay || usageContext === "campus" || usageContext === "gym" || usageContext === "physical_work" || usageContext === "light_work" || explicitOffice;
   if (evening && daytimeIntent) {
@@ -364,8 +367,10 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
     signals.push("occasion:office");
   }
 
-  const warmClimate = includesAny(text, ["calor", "caluroso", "calurosa", "humedo", "humeda", "tropical", "clima caliente", "para el calor", "clima calido", "hot weather"]);
-  const coldClimate = includesAny(text, ["frio", "fria", "invierno", "cold weather"]);
+  const warmClimate = ["calor", "caluroso", "calurosa", "humedo", "humeda", "tropical", "clima caliente", "para el calor", "clima calido", "hot weather"]
+    .some(term => classifyTermMentions(text, normalizeText(term)).positive);
+  const coldClimate = ["frio", "fria", "invierno", "cold weather"]
+    .some(term => classifyTermMentions(text, normalizeText(term)).positive);
   if (warmClimate && coldClimate) {
     conflicts.push(Object.freeze({ field: "climate", label: "Clima", question: "¿Debo priorizar clima caluroso y húmedo o clima frío?" }));
     signals.push("conflict:climate");
