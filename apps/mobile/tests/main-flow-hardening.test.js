@@ -52,3 +52,16 @@ test("TECH model edits remove stale comparison output before a replacement query
   assert.equal(main.split("clearTechComparisonOutput();").length - 1, 2);
 });
 
+
+
+test("Fragrance Advisor exposes concise use-case examples and explains its interpretation", async () => {
+  const main = await readMain();
+  assert.match(main, /data-text="Para gimnasio">Gimnasio/u);
+  assert.match(main, /data-text="Para salir">Salir/u);
+  assert.match(main, /data-text="Para uso diario">Diario/u);
+  assert.match(main, /data-text="Para trabajo pesado">Trabajo físico/u);
+  assert.match(main, /data-text="Para trabajo tranquilo">Trabajo tranquilo/u);
+  assert.match(main, /function renderAdviceContextSummary\(result\)/u);
+  assert.match(main, /result\.clarificationPrompt/u);
+  assert.match(main, /intent-context-summary/u);
+});
