@@ -3,6 +3,7 @@ name: JBAE Android Release
 on:
   push:
     branches:
+      - main
       - feature/jbae-standalone-android-app
       - feature/jbae-android-certification
     paths:
@@ -31,7 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && 'feature/jbae-android-certification' || github.sha }}
+          ref: ${{ github.sha }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -210,7 +211,7 @@ jobs:
           versionCode: $VERSION_CODE
           Source commit: $(git rev-parse HEAD)
           Package: com.jb.advisor.mobile
-          Contents: integrated FRAGRANCE and TECH flows, local SQLite profile/collection, and the JBAE Android updater.
+          Contents: FRAGRANCE advisor, local SQLite profile/collection, and the JBAE Android updater. TECH remains in source but is disabled by the product feature flag.
           Build checks: engine/mobile tests, signed APK package/version verification, and published-asset byte comparison.
           Distribution: direct APK download. Android requires user confirmation before installation. This is not a Google Play release.
           EOF
