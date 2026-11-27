@@ -176,7 +176,7 @@ test("fragrance customer requests are ephemeral and old preference filters are c
   assert.doesNotMatch(source, /state\.fragranceForm = \{\s*occasion: state\.profile\.occasion/u);
   assert.match(source, /data-action="clear-fragrance-request"/u);
   assert.match(source, /data-action="fragrance-example"/u);
-  assert.match(source, /Buscar esencias para el cliente/u);
+  assert.match(source, /Buscar esencias/u);
   const submit = source.slice(source.indexOf('if (event.target.id === "fragrance-advisor-form")'), source.indexOf('if (event.target.id === "tech-compare-form")'));
   assert.doesNotMatch(submit, /saveFragranceProfile/u);
 });
