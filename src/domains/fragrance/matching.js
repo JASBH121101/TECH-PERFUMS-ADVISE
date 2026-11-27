@@ -382,14 +382,14 @@ export function matchFragrances({
     if (!evidenceStore) caveats.push("Los atributos del catálogo se utilizaron sin verificación independiente.");
     if (values.some(item => item.score === null)) caveats.push("Una o más preferencias carecen de datos o evidencia elegible.");
     if (sourceNoteFields.length && !allNotesComplete) caveats.push("La pirámide de notas es parcial; no se afirma que las notas no registradas estén ausentes.");
+    const matchTier = score === null ? "unrated" : score >= 75 ? "strong_match" : score >= 55 ? "partial_match" : "weak_match";
+    const tierHeadline = matchTier === "strong_match" ? "Coincidencia sólida con los criterios disponibles." : matchTier === "partial_match" ? "Alternativa parcial: cumple parte de lo solicitado, con diferencias." : "Coincidencia limitada; no es una de las opciones principales.";
     const explanation = Object.freeze({
-      headline: reasons.length ? "Esta opción coincide con varias preferencias expresadas." : "No hay suficientes coincidencias positivas para justificar esta opción.",
+      headline: reasons.length ? tierHeadline : "No hay suficientes coincidencias positivas para justificar esta opción.",
       reasons: Object.freeze(reasons),
       tradeoffs: Object.freeze(scored.filter(item => item.score < 40).map(item => ({ criterion: item.key, score: item.score }))),
       evidenceNote: evidenceStore ? "La evidencia enlazada se evaluó bajo la política configurada." : "Las coincidencias utilizan atributos del catálogo no verificados independientemente; esto no certifica la calidad ni el rendimiento.",
     });
-    const matchTier = score === null ? "unrated" : score >= 75 ? "strong_match" : score >= 55 ? "partial_match" : "weak_match";
-    const tierHeadline = matchTier === "strong_match" ? "Coincidencia sólida con los criterios disponibles." : matchTier === "partial_match" ? "Alternativa parcial: cumple parte de lo solicitado, con diferencias." : "Coincidencia limitada; no es una de las opciones principales.";
     return Object.freeze({
       id: product.id, name: product.name, productType: product.productType, matchTier,
       score: score === null ? null : Number(score.toFixed(1)), coverage: Number(coverage.toFixed(1)),
