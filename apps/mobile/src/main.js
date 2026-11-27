@@ -150,11 +150,18 @@ function renderFragranceAdvisorForm() {
       <small>${escapeHtml(state.profileMessage || (state.runtime.native ? "Se conserva en SQLite en este dispositivo." : "Vista previa web: la memoria se reinicia al cerrar o recargar."))}</small>
     </section>
     <form id="fragrance-advisor-form" class="advisor-form">
-      <div class="form-heading"><strong>Cuéntame qué estás buscando</strong><p>Escribe como lo dirías a un asesor. También puedes añadir filtros para que la recomendación respete tus preferencias.</p></div>
+      <div class="form-heading"><strong>Solicitud del cliente</strong><p>Describe el aroma que busca el cliente con palabras propias. El motor detecta notas, familias, ocasión, carácter y restricciones. Los filtros son opcionales y temporales.</p></div>
       <div class="field-group">
         <label for="fragrance-prompt">DESCRIBE TU PERFIL</label>
         <textarea id="fragrance-prompt" name="message" maxlength="2000">${escapeHtml(state.fragrancePrompt)}</textarea>
-        <span class="field-hint">El motor reconoce ocasión, familias, notas que te gustan o quieres evitar, carácter e intensidad cuando aparecen expresamente.</span>
+        <span class="field-hint">Ejemplos de solicitudes (tocá uno para usarlo):</span>
+        <div class="request-examples">
+          <button type="button" data-action="fragrance-example" data-text="Busco algo fresco, limpio y cítrico para un cliente que trabaja en oficina y vive en clima caliente.">Fresco para oficina</button>
+          <button type="button" data-action="fragrance-example" data-text="El cliente quiere un perfume dulce, cálido, con vainilla y ámbar para salir de noche, pero que no sea demasiado pesado.">Dulce para noche</button>
+          <button type="button" data-action="fragrance-example" data-text="Busca una esencia elegante, amaderada y especiada, con buena presencia, pero sin notas demasiado dulces.">Elegante amaderado</button>
+          <button type="button" data-action="fragrance-example" data-text="El cliente quiere algo floral, suave y femenino, con rosa o jazmín, para uso diario.">Floral suave</button>
+        </div>
+        <span class="field-hint">El motor solo aplica señales que puede reconocer y datos presentes en la biblioteca. Lo que no esté documentado se marcará como desconocido.</span>
       </div>
       <div class="field-group">
         <label for="fragrance-occasion">¿PARA QUÉ OCASIÓN?</label>
@@ -216,7 +223,10 @@ function renderFragranceAdvisorForm() {
         </select>
         <span class="field-hint">No se inventa la intensidad: si el catálogo no la registra, el motor la marcará como dato faltante.</span>
       </div>
-      <button class="primary-action" type="submit">Guardar perfil y analizar <span>↗</span></button>
+      <div class="advisor-actions">
+        <button type="button" class="secondary-action" data-action="clear-fragrance-request">Vaciar solicitud</button>
+        <button class="primary-action" type="submit">Buscar esencias para el cliente <span>↗</span></button>
+      </div>
     </form>
     <section id="advice-results" class="advice-results"></section>`;
 }
@@ -867,7 +877,15 @@ function renderFragranceSearchResults() {
     : `<div class="empty-panel compact"><strong>No encontramos coincidencias</strong><p>Revisa la escritura o prueba con otra marca, familia o nota.</p></div>`;
 }
 
+function clearFragranceRequest() {
+  state.fragrancePrompt = "";
+  state.fragranceForm = { occasion: "", families: [], avoidFamilies: [], notes: "", avoidNotes: "", climate: "", intensity: "" };
+  state.adviceResult = null;
+  state.profileMessage = "Solicitud y filtros temporales limpiados.";
+}
+
 function navigate(route) {
+  if (state.route === "fragrance" && route !== "fragrance") clearFragranceRequest();
   techLookupGuard.invalidate();
   techComparisonGuard.invalidate();
   if (state.techLookupStatus === "loading") state.techLookupStatus = "idle";
@@ -958,9 +976,16 @@ app.addEventListener("click", async event => {
     state.techComparisonResult = null;
     render();
   } else if (actionButton.dataset.action === "fragrance-mode") {
+    clearFragranceRequest();
     state.fragranceMode = actionButton.dataset.mode;
     state.searchQuery = "";
-    state.adviceResult = null;
+    render();
+  } else if (actionButton.dataset.action === "fragrance-example") {
+    state.fragrancePrompt = actionButton.dataset.text ?? "";
+    const prompt = document.querySelector("#fragrance-prompt");
+    if (prompt) prompt.value = state.fragrancePrompt;
+  } else if (actionButton.dataset.action === "clear-fragrance-request") {
+    clearFragranceRequest();
     render();
   } else if (actionButton.dataset.action === "toggle-favorite") {
     const productId = decodeURIComponent(actionButton.dataset.id ?? "");
@@ -1263,17 +1288,8 @@ app.addEventListener("submit", async event => {
       .map(input => input.value);
     const toList = value => String(value ?? "").split(/[;,]/u).map(item => item.trim()).filter(Boolean);
     try {
-      state.profile = await state.runtime.knowledgeStore.saveFragranceProfile({
-        id: "local-default",
-        preferredFamilies: state.fragranceForm.families,
-        avoidFamilies: state.fragranceForm.avoidFamilies,
-        preferredNotes: toList(state.fragranceForm.notes),
-        avoidNotes: toList(state.fragranceForm.avoidNotes),
-        occasion: state.fragranceForm.occasion || null,
-        climate: state.fragranceForm.climate || null,
-        intensity: state.fragranceForm.intensity || null,
-      });
-      state.profileMessage = "Preferencias guardadas en tu perfil local.";
+      // Customer request filters are deliberately ephemeral: never save them to the local profile.
+      state.profileMessage = "Solicitud analizada. Los filtros se usan solo para esta búsqueda.";
       state.adviceResult = buildFragranceAdvice({
         products: state.products,
         message: state.fragrancePrompt,
@@ -1402,15 +1418,24 @@ async function boot() {
     state.products = state.runtime.knowledgeStore.getProducts({ domain: DOMAINS.FRAGRANCE });
     state.profile = state.runtime.knowledgeStore.getFragranceProfile();
     if (state.profile) {
-      state.fragranceForm = {
-        occasion: state.profile.occasion ?? "",
-        families: [...state.profile.preferredFamilies],
-        avoidFamilies: [...state.profile.avoidFamilies],
-        notes: state.profile.preferredNotes.join(", "),
-        avoidNotes: state.profile.avoidNotes.join(", "),
-        climate: state.profile.climate ?? "",
-        intensity: state.profile.intensity ?? "",
-      };
+      // Remove legacy saved advisor filters once, while preserving ratings, favorites and collection.
+      const hasLegacyFilters = state.profile.preferredFamilies.length ||
+        state.profile.avoidFamilies.length || state.profile.preferredNotes.length ||
+        state.profile.avoidNotes.length || state.profile.occasion ||
+        state.profile.climate || state.profile.intensity;
+      if (hasLegacyFilters) {
+        state.profile = await state.runtime.knowledgeStore.saveFragranceProfile({
+          id: state.profile.id,
+          preferredFamilies: [],
+          avoidFamilies: [],
+          preferredNotes: [],
+          avoidNotes: [],
+          occasion: null,
+          climate: null,
+          intensity: null,
+        });
+        state.profileMessage = "Preferencias antiguas limpiadas. Las solicitudes nuevas no se guardan.";
+      }
     }
     runtimeLabel.textContent = state.runtime.native ? "OFFLINE READY" : "PREVIEW MODE";
     runtimeLabel.parentElement.classList.toggle("is-preview", !state.runtime.native);
