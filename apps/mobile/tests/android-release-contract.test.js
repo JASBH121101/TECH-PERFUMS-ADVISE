@@ -128,3 +128,15 @@ test("manual APK release dispatch builds from the integrated certification branc
   assert.match(workflow, /name: Publish installable APK release/u);
   assert.match(workflow, /name: Verify published APK asset/u);
 });
+
+
+test("Android readability stylesheet is bundled by Vite and raises app-wide mobile text sizes", async () => {
+  const entry = await read("src/main.js");
+  const html = await read("index.html");
+  const accessibility = await read("src/update-accessibility.css");
+  assert.match(entry, /import "\.\/update-accessibility\.css";/u);
+  assert.doesNotMatch(html, /href=["']\/src\/update-accessibility\.css/u);
+  assert.match(accessibility, /#app p \{\s*font-size: 14px/su);
+  assert.match(accessibility, /#app small \{\s*font-size: 12px/su);
+  assert.match(accessibility, /#jbae-update-notice \.update-notice-copy p \{\s*font-size: 15px/su);
+});
