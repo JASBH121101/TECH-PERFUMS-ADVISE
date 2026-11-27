@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatFragranceConcentration, localizeFragranceList, localizeFragranceTerm } from "../src/fragrance-localization.js";
+import { displayFragranceBrand, formatFragranceConcentration, localizeFragranceList, localizeFragranceTerm } from "../src/fragrance-localization.js";
 
 test("traduce notas de salida, corazón y fondo conocidas al español", () => {
   assert.equal(
@@ -38,4 +38,15 @@ test("traduce las etiquetas de concentración habituales", () => {
   assert.equal(formatFragranceConcentration("eau-de-parfum"), "Agua de perfume (EDP)");
   assert.equal(formatFragranceConcentration("eau-de-toilette"), "Agua de tocador (EDT)");
   assert.equal(formatFragranceConcentration(""), "Concentración no indicada");
+});
+
+test("commercial brand names are canonicalized, never translated, and pseudo-houses are hidden", () => {
+  assert.equal(displayFragranceBrand("Yves Saint Laurent"), "Yves Saint Laurent (YSL)");
+  assert.equal(displayFragranceBrand("Yes Saint Laurent"), "Yves Saint Laurent (YSL)");
+  assert.equal(displayFragranceBrand("YSL"), "Yves Saint Laurent (YSL)");
+  assert.equal(displayFragranceBrand("Dolce&Gabbana"), "Dolce&Gabbana");
+  assert.equal(displayFragranceBrand("Hermes"), "Hermès");
+  assert.equal(displayFragranceBrand("Petal Garden"), "Casa no indicada");
+  assert.equal(displayFragranceBrand("Sunlit Citrus"), "Casa no indicada");
+  assert.equal(displayFragranceBrand("Maison Francis Kurkdjian"), "Maison Francis Kurkdjian");
 });
