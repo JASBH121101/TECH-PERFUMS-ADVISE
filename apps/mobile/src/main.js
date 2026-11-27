@@ -1286,7 +1286,6 @@ app.addEventListener("submit", async event => {
     state.fragranceForm.avoidNotes = event.target.querySelector("#fragrance-avoid-notes")?.value ?? state.fragranceForm.avoidNotes;
     state.fragranceForm.avoidFamilies = [...event.target.querySelectorAll('input[name="fragrance-avoid-family"]:checked')]
       .map(input => input.value);
-    const toList = value => String(value ?? "").split(/[;,]/u).map(item => item.trim()).filter(Boolean);
     try {
       // Customer request filters are deliberately ephemeral: never save them to the local profile.
       state.profileMessage = "Solicitud analizada. Los filtros se usan solo para esta búsqueda.";
