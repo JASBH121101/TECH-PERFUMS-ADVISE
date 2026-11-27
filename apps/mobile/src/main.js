@@ -375,7 +375,7 @@ function renderAdviceResults() {
 function renderFragranceSearch() {
   return `
     <section class="search-panel compact-catalog-search"><label for="fragrance-search">BUSCAR EN LA BIBLIOTECA OFFLINE</label>
-      <div class="search-field"><span aria-hidden="true">⌕</span><input id="fragrance-search" type="search" autocomplete="off" value="${escapeHtml(state.searchQuery)}" placeholder="Nombre, marca, nota o carácter"><button type="button" id="clear-search" data-action="clear-search" aria-label="Limpiar búsqueda">×</button></div>
+      <div class="search-field"><span aria-hidden="true">⌕</span><input id="fragrance-search" type="search" autocomplete="off" value="${escapeHtml(state.searchQuery)}"><button type="button" id="clear-search" data-action="clear-search" aria-label="Limpiar búsqueda">×</button></div>
       <div class="catalog-search-examples" aria-label="Búsquedas rápidas">
         <button type="button" data-action="search-example" data-query="Dior">Dior</button>
         <button type="button" data-action="search-example" data-query="Vainilla">Vainilla</button>
