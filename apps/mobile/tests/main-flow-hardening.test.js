@@ -65,3 +65,11 @@ test("Fragrance Advisor exposes concise use-case examples and explains its inter
   assert.match(main, /result\.clarificationPrompt/u);
   assert.match(main, /intent-context-summary/u);
 });
+
+
+test("Fragrance Advisor surfaces local commercial references and coverage-based explanations", async () => {
+  const main = await readMain();
+  assert.match(main, /result\.reference\.matchedInCatalog/u);
+  assert.match(main, /No se encontró una ficha local/u);
+  assert.match(main, /item\.explanation\?\.summary/u);
+});

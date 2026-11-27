@@ -140,3 +140,84 @@ test("recognizes short daily and explicitly timed outing requests", () => {
   assert.equal(night.preferences.occasion, "evening");
   assert.equal(night.needsClarification, false);
 });
+
+
+test("understands informal Spanish and regional wording without changing the intended use", () => {
+  const gym = parseFragranceCustomerMessage("Pa'l gym");
+  assert.equal(gym.usageContext, "gym");
+  assert.equal(gym.preferences.occasion, "day");
+
+  const daily = parseFragranceCustomerMessage("Algo fresquito pa diario");
+  assert.equal(daily.usageContext, "daily");
+  assert.equal(daily.preferences.occasion, "day");
+  assert.ok(daily.preferences.preferredCharacters.includes("fresh"));
+});
+
+test("separates a positive fresh preference from an explicitly rejected citrus profile", () => {
+  const result = parseFragranceCustomerMessage("Quiero algo fresco, pero no cítrico");
+  assert.deepEqual(result.preferences.preferredCharacters, ["fresh", "clean"]);
+  assert.deepEqual(result.preferences.avoidFamilies, ["citrus"]);
+  assert.deepEqual(result.preferences.avoidCharacters, ["citrusy"]);
+  assert.equal(result.preferences.preferredFamilies, undefined);
+});
+
+test("understands common anti-sweet phrases and non-intrusive wording", () => {
+  const sweet = parseFragranceCustomerMessage("No quiero algo muy dulce ni empalagoso");
+  assert.ok(sweet.preferences.avoidFamilies.includes("gourmand"));
+  assert.ok(sweet.preferences.avoidCharacters.includes("sweet"));
+  assert.ok(sweet.preferences.avoidCharacters.includes("gourmand"));
+
+  const quiet = parseFragranceCustomerMessage("Algo livianito, que no sea muy cargado");
+  assert.equal(quiet.preferences.intensity, "soft");
+  assert.equal(quiet.preferences.maxIntensity, "moderate");
+});
+
+test("does not assume a generic job means office work or physical work", () => {
+  const result = parseFragranceCustomerMessage("Para el brete");
+  assert.equal(result.usageContext, "work_unspecified");
+  assert.equal(result.preferences.occasion, undefined);
+  assert.equal(result.needsClarification, true);
+  assert.equal(result.clarificationPrompt, "¿Es un trabajo de oficina o implica actividad física?");
+});
+
+test("recognizes fresh-out-of-shower language and long-wear wording without inventing hours", () => {
+  const clean = parseFragranceCustomerMessage("Quiero oler como recién bañado");
+  assert.deepEqual(clean.preferences.preferredCharacters, ["clean"]);
+
+  const long = parseFragranceCustomerMessage("Que aguante toda la jornada");
+  assert.equal(long.preferences.performancePriority, "long_lasting");
+  assert.equal(long.preferences.longevityHours, undefined);
+});
+
+test("resolves a named commercial reference against the local perfume catalogue", () => {
+  const result = parseFragranceCustomerMessage("Algo similar a Dior Sauvage, pero más suave", {
+    knownPerfumes: [
+      { id: "dior-sauvage", name: "Sauvage", brand: "Dior" },
+      { id: "bleu", name: "Bleu de Chanel", brand: "Chanel" },
+    ],
+  });
+  assert.equal(result.referenceProduct.id, "dior-sauvage");
+  assert.equal(result.referenceProduct.name, "Sauvage");
+  assert.equal(result.referenceResolution, "matched_in_catalog");
+  assert.ok(result.referenceModifiers.includes("softer"));
+});
+
+test("does not silently choose between ambiguous commercial flankers", () => {
+  const result = parseFragranceCustomerMessage("Algo como Sauvage", {
+    knownPerfumes: [
+      { id: "sauvage-edp", name: "Sauvage Eau de Parfum", brand: "Dior" },
+      { id: "sauvage-elixir", name: "Sauvage Elixir", brand: "Dior" },
+    ],
+  });
+  assert.equal(result.referenceProduct, null);
+  assert.equal(result.referenceResolution, "ambiguous");
+});
+
+test("asks for preferences when a commercial reference cannot be found locally", () => {
+  const result = parseFragranceCustomerMessage("Algo parecido a Midnight Blue X", {
+    knownPerfumes: [{ id: "sauvage", name: "Sauvage", brand: "Dior" }],
+  });
+  assert.equal(result.referenceResolution, "not_found");
+  assert.equal(result.needsClarification, true);
+  assert.match(result.clarificationPrompt, /No encontré esa referencia/u);
+});

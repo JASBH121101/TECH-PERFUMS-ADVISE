@@ -208,3 +208,61 @@ test("una solicitud genérica para salir pide horario en vez de inventar un esti
   assert.equal(advice.usageContext, "social_outing");
   assert.equal(advice.clarificationPrompt, "¿La salida será de día o de noche?");
 });
+
+
+test("similar-to requests use only documented attributes from a local reference perfume", () => {
+  const catalog = [
+    {
+      id: "reference-sauvage", name: "Sauvage", brand: "Dior", domain: "fragrance", productType: "perfume",
+      attributes: {
+        scentFamilies: ["Sunlit Citrus", "Wood & Root"],
+        characterTraits: ["fresh", "woody"],
+        allNotes: ["Bergamot", "Pepper", "Cedarwood"],
+      },
+    },
+    {
+      id: "similar-fresh-wood", name: "Fresh Woods", domain: "fragrance", productType: "perfume",
+      attributes: {
+        scentFamilies: ["Sunlit Citrus", "Wood & Root"],
+        characterTraits: ["fresh", "woody"],
+        allNotes: ["Bergamot", "Cedarwood", "Vetiver"],
+        intensityLevel: "soft",
+        projectionLevel: "close",
+        sillageLevel: "moderate",
+      },
+    },
+    {
+      id: "sweet-floral", name: "Sweet Floral", domain: "fragrance", productType: "perfume",
+      attributes: {
+        scentFamilies: ["White Bloom", "Velvet Sweet"],
+        characterTraits: ["sweet"],
+        allNotes: ["Vanilla", "Rose"],
+        intensityLevel: "strong",
+        projectionLevel: "strong",
+        sillageLevel: "strong",
+      },
+    },
+  ];
+  const advice = buildFragranceAdvice({
+    products: catalog,
+    message: "Algo similar a Dior Sauvage, pero más suave",
+  });
+  assert.equal(advice.reference.matchedInCatalog, true);
+  assert.equal(advice.reference.name, "Sauvage");
+  assert.ok(advice.reference.usedFields.includes("scentFamilies"));
+  assert.ok(advice.preferences.preferredFamilies.includes("citrus"));
+  assert.ok(advice.preferences.preferredNotes.includes("bergamot"));
+  assert.equal(advice.preferences.intensity, "soft");
+  assert.equal(advice.recommendations[0].id, "similar-fresh-wood");
+});
+
+test("unknown reference names are disclosed and never converted into invented fragrance attributes", () => {
+  const advice = buildFragranceAdvice({
+    products: activityProducts,
+    message: "Algo parecido a un perfume que se llama Midnight Blue X",
+  });
+  assert.equal(advice.reference.matchedInCatalog, false);
+  assert.equal(advice.reference.resolution, "not_found");
+  assert.equal(advice.status, "needs_preferences");
+  assert.equal(advice.preferences.preferredFamilies, undefined);
+});

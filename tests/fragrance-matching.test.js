@@ -195,3 +195,67 @@ test("classifies recommendation strength while retaining eligibility and score t
   assert.ok(["partial_match", "weak_match"].includes(result.ranking[1].matchTier));
   assert.equal(result.ranking[0].eligibility, "eligible");
 });
+
+
+test("coverage-aware ranking keeps a high raw score with missing data below a more complete match", () => {
+  const result = matchFragrances({
+    products: [
+      {
+        id: "sparse-perfect", name: "Sparse Perfect", domain: "fragrance", productType: "perfume",
+        attributes: { scentFamilies: ["citrica"] },
+      },
+      {
+        id: "broader-record", name: "Broader Record", domain: "fragrance", productType: "perfume",
+        attributes: { scentFamilies: ["citrica"], allNotes: ["bergamot"] },
+      },
+    ],
+    preferences: {
+      preferredFamilies: ["citrica"],
+      preferredNotes: ["bergamot", "lavender"],
+      preferredCharacters: ["fresh"],
+    },
+    minimumMatchCoverage: 85,
+  });
+  assert.equal(result.ranking[0].id, "broader-record");
+  assert.equal(result.ranking[0].eligibility, "insufficient_coverage");
+  assert.equal(result.ranking[0].matchTier, "partial_match");
+  assert.ok(result.ranking[0].rankingScore > result.ranking[1].rankingScore);
+  assert.match(result.ranking[0].explanation.summary, /cobertura de datos/u);
+});
+
+test("match explanations identify matched dimensions and missing attributes separately", () => {
+  const result = matchFragrances({
+    products: [{
+      id: "explained", name: "Explained", domain: "fragrance", productType: "perfume",
+      attributes: { scentFamilies: ["Sunlit Citrus"], allNotes: ["Bergamot"] },
+    }],
+    preferences: {
+      preferredFamilies: ["citrus"],
+      preferredNotes: ["bergamot"],
+      preferredCharacters: ["fresh"],
+      occasion: "day",
+    },
+    minimumMatchCoverage: 40,
+  });
+  const item = result.ranking[0];
+  assert.deepEqual(item.explanation.matchedDetails.families, ["citrus"]);
+  assert.deepEqual(item.explanation.matchedDetails.notes, ["bergamot"]);
+  assert.deepEqual(item.explanation.missingCriteria.sort(), ["characterTraits", "occasion"]);
+  assert.ok(item.explanation.summary.includes("Cobertura de datos"));
+  assert.equal(item.rankingScore, Number((item.score * item.coverage / 100).toFixed(1)));
+});
+
+test("excluded products receive an excluded tier and cannot appear as strong matches", () => {
+  const result = matchFragrances({
+    products: [
+      products[0],
+      { id: "sweet", name: "Sweet", domain: "fragrance", productType: "perfume", attributes: {
+        scentFamilies: ["Gourmand"], allNotes: ["Vanilla"], characterTraits: ["sweet"],
+      } },
+    ],
+    preferences: { avoidFamilies: ["gourmand"], preferredFamilies: ["citrus"] },
+  });
+  const excluded = result.ranking.find(item => item.id === "sweet");
+  assert.equal(excluded.eligibility, "excluded");
+  assert.equal(excluded.matchTier, "excluded");
+});

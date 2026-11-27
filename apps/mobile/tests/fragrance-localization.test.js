@@ -64,3 +64,12 @@ test("normaliza etiquetas editoriales de familias a categorías olfativas recono
   assert.equal(displayFragranceFamily("Rare source family"), "Rare source family");
   assert.equal(displayFragranceFamilies(["White Bloom", "Petal Garden"]), "Floral blanca, Floral");
 });
+
+
+test("keeps commercial perfume names unchanged while known note vocabulary is localized", () => {
+  const commercialName = "Dior Sauvage Elixir";
+  assert.equal(localizeFragranceTerm(commercialName, "note"), commercialName);
+  assert.equal(localizeFragranceTerm("vanilla", "note"), "Vainilla");
+  assert.equal(localizeFragranceTerm("oud", "note"), "Oud (madera de agar)");
+  assert.equal(displayFragranceBrand("Dior"), "Dior");
+});
