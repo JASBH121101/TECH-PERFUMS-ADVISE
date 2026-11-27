@@ -92,3 +92,13 @@ test("catalog search examples use localized fragrance vocabulary", async () => {
   assert.match(main, /data-query="Fresco"/u);
   assert.match(main, /displayFragranceCharacters\(product\.attributes\.characterTraits\)/u);
 });
+
+
+test("Fragrance comparison matrix localizes notes, character, concentration and product facts", async () => {
+  const main = await readMain();
+  assert.match(main, /function renderComparisonValue\(value, fieldKey = ""\)/u);
+  assert.match(main, /localizeFragranceTerm\(item, "note"\)/u);
+  assert.match(main, /displayFragranceCharacters\(\[item\]\)/u);
+  assert.match(main, /formatFragranceConcentration\(item\)/u);
+  assert.match(main, /renderComparisonValue\(item\.available \? item\.value : null, field\.key\)/u);
+});

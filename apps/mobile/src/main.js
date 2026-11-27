@@ -1,7 +1,7 @@
 import "./styles.css";
 import "./update-accessibility.css";
 import { PRODUCT_MODULES } from "./product-modules.js";
-import { displayFragranceBrand, displayFragranceCharacters, displayFragranceFamilies, displayFragranceFamily, formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
+import { displayFragranceBrand, displayFragranceCharacters, displayFragranceFamilies, displayFragranceFamily, formatFragranceConcentration, localizeFragranceList, localizeFragranceTerm } from "./fragrance-localization.js";
 import { safeExternalUrl } from "./safe-external-url.js";
 import { DOMAINS, buildFragranceComparison } from "../../../src/index.js";
 import { closeStorage, initializeStorage } from "./storage.js";
@@ -493,16 +493,45 @@ function renderFragranceCollection() {
     <div id="collection-content">${renderFragranceCollectionContent(profile)}</div>`;
 }
 
-function renderComparisonValue(value) {
+const COMPARISON_LEVEL_LABELS = Object.freeze({
+  soft: "Suave", moderate: "Moderada", strong: "Intensa", very_strong: "Muy intensa",
+  close: "Cercana", low: "Baja", high: "Alta", light: "Ligera",
+});
+const COMPARISON_CLIMATE_LABELS = Object.freeze({
+  hot: "Caluroso", hot_humid: "Caluroso / húmedo", tropical: "Tropical",
+  humid: "Húmedo", cold: "Frío", cool: "Fresco", winter: "Invierno", dry: "Seco",
+});
+function renderComparisonValue(value, fieldKey = "") {
   if (value === null || value === undefined) return `<span class="comparison-missing">Sin dato registrado</span>`;
-  if (Array.isArray(value)) return escapeHtml(value.join(" · "));
-  if (typeof value === "object" && Number.isFinite(value.min) && Number.isFinite(value.max)) {
+  if (typeof value === "object" && !Array.isArray(value) && Number.isFinite(value.min) && Number.isFinite(value.max)) {
     return escapeHtml(`${value.min}–${value.max} ${value.unit}`);
   }
-  if (typeof value === "object" && Number.isFinite(value.value)) {
+  if (typeof value === "object" && !Array.isArray(value) && Number.isFinite(value.value)) {
     return escapeHtml(`${value.value} ${value.unit}`);
   }
-  return escapeHtml(value);
+  const localize = item => {
+    if (fieldKey === "families") return displayFragranceFamily(item);
+    if (["topNotes", "middleNotes", "baseNotes", "allNotes"].includes(fieldKey)) return localizeFragranceTerm(item, "note");
+    if (fieldKey === "character") return displayFragranceCharacters([item]);
+    if (fieldKey === "seasons") return localizeFragranceTerm(item, "season");
+    if (fieldKey === "timesOfDay") return localizeFragranceTerm(item, "time");
+    if (fieldKey === "concentration") return formatFragranceConcentration(item);
+    if (fieldKey === "brand") return displayFragranceBrand(item);
+    if (fieldKey === "climate") return COMPARISON_CLIMATE_LABELS[String(item).toLowerCase()] ?? item;
+    if (["intensity", "projection", "sillage"].includes(fieldKey)) {
+      return COMPARISON_LEVEL_LABELS[String(item).toLowerCase()] ?? item;
+    }
+    if (fieldKey === "productType") {
+      const types = { perfume: "Perfume", "body mist": "Bruma corporal", set: "Set" };
+      return types[String(item).toLowerCase()] ?? item;
+    }
+    return item;
+  };
+  if (Array.isArray(value)) {
+    const rendered = [...new Set(value.map(item => String(localize(item))))];
+    return escapeHtml(rendered.join(" · "));
+  }
+  return escapeHtml(localize(String(value)));
 }
 
 function renderFragranceComparisonMatrix(result) {
@@ -511,7 +540,7 @@ function renderFragranceComparisonMatrix(result) {
     <th><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))}</small></th>`).join("");
   const rows = result.fields.map(field => `
     <tr><th scope="row">${escapeHtml(field.label)}<small>${field.available}/${field.total} con dato</small></th>
-      ${field.values.map(item => `<td>${renderComparisonValue(item.available ? item.value : null)}</td>`).join("")}
+      ${field.values.map(item => `<td>${renderComparisonValue(item.available ? item.value : null, field.key)}</td>`).join("")}
     </tr>`).join("");
   const coverage = result.coverage.map(item => {
     const product = result.columns.find(column => column.id === item.productId);
