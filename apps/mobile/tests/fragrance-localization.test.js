@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { displayFragranceBrand, formatFragranceConcentration, localizeFragranceList, localizeFragranceTerm } from "../src/fragrance-localization.js";
+import { displayFragranceBrand, displayFragranceFamilies, displayFragranceFamily, formatFragranceConcentration, localizeFragranceList, localizeFragranceTerm } from "../src/fragrance-localization.js";
 
 test("traduce notas de salida, corazón y fondo conocidas al español", () => {
   assert.equal(
@@ -49,4 +49,18 @@ test("commercial brand names are canonicalized, never translated, and pseudo-hou
   assert.equal(displayFragranceBrand("Petal Garden"), "Casa no indicada");
   assert.equal(displayFragranceBrand("Sunlit Citrus"), "Casa no indicada");
   assert.equal(displayFragranceBrand("Maison Francis Kurkdjian"), "Maison Francis Kurkdjian");
+});
+
+test("normaliza etiquetas editoriales de familias a categorías olfativas reconocibles", () => {
+  assert.equal(displayFragranceFamily("White Bloom"), "Floral blanca");
+  assert.equal(displayFragranceFamily("Petal Garden"), "Floral");
+  assert.equal(displayFragranceFamily("Sunlit Citrus"), "Cítrica");
+  assert.equal(displayFragranceFamily("Velvet Sweet"), "Dulce / gourmand");
+  assert.equal(displayFragranceFamily("Spice Route"), "Especiada");
+  assert.equal(displayFragranceFamily("Orchard Fruit"), "Frutal");
+  assert.equal(displayFragranceFamily("Wood & Root"), "Amaderada");
+  assert.equal(displayFragranceFamily("Amber & Resin"), "Ambarada");
+  assert.equal(displayFragranceFamily("Oud Court"), "Oud");
+  assert.equal(displayFragranceFamily("Rare source family"), "Rare source family");
+  assert.equal(displayFragranceFamilies(["White Bloom", "Petal Garden"]), "Floral blanca, Floral");
 });
