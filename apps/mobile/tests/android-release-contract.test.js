@@ -140,3 +140,23 @@ test("Android readability stylesheet is bundled by Vite and raises app-wide mobi
   assert.match(accessibility, /#app small \{\s*font-size: 12px/su);
   assert.match(accessibility, /#jbae-update-notice \.update-notice-copy p \{\s*font-size: 15px/su);
 });
+
+
+test("editable text fields render blank and do not show example text inside controls", async () => {
+  const source = await read("src/main.js");
+  assert.doesNotMatch(source, /\\bplaceholder\\s*=/u);
+  assert.match(source, /searchQuery:\\s*""/u);
+  assert.match(source, /fragrancePrompt:\\s*""/u);
+  assert.match(source, /collectionSearch:\\s*""/u);
+  assert.match(source, /comparisonSearch:\\s*""/u);
+  assert.match(source, /techModel:\\s*""/u);
+  assert.match(source, /techCompareModels:\\s*\\["",\\s*"",\\s*"",\\s*""\\]/u);
+});
+
+test("readability contract overrides compact legacy typography in the shipped interface", async () => {
+  const accessibility = await read("src/update-accessibility.css");
+  assert.match(accessibility, /#app p \\{\\s*font-size: 15px !important/su);
+  assert.match(accessibility, /#app small,\\s*#app label,\\s*#app legend,\\s*#app dt,\\s*#app dd \\{\\s*font-size: 13px !important/su);
+  assert.match(accessibility, /#app input,\\s*#app select,\\s*#app textarea \\{\\s*font-size: 16px !important/su);
+  assert.match(accessibility, /#app button,\\s*#app \\.family-choice,\\s*#app \\.mode-tab \\{\\s*font-size: 15px !important/su);
+});
