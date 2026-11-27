@@ -197,7 +197,7 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [] } = {})
     signals.push("avoid_notes:" + notes.avoidNotes.join(","));
   }
 
-  if (includesAny(text, ["no dulce", "no tan dulce", "poco dulce", "no quiero dulce", "not sweet", "not too sweet"])) {
+  if (includesAny(text, ["no dulce", "no tan dulce", "poco dulce", "no quiero dulce", "menos dulce", "less sweet", "not sweet", "not too sweet"])) {
     preferences.avoidCharacters = ["sweet", "gourmand"];
     signals.push("avoid_character:sweet_gourmand");
   }
