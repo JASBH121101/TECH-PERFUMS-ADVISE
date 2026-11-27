@@ -197,7 +197,7 @@ const BRAND_CANONICAL = Object.freeze({
 });
 
 function normalizeBrandKey(value) {
-  return String(value ?? "").normalize("NFD").replace(/[\\u0300-\\u036f]/gu, "")
+  return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/gu, "")
     .toLowerCase().replace(/&/gu, " and ").replace(/[^a-z0-9]+/gu, " ").trim();
 }
 
