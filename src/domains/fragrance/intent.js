@@ -46,7 +46,7 @@ function includesAny(text, terms) {
   return terms.some(term => new RegExp("\\b" + escapeRegExp(normalizeText(term)) + "\\b", "u").test(text));
 }
 function hasNegatedTerm(text, term) {
-  const prefix = "(?:no\\s+(?:quiero|me\\s+gusta(?:n)?|soporto|busco)(?:\\s+(?:algo|un|una|el|la|los|las|nada|muy|tan|demasiado|tanto|tanta))*|no\\s+tan|que\\s+no\\s+sea(?:\\s+(?:muy|tan|demasiado))?|que\\s+no\\s+tenga|nada\\s+de|sin|evita|evitar)";
+  const prefix = "(?:no\\s+(?:quiero|me\\s+gusta(?:n)?|soporto|busco)(?:\\s+(?:algo|un|una|el|la|los|las|nada|muy|tan|demasiado|tanto|tanta))*|no\\s+tan|no|que\\s+no\\s+sea(?:\\s+(?:muy|tan|demasiado))?|que\\s+no\\s+tenga|nada\\s+de|sin|evita|evitar)";
   const optionalWords = "(?:(?:ningun|ninguna|ninguno|el|la|los|las|un|una|algo|aroma|aromas|nota|notas|fragancia|fragancias|perfume|perfumes|familia|familias|muy|tan|demasiado|tanto|tanta)\\s+){0,4}";
   return new RegExp("\\b" + prefix + "\\s+" + optionalWords + escapeRegExp(term) + "\\b", "u").test(text);
 }
@@ -349,7 +349,9 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
 
   const contextDetails = usageContext ? USAGE_CONTEXTS[usageContext] : null;
   const needsClarification = Object.keys(preferences).length === 0;
-  const clarificationPrompt = usageContext === "social_outing" && !preferences.occasion
+  const clarificationPrompt = reference.query && reference.resolution === "not_found" && needsClarification
+    ? "No encontré esa referencia en el catálogo local. ¿Qué rasgos te gustan de ese perfume?"
+    : usageContext === "social_outing" && !preferences.occasion
     ? "¿La salida será de día o de noche?"
     : usageContext === "work_unspecified" && !preferences.occasion
       ? "¿Es un trabajo de oficina o implica actividad física?"
