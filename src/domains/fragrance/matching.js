@@ -1,3 +1,4 @@
+// Match tiers communicate preference fit only; they do not describe product quality or performance.
 const LEVELS = Object.freeze({ soft: 1, suave: 1, moderate: 2, moderada: 2, strong: 3, intensa: 3, very_strong: 4 });
 const PROJECTION = Object.freeze({ close: 1, moderate: 2, moderada: 2, strong: 3, alta: 3, very_strong: 4 });
 const SILLAGE = Object.freeze({ low: 1, baja: 1, moderate: 2, moderada: 2, strong: 3, alta: 3, very_strong: 4 });
