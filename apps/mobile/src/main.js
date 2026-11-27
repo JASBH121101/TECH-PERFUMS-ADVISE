@@ -1,4 +1,5 @@
 import "./styles.css";
+import "./update-accessibility.css";
 import { formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
 import { safeExternalUrl } from "./safe-external-url.js";
 import { DOMAINS, buildFragranceComparison } from "../../../src/index.js";
