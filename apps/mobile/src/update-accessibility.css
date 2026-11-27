@@ -458,3 +458,20 @@
   #app .advisor-memory-strip small { display: none; }
   #app .compact-advisor-actions .secondary-action { min-width: 70px; }
 }
+
+
+/* Compact explanation of the customer use-case interpreted by the advisor. */
+#app .intent-context-summary {
+  margin: 9px 0 12px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--cyan);
+  border-radius: 8px;
+  background: rgba(117,225,209,.055);
+  color: var(--muted);
+  font-size: 11px !important;
+  line-height: 1.55;
+}
+#app .intent-context-summary strong {
+  color: var(--cyan);
+  font-size: 11px !important;
+}
