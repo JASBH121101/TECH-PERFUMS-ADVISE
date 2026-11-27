@@ -11,8 +11,8 @@ The deterministic intent parser converts explicit customer wording into structur
 - Intensity and projection: soft/subtle/discreet wording sets soft intensity and close projection. Strong/intense wording sets strong intensity and projection. Contradictory soft/strong wording does not cause the parser to guess.
 - Non-intrusive limits: wording such as “no hostigoso”, “no invasivo” or “not overpowering” sets hard maximums of moderate intensity, projection and sillage. These are constraints, not an inferred claim about the product.
 - Character: fresh/clean.
-- Families: citrus (including cítrico/cítrica/cítricos/cítricas), floral, woody, gourmand, aromatic, aquatic and amber.
-- Selected notes: common Spanish/English notes such as bergamot, lemon, lavender, jasmine, rose, vanilla, amber, musk, cinnamon, coconut, leather, patchouli and oud.
+- Families: citrus, floral, woody, gourmand, aromatic, aquatic, amber, spicy, green, fruity, powdery, musky, leather, mineral and oud. The parser also recognizes the Scento source-family names, including Wood & Root and Sunlit Citrus.
+- Selected notes: common Spanish/English notes such as bergamot, lemon, lavender, jasmine, rose, vanilla, amber, musk, cinnamon, coconut, leather, patchouli, cedarwood, sandalwood and vetiver. The mobile adviser can additionally match explicit note names found in its loaded perfume library; these are recognized from candidate catalogue data, not invented.
 - Performance priority: explicit requests for long wear select the `long_lasting` recommendation profile.
 
 Spanish accents are normalized. Explicit structured preferences supplied by the caller override inferred preferences. Unknown messages return `needsClarification: true` when no supported signal is found; when one dimension is contradictory, the parser leaves that dimension unresolved rather than selecting one side.

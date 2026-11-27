@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/jbae-standalone-android-app
   workflow_dispatch:
 
 permissions:
@@ -35,8 +36,16 @@ jobs:
       - name: Run engine tests
         run: npm test
 
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm install --no-audit --no-fund
+
       - name: Run mobile app tests
         run: npm --prefix apps/mobile test
+
+      - name: Build mobile web bundle
+        working-directory: apps/mobile
+        run: npm run build
 
       - name: Build complete fragrance knowledge seed
         run: npm run build:fragrance-library

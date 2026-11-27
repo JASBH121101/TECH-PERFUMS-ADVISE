@@ -1,11 +1,19 @@
 const FAMILY_TERMS = Object.freeze([
-  { terms: ["citrico", "citrica", "citricos", "citricas", "citrus"], value: "citrus" },
-  { terms: ["floral", "flores", "florales"], value: "floral" },
-  { terms: ["amaderado", "amaderada", "madera", "woodsy", "woody"], value: "woody" },
-  { terms: ["dulce", "gourmand"], value: "gourmand" },
+  { terms: ["citrico", "citrica", "citricos", "citricas", "citrus", "sunlit citrus"], value: "citrus" },
+  { terms: ["floral", "flores", "florales", "white bloom", "petal garden"], value: "floral" },
+  { terms: ["amaderado", "amaderada", "amaderados", "amaderadas", "madera", "maderas", "woodsy", "woody", "wood root", "wood and root"], value: "woody" },
+  { terms: ["dulce", "gourmand", "velvet sweet"], value: "gourmand" },
   { terms: ["aromatico", "aromatica", "herbal", "hierbas"], value: "aromatic" },
   { terms: ["acuatico", "acuatica", "marino", "fresh aquatic"], value: "aquatic" },
-  { terms: ["ambarado", "ambar", "oriental"], value: "amber" },
+  { terms: ["ambarado", "ambarada", "ambar", "oriental", "amber resin"], value: "amber" },
+  { terms: ["especiado", "especiada", "especiados", "spicy", "spice route"], value: "spicy" },
+  { terms: ["verde", "verdes", "green", "green leaf"], value: "green" },
+  { terms: ["frutal", "frutales", "fruta", "frutas", "fruity", "orchard fruit"], value: "fruity" },
+  { terms: ["empolvado", "empolvada", "polvoroso", "polvorosa", "powdery", "powder veil"], value: "powdery" },
+  { terms: ["almizclado", "almizclada", "almizcle", "musky", "skin musk"], value: "musky" },
+  { terms: ["cuero", "cuero ahumado", "leather", "smoke leather"], value: "leather" },
+  { terms: ["mineral", "salino", "salina", "salt mineral"], value: "mineral" },
+  { terms: ["oud", "madera de agar", "agarwood", "oud court"], value: "oud" },
 ]);
 const NOTE_TERMS = Object.freeze([
   ["vainilla", "vanilla"], ["vanilla", "vanilla"], ["bergamota", "bergamot"],
@@ -16,7 +24,15 @@ const NOTE_TERMS = Object.freeze([
   ["musk", "musk"], ["canela", "cinnamon"], ["cinnamon", "cinnamon"],
   ["coco", "coconut"], ["coconut", "coconut"], ["cuero", "leather"],
   ["leather", "leather"], ["pachuli", "patchouli"], ["patchouli", "patchouli"],
-  ["oud", "oud"],
+  ["oud", "oud"], ["cedro", "cedarwood"], ["cedar", "cedarwood"],
+  ["cedarwood", "cedarwood"], ["sandalwood", "sandalwood"], ["sandalo", "sandalwood"],
+  ["vetiver", "vetiver"], ["toronja", "grapefruit"], ["pomelo", "grapefruit"],
+  ["grapefruit", "grapefruit"], ["naranja", "orange"], ["orange", "orange"],
+  ["mandarina", "mandarin"], ["mandarin", "mandarin"], ["lima", "lime"],
+  ["lime", "lime"], ["yuzu", "yuzu"], ["pimienta", "pepper"],
+  ["pepper", "pepper"], ["romero", "rosemary"], ["rosemary", "rosemary"],
+  ["cardamomo", "cardamom"], ["cardamom", "cardamom"], ["incienso", "frankincense"],
+  ["frankincense", "frankincense"], ["pino", "pine"], ["pine", "pine"],
 ]);
 
 function normalizeText(value) {
@@ -31,23 +47,25 @@ function includesAny(text, terms) {
 }
 function hasNegatedTerm(text, term) {
   return new RegExp(
-    "\\b(?:no quiero|no me gusta|no me gustan|no soporto|sin|evita|evitar)\\s+(?:(?:el|la|los|las)\\s+)?(?:(?:aroma|aromas|nota|notas|fragancia|fragancias)\\s+de?\\s+)?"+escapeRegExp(term)+"\\b",
+    "\\b(?:no quiero|no me gusta|no me gustan|no soporto|sin|evita|evitar)\\s+(?:(?:el|la|los|las)\\s+)?(?:(?:aroma|aromas|nota|notas|fragancia|fragancias|perfume|perfumes|familia|familias)(?:\\s+de)?\\s+)?"+escapeRegExp(term)+"\\b",
     "u",
   ).test(text);
 }
-function extractNotes(text) {
+function extractNotes(text, knownNotes = []) {
   const preferredNotes = [], avoidNotes = [];
-  for (const [term, canonical] of NOTE_TERMS) {
+  const terms = new Map(NOTE_TERMS);
+  for (const note of knownNotes) {
+    const term = normalizeText(note);
+    if (term) terms.set(term, term);
+  }
+  for (const [term, canonical] of terms) {
     if (!new RegExp("\\b" + escapeRegExp(term) + "\\b", "u").test(text)) continue;
     if (hasNegatedTerm(text, term)) {
       avoidNotes.push(canonical);
       continue;
     }
-    const positive = new RegExp(
-      "\\b(?:me gusta|me gustan|prefiero|con|que tenga|notas de)\\s+(?:(?:el|la|los|las)\\s+)?(?:(?:nota|notas)\\s+de\\s+)?"+escapeRegExp(term)+"\\b",
-      "u",
-    );
-    if (positive.test(text)) preferredNotes.push(canonical);
+    const positive = /\b(?:me gusta|me gustan|me encanta|me encantan|prefiero|busco|quiero|con|que tenga|notas? de)\b/u.test(text);
+    if (positive) preferredNotes.push(canonical);
   }
   return { preferredNotes: [...new Set(preferredNotes)], avoidNotes: [...new Set(avoidNotes)] };
 }
@@ -56,11 +74,14 @@ function extractNotes(text) {
  * Conservative phrase-based extraction for Spanish/English fragrance requests.
  * This is an intent helper, not a generative model: only explicit signals are emitted.
  */
-export function parseFragranceCustomerMessage(message) {
+export function parseFragranceCustomerMessage(message, { knownNotes = [] } = {}) {
   if (typeof message !== "string" || !message.trim()) {
     throw new TypeError("customer message must be a non-empty string");
   }
   if (message.length > 2000) throw new TypeError("customer message must not exceed 2000 characters");
+  if (!Array.isArray(knownNotes) || knownNotes.some(note => typeof note !== "string" || !note.trim())) {
+    throw new TypeError("knownNotes must be an array of non-empty strings");
+  }
   const text = normalizeText(message);
   const preferences = {};
   const signals = [];
@@ -135,7 +156,7 @@ export function parseFragranceCustomerMessage(message) {
     signals.push("families:" + preferences.preferredFamilies.join(","));
   }
 
-  const notes = extractNotes(text);
+  const notes = extractNotes(text, knownNotes);
   if (notes.preferredNotes.length) {
     preferences.preferredNotes = notes.preferredNotes;
     signals.push("notes:" + notes.preferredNotes.join(","));

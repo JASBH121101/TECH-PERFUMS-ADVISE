@@ -26,6 +26,24 @@ const app = document.querySelector("#app");
 const nav = document.querySelector("#bottom-nav");
 const runtimeLabel = document.querySelector("#runtime-label");
 
+const FRAGRANCE_FAMILY_OPTIONS = Object.freeze([
+  { value: "woody", label: "Amaderada" },
+  { value: "citrus", label: "Cítrica" },
+  { value: "floral", label: "Floral" },
+  { value: "aromatic", label: "Aromática" },
+  { value: "aquatic", label: "Acuática" },
+  { value: "gourmand", label: "Dulce / gourmand" },
+  { value: "amber", label: "Ambarada" },
+  { value: "spicy", label: "Especiada" },
+  { value: "green", label: "Verde" },
+  { value: "fruity", label: "Frutal" },
+  { value: "powdery", label: "Empolvada" },
+  { value: "musky", label: "Almizclada" },
+  { value: "leather", label: "Cuero / ahumada" },
+  { value: "mineral", label: "Mineral / salina" },
+  { value: "oud", label: "Oud" },
+]);
+
 const state = {
   route: "home",
   detailsId: null,
@@ -34,7 +52,7 @@ const state = {
   products: [],
   fragranceMode: "advisor",
   fragrancePrompt: "",
-  fragranceForm: { occasion: "", family: "", climate: "", intensity: "" },
+  fragranceForm: { occasion: "", families: [], notes: "", climate: "", intensity: "" },
   adviceResult: null,
   techModel: "",
   techLookupSelection: null,
@@ -121,18 +139,21 @@ function renderFragranceAdvisorForm() {
           <option value="evening" ${f.occasion === "evening" ? "selected" : ""}>Noche / cita</option>
         </select>
       </div>
+      <fieldset class="field-group family-fieldset">
+        <legend>¿QUÉ FAMILIAS OLFATIVAS TE GUSTAN?</legend>
+        <span class="field-hint">Puedes seleccionar varias. Por ejemplo: amaderada + cítrica.</span>
+        <div class="family-choice-grid">
+          ${FRAGRANCE_FAMILY_OPTIONS.map(option => `
+            <label class="family-choice">
+              <input type="checkbox" name="fragrance-family" value="${option.value}" ${f.families.includes(option.value) ? "checked" : ""}>
+              <span>${option.label}</span>
+            </label>`).join("")}
+        </div>
+      </fieldset>
       <div class="field-group">
-        <label for="fragrance-family">¿QUÉ FAMILIA OLFATIVA PREFIERES?</label>
-        <select id="fragrance-family" name="family">
-          <option value="">Sin preferencia</option>
-          <option value="woody" ${f.family === "woody" ? "selected" : ""}>Amaderada</option>
-          <option value="citrus" ${f.family === "citrus" ? "selected" : ""}>Cítrica</option>
-          <option value="floral" ${f.family === "floral" ? "selected" : ""}>Floral</option>
-          <option value="aromatic" ${f.family === "aromatic" ? "selected" : ""}>Aromática</option>
-          <option value="aquatic" ${f.family === "aquatic" ? "selected" : ""}>Acuática</option>
-          <option value="gourmand" ${f.family === "gourmand" ? "selected" : ""}>Dulce / gourmand</option>
-          <option value="amber" ${f.family === "amber" ? "selected" : ""}>Ambarada</option>
-        </select>
+        <label for="fragrance-notes">¿QUÉ NOTAS ESPECÍFICAS PREFIERES?</label>
+        <input id="fragrance-notes" name="notes" type="text" autocomplete="off" value="${escapeHtml(f.notes)}" placeholder="Ej.: cedro, bergamota, vetiver">
+        <span class="field-hint">Puedes escribir varias separadas por comas. El motor busca las notas presentes en la biblioteca.</span>
       </div>
       <div class="field-group">
         <label for="fragrance-climate">¿EN QUÉ CLIMA LA USARÁS?</label>
@@ -170,15 +191,33 @@ function renderAdviceResults() {
     target.innerHTML = `<div class="warning-panel"><strong>No pude completar el análisis.</strong>${escapeHtml(result.error)}</div>`;
     return;
   }
-  if (result.status === "insufficient_coverage") {
+  if (result.status === "insufficient_coverage" || result.status === "partial_matches") {
     const top = result.match?.ranking?.[0];
     const missing = top?.breakdown?.filter(item => item.score === null).map(item => item.key) ?? [];
+    const alternatives = (result.alternatives ?? []).map((item, index) => {
+      const product = state.products.find(candidate => candidate.id === item.id);
+      const family = product?.attributes?.primaryScentFamily ?? product?.attributes?.scentFamilies?.[0] ?? "Familia no indicada";
+      const reasons = item.reasons?.length
+        ? `<ul class="advice-reasons">${item.reasons.slice(0, 3).map(reason => `<li>${escapeHtml(reason)}</li>`).join("")}</ul>`
+        : "";
+      return `
+        <button type="button" class="advice-card partial-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
+          <div class="advice-card-head">
+            <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
+            <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(product?.brand ?? "Casa no indicada")} · ${escapeHtml(family)} · Alternativa parcial</small></span>
+            <span class="match-score">${item.score}%</span>
+          </div>
+          ${reasons}
+          <div class="evidence-inline">Cobertura del perfil: ${item.coverage}% · revisa los criterios que faltan antes de elegir</div>
+        </button>`;
+    }).join("");
     target.innerHTML = `
-      <div class="warning-panel"><strong>No hay una recomendación suficientemente sustentada.</strong>
-        La biblioteca contiene datos incompletos para uno o más filtros. ${missing.length ? "Campos que faltan en la opción mejor posicionada: " + escapeHtml(missing.join(", ")) + "." : "Ninguna opción superó la cobertura mínima del motor."}
-        Prueba quitando un filtro o usando una preferencia que sí aparezca en la ficha.
+      <div class="warning-panel"><strong>${alternatives ? "No hay coincidencias completas; encontré alternativas parciales." : "No hay una recomendación suficientemente sustentada."}</strong>
+        La biblioteca contiene datos incompletos para uno o más filtros. ${missing.length ? "Campos que faltan en la opción mejor posicionada: " + escapeHtml(missing.join(", ")) + "." : "Ninguna opción superó el umbral mínimo de cobertura."}
+        Las alternativas parciales no se presentan como coincidencias completas.
       </div>
-      <div class="result-disclaimer">El motor no rellenó valores desconocidos ni inventó duración, proyección o intensidad. Las preferencias que exigen límites obligatorios no se consideran satisfechas cuando el dato no existe.</div>`;
+      ${alternatives ? `<div class="result-section-title"><strong>Alternativas para revisar</strong><small>${result.alternatives.length} opciones parciales</small></div>${alternatives}` : ""}
+      <div class="result-disclaimer">El motor no rellenó valores desconocidos ni inventó duración, proyección o intensidad. Las preferencias que exigen límites obligatorios siguen siendo restricciones estrictas.</div>`;
     return;
   }
   const items = result.recommendations.map((item, index) => {
@@ -626,6 +665,8 @@ app.addEventListener("input", event => {
     renderFragranceSearchResults();
   } else if (event.target.id === "fragrance-prompt") {
     state.fragrancePrompt = event.target.value;
+  } else if (event.target.id === "fragrance-notes") {
+    state.fragranceForm.notes = event.target.value;
   } else if (event.target.id === "tech-model") {
     state.techModel = event.target.value;
     state.techLookupSelection = null;
@@ -653,9 +694,13 @@ app.addEventListener("input", event => {
 });
 
 app.addEventListener("change", event => {
+  if (event.target.matches('input[name="fragrance-family"]')) {
+    state.fragranceForm.families = [...app.querySelectorAll('input[name="fragrance-family"]:checked')]
+      .map(input => input.value);
+    return;
+  }
   const fields = {
     "fragrance-occasion": "occasion",
-    "fragrance-family": "family",
     "fragrance-climate": "climate",
     "fragrance-intensity": "intensity",
   };
@@ -691,6 +736,9 @@ app.addEventListener("submit", async event => {
   event.preventDefault();
   if (event.target.id === "fragrance-advisor-form") {
     state.fragrancePrompt = document.querySelector("#fragrance-prompt")?.value ?? state.fragrancePrompt;
+    state.fragranceForm.families = [...event.target.querySelectorAll('input[name="fragrance-family"]:checked')]
+      .map(input => input.value);
+    state.fragranceForm.notes = event.target.querySelector("#fragrance-notes")?.value ?? state.fragranceForm.notes;
     try {
       state.adviceResult = buildFragranceAdvice({
         products: state.products,

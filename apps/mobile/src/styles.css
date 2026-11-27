@@ -392,3 +392,14 @@ button { color: inherit; }
 .primary-spec-source-links a { display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 42px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--cyan); font-size: 11px; line-height: 1.35; text-decoration: none; }
 .primary-spec-source-links a span { flex: 0 0 auto; }
 @media(max-width:370px) { .primary-spec-source-links { grid-template-columns: 1fr; } }
+
+
+/* Multi-select fragrance families and explicit note preferences. */
+.family-fieldset { min-width: 0; padding: 0; border: 0; }
+.family-fieldset legend { margin-bottom: 7px; color: var(--dim); font-size: 8px; font-weight: 800; letter-spacing: .13em; }
+.family-choice-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+.family-choice { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 42px; padding: 9px 10px; border: 1px solid rgba(203,218,238,.12); border-radius: 11px; color: var(--muted); background: #0b1118; font-size: 11px; line-height: 1.3; cursor: pointer; }
+.family-choice input { flex: 0 0 16px; width: 16px; min-height: 16px; margin: 0; accent-color: var(--violet); }
+.family-choice:has(input:checked) { border-color: rgba(179,162,255,.48); color: var(--text); background: rgba(179,162,255,.1); }
+.partial-advice-card { border-style: dashed; }
+.partial-advice-card .evidence-inline { color: var(--muted); }

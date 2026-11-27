@@ -46,3 +46,33 @@ test("does not resolve contradictory intensity requests by guessing", () => {
   assert.equal(result.preferences.intensity, undefined);
   assert.equal(result.preferences.projection, undefined);
 });
+
+
+test("detects two or more families from one Spanish preference statement", () => {
+  const result = parseFragranceCustomerMessage("Me gustan los perfumes amaderados y cítricos.");
+  assert.deepEqual(result.preferences.preferredFamilies, ["citrus", "woody"]);
+});
+
+test("recognizes source-family names used by the Scento catalogue", () => {
+  const result = parseFragranceCustomerMessage("Me gusta Wood & Root y Sunlit Citrus.");
+  assert.deepEqual(result.preferences.preferredFamilies, ["citrus", "woody"]);
+});
+
+test("recognizes common Spanish notes including cedar, sandalwood and vetiver", () => {
+  const result = parseFragranceCustomerMessage("Me gustan las notas de cedro, sándalo y vetiver.");
+  assert.deepEqual(result.preferences.preferredNotes, ["cedarwood", "sandalwood", "vetiver"]);
+});
+
+test("uses known catalogue notes to extend phrase matching without a fixed short list", () => {
+  const result = parseFragranceCustomerMessage("Prefiero cashmeran y grapefruit.", {
+    knownNotes: ["Cashmeran", "Grapefruit", "Cedarwood"],
+  });
+  assert.deepEqual([...result.preferences.preferredNotes].sort(), ["cashmeran", "grapefruit"]);
+});
+
+test("rejects malformed known-note metadata", () => {
+  assert.throws(
+    () => parseFragranceCustomerMessage("Quiero algo fresco.", { knownNotes: ["Cedarwood", ""] }),
+    /knownNotes must be an array/u,
+  );
+});
