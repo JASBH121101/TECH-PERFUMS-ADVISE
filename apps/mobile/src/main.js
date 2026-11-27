@@ -1,5 +1,6 @@
 import "./styles.css";
 import "./update-accessibility.css";
+import { PRODUCT_MODULES } from "./product-modules.js";
 import { displayFragranceBrand, displayFragranceFamilies, displayFragranceFamily, formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
 import { safeExternalUrl } from "./safe-external-url.js";
 import { DOMAINS, buildFragranceComparison } from "../../../src/index.js";
@@ -50,7 +51,7 @@ const FRAGRANCE_FAMILY_OPTIONS = Object.freeze([
 ]);
 
 const state = {
-  route: "home",
+  route: "fragrance",
   detailsId: null,
   searchQuery: "",
   runtime: null,
@@ -67,6 +68,8 @@ const state = {
   profile: null,
   profileMessage: "",
   adviceResult: null,
+  adviceVisibleLimit: 5,
+  searchVisibleLimit: 8,
   techModel: "",
   techLookupSelection: null,
   techLookupSuggestionToken: 0,
@@ -105,35 +108,22 @@ function displayList(value, type = "note") {
 }
 
 function renderHome() {
-  const { fragranceCount, technologyCount, storageLabel, dataset } = state.runtime;
+  const { fragranceCount, storageLabel, dataset } = state.runtime;
   return `
-    <section class="hero">
-      <div class="eyebrow"><span class="eyebrow-dot"></span> TU CENTRO DE DECISIONES</div>
-      <h1>Elegir mejor.<br><span>Con información.</span></h1>
-      <p>Asesoría especializada en fragancias y tecnología, con datos identificados y criterios transparentes.</p>
-      <div class="hero-footer"><span class="hero-status"><i></i> BIBLIOTECA LOCAL DISPONIBLE</span><span class="hero-version">JBAE · ${escapeHtml(import.meta.env.VITE_APP_VERSION || "PREVIEW")}</span></div>
-    </section>
-    <section class="home-stats">
-      <div class="home-stat"><small>FRAGANCIAS OFFLINE</small><strong>${fragranceCount.toLocaleString("es-NI")}</strong><span>Fichas listas para consulta en el dispositivo</span></div>
-      <div class="home-stat"><small>TECNOLOGÍA</small><strong>Consulta online</strong><span>Fuentes públicas por modelo exacto; resultados pendientes de revisión</span></div>
-    </section>
-    <section class="data-strip">
-      <div class="data-strip-icon">◈</div>
-      <div><span class="kicker">BIBLIOTECA PERSONAL</span><strong>${escapeHtml(dataset.title)}</strong><small>${fragranceCount.toLocaleString("es-NI")} perfumes · ${escapeHtml(storageLabel)}</small></div>
-    </section>
-    <section class="home-note"><strong>La navegación está abajo.</strong><p>En Fragancias puedes pedir una recomendación basada en tus preferencias o buscar una ficha por nombre, casa, familia o nota. En TECH puedes consultar fuentes de especificaciones por modelo.</p></section>
-    <p class="footnote">${technologyCount.toLocaleString("es-NI")} productos de tecnología guardados localmente. Los datos de fuentes externas se muestran como candidatos hasta su revisión.</p>`;
+    <section class="home-compact">
+      <span class="kicker">JBAE · PERFUMERÍA</span>
+      <h1>Asesoría de <span>fragancias.</span></h1>
+      <p>Opciones para cada cliente según lo que busca, su estilo y la ocasión.</p>
+      <button class="primary-action" type="button" data-route="fragrance">Abrir asesor de fragancias <span>↗</span></button>
+      <div class="home-library-strip"><strong>${fragranceCount.toLocaleString("es-NI")}</strong><span>fragancias disponibles sin conexión</span></div>
+      <small class="home-storage-label">${escapeHtml(storageLabel)} · ${escapeHtml(dataset.title)}</small>
+    </section>`;
 }
 
 function renderModeTabs() {
-  const modes = [
-    ["advisor", "Asesor"],
-    ["search", "Buscar"],
-    ["collection", "Mi colección"],
-    ["compare", "Comparar"],
-  ];
+  const modes = [["advisor", "Asesor"], ["search", "Buscar"], ["collection", "Colección"], ["compare", "Comparar"]];
   return `
-    <div class="mode-tabs fragrance-mode-tabs" role="tablist" aria-label="Secciones de fragancias">
+    <div class="mode-tabs fragrance-mode-tabs" role="tablist" aria-label="Herramientas de perfumería">
       ${modes.map(([mode, label]) => `
         <button type="button" class="mode-tab ${state.fragranceMode === mode ? "active" : ""}"
           data-action="fragrance-mode" data-mode="${mode}" role="tab"
@@ -143,90 +133,64 @@ function renderModeTabs() {
 
 function renderFragranceAdvisorForm() {
   const f = state.fragranceForm;
+  const filterCount = [f.occasion, f.families.length, f.avoidFamilies.length, f.notes, f.avoidNotes, f.climate, f.intensity]
+    .filter(value => Array.isArray(value) ? value.length > 0 : Boolean(value)).length;
+  const familyChoices = options => FRAGRANCE_FAMILY_OPTIONS.map(option => `
+    <label class="family-choice"><input type="checkbox" name="${options.name}" value="${option.value}" ${options.selected.includes(option.value) ? "checked" : ""}><span>${option.label}</span></label>`).join("");
   return `
-    <section class="profile-panel" aria-live="polite">
-      <div><span class="kicker">PERFIL LOCAL INTELIGENTE</span><strong>Tu memoria olfativa</strong></div>
-      <p>${state.profile?.feedback?.length ?? 0} valoraciones guardadas. El motor detecta tendencias cuando una familia o nota se repite en al menos dos fragancias valoradas.</p>
-      <small>${escapeHtml(state.profileMessage || (state.runtime.native ? "Se conserva en SQLite en este dispositivo." : "Vista previa web: la memoria se reinicia al cerrar o recargar."))}</small>
-    </section>
-    <form id="fragrance-advisor-form" class="advisor-form">
-      <div class="form-heading"><strong>Solicitud del cliente</strong><p>Describe el aroma que busca el cliente con palabras propias. El motor detecta notas, familias, ocasión, carácter y restricciones. Los filtros son opcionales y temporales.</p></div>
-      <div class="field-group">
-        <label for="fragrance-prompt">DESCRIBE TU PERFIL</label>
-        <textarea id="fragrance-prompt" name="message" maxlength="2000">${escapeHtml(state.fragrancePrompt)}</textarea>
-        <span class="field-hint">Ejemplos de solicitudes (tocá uno para usarlo):</span>
+    <form id="fragrance-advisor-form" class="advisor-form compact-advisor-form">
+      <div class="advisor-memory-strip"><span>Memoria local</span><strong>${state.profile?.feedback?.length ?? 0} valoraciones</strong><small>Solicitudes temporales</small></div>
+      <div class="compact-request-heading"><label for="fragrance-prompt">¿QUÉ BUSCA TU CLIENTE?</label><span>Descríbelo con tus propias palabras</span></div>
+      <textarea id="fragrance-prompt" name="message" maxlength="2000" rows="3">${escapeHtml(state.fragrancePrompt)}</textarea>
+      <details class="quick-examples-disclosure">
+        <summary>Ideas rápidas <span>Opcional</span></summary>
         <div class="request-examples">
-          <button type="button" data-action="fragrance-example" data-text="Busco algo fresco, limpio y cítrico para un cliente que trabaja en oficina y vive en clima caliente.">Fresco para oficina</button>
-          <button type="button" data-action="fragrance-example" data-text="El cliente quiere un perfume dulce, cálido, con vainilla y ámbar para salir de noche, pero que no sea demasiado pesado.">Dulce para noche</button>
-          <button type="button" data-action="fragrance-example" data-text="Busca una esencia elegante, amaderada y especiada, con buena presencia, pero sin notas demasiado dulces.">Elegante amaderado</button>
-          <button type="button" data-action="fragrance-example" data-text="El cliente quiere algo floral, suave y femenino, con rosa o jazmín, para uso diario.">Floral suave</button>
+          <button type="button" data-action="fragrance-example" data-text="Busco algo fresco, limpio y cítrico para un cliente que trabaja en oficina y vive en clima caliente.">Fresco / oficina</button>
+          <button type="button" data-action="fragrance-example" data-text="El cliente quiere un perfume dulce, cálido, con vainilla y ámbar para salir de noche, pero que no sea demasiado pesado.">Dulce / noche</button>
+          <button type="button" data-action="fragrance-example" data-text="Busca una esencia elegante, amaderada y especiada, con buena presencia, pero sin notas demasiado dulces.">Elegante / amaderado</button>
+          <button type="button" data-action="fragrance-example" data-text="El cliente quiere algo floral, suave y femenino, con rosa o jazmín, para uso diario.">Floral / diario</button>
         </div>
-        <span class="field-hint">El motor solo aplica señales que puede reconocer y datos presentes en la biblioteca. Lo que no esté documentado se marcará como desconocido.</span>
-      </div>
-      <div class="field-group">
-        <label for="fragrance-occasion">¿PARA QUÉ OCASIÓN?</label>
-        <select id="fragrance-occasion" name="occasion">
-          <option value="">Cualquier ocasión</option>
-          <option value="day" ${f.occasion === "day" ? "selected" : ""}>Uso diario</option>
-          <option value="office" ${f.occasion === "office" ? "selected" : ""}>Trabajo / oficina</option>
-          <option value="evening" ${f.occasion === "evening" ? "selected" : ""}>Noche / cita</option>
-        </select>
-      </div>
-      <fieldset class="field-group family-fieldset">
-        <legend>¿QUÉ FAMILIAS OLFATIVAS TE GUSTAN?</legend>
-        <span class="field-hint">Puedes seleccionar varias. Por ejemplo: amaderada + cítrica.</span>
-        <div class="family-choice-grid">
-          ${FRAGRANCE_FAMILY_OPTIONS.map(option => `
-            <label class="family-choice">
-              <input type="checkbox" name="fragrance-family" value="${option.value}" ${f.families.includes(option.value) ? "checked" : ""}>
-              <span>${option.label}</span>
-            </label>`).join("")}
+      </details>
+      <details class="advisor-filter-disclosure">
+        <summary>Filtros opcionales <span>${filterCount ? filterCount + " activos" : "Sin filtros"}</span></summary>
+        <div class="advisor-filter-grid">
+          <div class="field-group"><label for="fragrance-occasion">OCASIÓN</label>
+            <select id="fragrance-occasion" name="occasion">
+              <option value="">Cualquiera</option>
+              <option value="day" ${f.occasion === "day" ? "selected" : ""}>Uso diario</option>
+              <option value="office" ${f.occasion === "office" ? "selected" : ""}>Trabajo / oficina</option>
+              <option value="evening" ${f.occasion === "evening" ? "selected" : ""}>Noche / cita</option>
+            </select>
+          </div>
+          <details class="filter-option-group"><summary>Familias que prefiere <span>${f.families.length || ""}</span></summary>
+            <fieldset class="family-choice-grid"><legend class="visually-hidden">Familias olfativas preferidas</legend>${familyChoices({name:"fragrance-family",selected:f.families})}</fieldset>
+          </details>
+          <details class="filter-option-group"><summary>Familias que quiere evitar <span>${f.avoidFamilies.length || ""}</span></summary>
+            <fieldset class="family-choice-grid"><legend class="visually-hidden">Familias olfativas que desea evitar</legend>${familyChoices({name:"fragrance-avoid-family",selected:f.avoidFamilies})}</fieldset>
+          </details>
+          <details class="filter-option-group"><summary>Notas específicas <span>${f.notes || f.avoidNotes ? "Activas" : ""}</span></summary>
+            <div class="filter-note-fields">
+              <div class="field-group"><label for="fragrance-notes">NOTAS QUE BUSCA</label><input id="fragrance-notes" name="notes" type="text" autocomplete="off" value="${escapeHtml(f.notes)}"></div>
+              <div class="field-group"><label for="fragrance-avoid-notes">NOTAS QUE QUIERE EVITAR</label><input id="fragrance-avoid-notes" name="avoidNotes" type="text" autocomplete="off" value="${escapeHtml(f.avoidNotes)}"></div>
+            </div>
+          </details>
+          <details class="filter-option-group"><summary>Clima e intensidad <span>${f.climate || f.intensity ? "Activos" : ""}</span></summary>
+            <div class="filter-note-fields">
+              <div class="field-group"><label for="fragrance-climate">CLIMA</label><select id="fragrance-climate" name="climate">
+                <option value="">Cualquiera</option><option value="hot_humid" ${f.climate === "hot_humid" ? "selected" : ""}>Caluroso / tropical</option><option value="cold" ${f.climate === "cold" ? "selected" : ""}>Frío / fresco</option>
+              </select></div>
+              <div class="field-group"><label for="fragrance-intensity">INTENSIDAD</label><select id="fragrance-intensity" name="intensity">
+                <option value="">Cualquiera</option><option value="soft" ${f.intensity === "soft" ? "selected" : ""}>Suave</option><option value="moderate" ${f.intensity === "moderate" ? "selected" : ""}>Moderada</option><option value="strong" ${f.intensity === "strong" ? "selected" : ""}>Intensa</option>
+              </select></div>
+            </div>
+          </details>
         </div>
-      </fieldset>
-      <fieldset class="field-group family-fieldset">
-        <legend>¿QUÉ FAMILIAS OLFATIVAS QUIERES EVITAR?</legend>
-        <span class="field-hint">Estas familias se aplican como exclusiones, no como preferencias suaves.</span>
-        <div class="family-choice-grid">
-          ${FRAGRANCE_FAMILY_OPTIONS.map(option => `
-            <label class="family-choice">
-              <input type="checkbox" name="fragrance-avoid-family" value="${option.value}" ${f.avoidFamilies.includes(option.value) ? "checked" : ""}>
-              <span>${option.label}</span>
-            </label>`).join("")}
-        </div>
-      </fieldset>
-      <div class="field-group">
-        <label for="fragrance-notes">¿QUÉ NOTAS ESPECÍFICAS PREFIERES?</label>
-        <input id="fragrance-notes" name="notes" type="text" autocomplete="off" value="${escapeHtml(f.notes)}">
-        <span class="field-hint">Puedes escribir varias separadas por comas. El motor busca las notas presentes en la biblioteca.</span>
+      </details>
+      <div class="advisor-actions compact-advisor-actions">
+        <button class="primary-action" type="submit">Buscar esencias <span>↗</span></button>
+        <button type="button" class="secondary-action" data-action="clear-fragrance-request">Limpiar</button>
       </div>
-      <div class="field-group">
-        <label for="fragrance-avoid-notes">¿QUÉ NOTAS QUIERES EVITAR?</label>
-        <input id="fragrance-avoid-notes" name="avoidNotes" type="text" autocomplete="off" value="${escapeHtml(f.avoidNotes)}">
-        <span class="field-hint">Se excluyen las opciones que incluyan esas notas cuando la ficha permite comprobarlo.</span>
-      </div>
-      <div class="field-group">
-        <label for="fragrance-climate">¿EN QUÉ CLIMA LA USARÁS?</label>
-        <select id="fragrance-climate" name="climate">
-          <option value="">Cualquier clima</option>
-          <option value="hot_humid" ${f.climate === "hot_humid" ? "selected" : ""}>Caluroso / húmedo / tropical</option>
-          <option value="cold" ${f.climate === "cold" ? "selected" : ""}>Frío / fresco</option>
-        </select>
-        <span class="field-hint">El clima solo se puntúa cuando la ficha trae etiquetas compatibles.</span>
-      </div>
-      <div class="field-group">
-        <label for="fragrance-intensity">¿QUÉ INTENSIDAD TE GUSTA?</label>
-        <select id="fragrance-intensity" name="intensity">
-          <option value="">No es un criterio obligatorio</option>
-          <option value="soft" ${f.intensity === "soft" ? "selected" : ""}>Suave / discreta</option>
-          <option value="moderate" ${f.intensity === "moderate" ? "selected" : ""}>Moderada</option>
-          <option value="strong" ${f.intensity === "strong" ? "selected" : ""}>Intensa</option>
-        </select>
-        <span class="field-hint">No se inventa la intensidad: si el catálogo no la registra, el motor la marcará como dato faltante.</span>
-      </div>
-      <div class="advisor-actions">
-        <button type="button" class="secondary-action" data-action="clear-fragrance-request">Vaciar solicitud</button>
-        <button class="primary-action" type="submit">Buscar esencias para el cliente <span>↗</span></button>
-      </div>
+      <small class="advisor-status" aria-live="polite">${escapeHtml(state.profileMessage || "")}</small>
     </form>
     <section id="advice-results" class="advice-results"></section>`;
 }
@@ -236,78 +200,69 @@ function renderAdviceResults() {
   if (!target || !state.adviceResult) return;
   const result = state.adviceResult;
   if (result.status === "needs_preferences") {
-    target.innerHTML = `<div class="empty-panel compact"><strong>Cuéntame un poco más</strong><p>Escribe una ocasión, una familia olfativa o alguna nota que te guste. No voy a recomendar por adivinar.</p></div>`;
+    target.innerHTML = `<div class="empty-panel compact"><strong>¿Qué aroma está buscando?</strong><p>Describí la ocasión, el estilo o alguna nota.</p></div>`;
     return;
   }
   if (result.status === "error") {
-    target.innerHTML = `<div class="warning-panel"><strong>No pude completar el análisis.</strong>${escapeHtml(result.error)}</div>`;
+    target.innerHTML = `<div class="warning-panel"><strong>No pude completar el análisis.</strong> ${escapeHtml(result.error)}</div>`;
     return;
   }
   if (result.status === "insufficient_coverage" || result.status === "partial_matches") {
     const top = result.match?.ranking?.[0];
     const missing = top?.breakdown?.filter(item => item.score === null).map(item => item.key) ?? [];
-    const alternatives = (result.alternatives ?? []).map((item, index) => {
+    const allAlternatives = result.alternatives ?? [];
+    const visibleAlternatives = allAlternatives.slice(0, state.adviceVisibleLimit);
+    const alternatives = visibleAlternatives.map((item, index) => {
       const product = state.products.find(candidate => candidate.id === item.id);
       const family = product?.attributes?.primaryScentFamily ?? product?.attributes?.scentFamilies?.[0] ?? "Familia no indicada";
-      const reasons = item.reasons?.length
-        ? `<ul class="advice-reasons">${item.reasons.slice(0, 3).map(reason => `<li>${escapeHtml(reason)}</li>`).join("")}</ul>`
-        : "";
+      const reason = item.reasons?.[0] ?? "";
       return `
-        <button type="button" class="advice-card partial-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
-          <div class="advice-card-head">
-            <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
-            <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · Familia: ${escapeHtml(displayFragranceFamily(family))} · Alternativa parcial</small></span>
-            <span class="match-score">${item.score}%</span>
-          </div>
-          ${reasons}
-          <div class="evidence-inline">Cobertura del perfil: ${item.coverage}% · revisa los criterios que faltan antes de elegir</div>
+        <button type="button" class="advice-card compact-advice-card partial-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
+          <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
+          <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · ${escapeHtml(displayFragranceFamily(family))}</small>${reason ? `<em>${escapeHtml(reason)}</em>` : ""}</span>
+          <span class="match-score">${item.score}%</span>
         </button>`;
     }).join("");
     target.innerHTML = `
-      <div class="warning-panel"><strong>${alternatives ? "No hay coincidencias completas; encontré alternativas parciales." : "No hay una recomendación suficientemente sustentada."}</strong>
-        La biblioteca contiene datos incompletos para uno o más filtros. ${missing.length ? "Campos que faltan en la opción mejor posicionada: " + escapeHtml(missing.join(", ")) + "." : "Ninguna opción superó el umbral mínimo de cobertura."}
-        Las alternativas parciales no se presentan como coincidencias completas.
-      </div>
-      ${alternatives ? `<div class="result-section-title"><strong>Alternativas para revisar</strong><small>${result.alternatives.length} opciones parciales</small></div>${alternatives}` : ""}
-      <div class="result-disclaimer">El motor no rellenó valores desconocidos ni inventó duración, proyección o intensidad. Las preferencias que exigen límites obligatorios siguen siendo restricciones estrictas.</div>`;
+      <div class="warning-panel compact-warning"><strong>No hay coincidencias completas.</strong> Estas alternativas son parciales; revisá los datos faltantes.</div>
+      ${missing.length ? `<details class="result-detail-disclosure"><summary>Datos que faltan en la mejor opción</summary><p>${escapeHtml(missing.join(", "))}</p></details>` : ""}
+      <div class="result-section-title"><strong>Alternativas para revisar</strong><small>${visibleAlternatives.length} de ${allAlternatives.length}</small></div>
+      <div class="advice-result-list">${alternatives}</div>
+      ${allAlternatives.length > visibleAlternatives.length ? `<button type="button" class="show-more-results" data-action="show-more-advice">Mostrar 5 más</button>` : ""}
+      <small class="result-footnote">No se completaron datos desconocidos ni se inventaron características.</small>`;
     return;
   }
-  const items = result.recommendations.map((item, index) => {
+  const allRecommendations = result.recommendations ?? [];
+  const visibleRecommendations = allRecommendations.slice(0, state.adviceVisibleLimit);
+  const items = visibleRecommendations.map((item, index) => {
     const product = state.products.find(candidate => candidate.id === item.id);
     const family = product?.attributes?.primaryScentFamily ?? product?.attributes?.scentFamilies?.[0] ?? "Familia no indicada";
-    const notes = product?.attributes?.allNotes ?? [
-      ...(product?.attributes?.topNotes ?? []),
-      ...(product?.attributes?.middleNotes ?? []),
-      ...(product?.attributes?.baseNotes ?? []),
-    ];
-    const reasons = item.reasons?.length
-      ? `<ul class="advice-reasons">${item.reasons.slice(0, 3).map(reason => `<li>${escapeHtml(reason)}</li>`).join("")}</ul>`
-      : "";
+    const reason = item.reasons?.[0] ?? "";
     return `
-      <button type="button" class="advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
-        <div class="advice-card-head">
+      <article class="advice-result-item">
+        <button type="button" class="advice-card compact-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
           <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
-          <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · Familia: ${escapeHtml(displayFragranceFamily(family))}</small></span>
+          <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · ${escapeHtml(displayFragranceFamily(family))}</small>${reason ? `<em>${escapeHtml(reason)}</em>` : ""}</span>
           <span class="match-score">${item.score}%</span>
+        </button>
+        <div class="advice-feedback compact-advice-feedback"><span>¿Encaja?</span>
+          <button type="button" data-action="rate-fragrance" data-id="${encodeURIComponent(item.id)}" data-rating="5">Me gusta</button>
+          <button type="button" data-action="rate-fragrance" data-id="${encodeURIComponent(item.id)}" data-rating="1">No es para mí</button>
         </div>
-        ${reasons}
-        <div class="evidence-inline">Cobertura del perfil: ${item.coverage}% · ${notes.length ? escapeHtml(notes.slice(0, 5).join(", ")) : "Pirámide de notas no disponible"}</div>
-      </button>
-      <div class="advice-feedback">
-        <span>¿Qué te pareció?</span>
-        <button type="button" data-action="rate-fragrance" data-id="${encodeURIComponent(item.id)}" data-rating="5">Me gusta</button>
-        <button type="button" data-action="rate-fragrance" data-id="${encodeURIComponent(item.id)}" data-rating="1">No es para mí</button>
-      </div>`;
+      </article>`;
   }).join("");
   const recognized = Object.entries(result.preferences ?? {}).flatMap(([key, value]) => {
     const values = Array.isArray(value) ? value : [value];
     return values.map(item => `${key}: ${item}`);
   });
   target.innerHTML = `
-    <div class="result-section-title"><strong>Opciones que encajan con tu perfil</strong><small>${result.recommendations.length} sugerencias</small></div>
-    ${items}
-    <div class="preference-chips">${recognized.map(value => `<span class="preference-chip">${escapeHtml(value)}</span>`).join("")}</div>
-    <div class="result-disclaimer">Compatibilidad con tus preferencias, no una calificación universal. Las coincidencias utilizan atributos del catálogo sin verificación independiente; no son una garantía de olor, duración, proyección ni rendimiento.</div>`;
+    <div class="result-section-title"><strong>Mejores coincidencias</strong><small>${visibleRecommendations.length} de ${allRecommendations.length}</small></div>
+    <div class="advice-result-list">${items}</div>
+    ${allRecommendations.length > visibleRecommendations.length ? `<button type="button" class="show-more-results" data-action="show-more-advice">Mostrar 5 más</button>` : ""}
+    <details class="result-detail-disclosure"><summary>Ver criterios y explicación del análisis</summary>
+      <div class="preference-chips">${recognized.map(value => `<span class="preference-chip">${escapeHtml(value)}</span>`).join("")}</div>
+      <p>La compatibilidad compara los criterios expresados con los atributos documentados del catálogo. No garantiza olor, duración ni rendimiento.</p>
+    </details>`;
 }
 
 function renderFragranceSearch() {
@@ -548,10 +503,9 @@ function renderFragranceComparison() {
 
 function renderFragrance() {
   return `
-    <section class="page-intro fragrance-intro"><span class="kicker">MÓDULO 01 / FRAGRANCE</span>
-      <h1>Tu perfil.<br><span>Tu fragancia.</span></h1>
-      <p>Personaliza la búsqueda según tu ocasión, familia olfativa, notas, clima e intensidad preferida.</p>
-      <div class="catalog-chip"><i></i> ${state.runtime.fragranceCount.toLocaleString("es-NI")} fichas locales · funciona sin conexión</div>
+    <section class="fragrance-intro-compact">
+      <div><span class="kicker">JBAE · PERFUMERÍA</span><h1>Asesor de fragancias</h1></div>
+      <span class="catalog-chip"><i></i>${state.runtime.fragranceCount.toLocaleString("es-NI")} fichas offline</span>
     </section>
     ${renderModeTabs()}
     ${state.fragranceMode === "advisor" ? renderFragranceAdvisorForm()
@@ -803,20 +757,18 @@ function renderTech() {
   return `<section class="page-intro tech-intro"><span class="kicker">MÓDULO 02 / TECH</span><h1>Decide con<br><span>criterio técnico.</span></h1><p>Consulta fichas públicas y compara especificaciones con trazabilidad.</p><div class="catalog-chip"><i></i> Consulta online · no requiere cuenta</div></section>${tabs}${state.techMode==="compare"?renderTechComparisonForm():lookupForm}`;
 }
 function renderLibrary() {
-  const { dataset, fragranceCount, technologyCount, evidenceCount, storageLabel } = state.runtime;
+  const { dataset, fragranceCount, evidenceCount, storageLabel } = state.runtime;
   const coverage = dataset.perfumeCount
     ? Math.round((dataset.perfumesWithCompleteNotePyramid / dataset.perfumeCount) * 1000) / 10
     : 0;
   return `
-    <section class="page-intro library-intro"><span class="kicker">DATOS LOCALES</span><h1>Tu biblioteca<br><span>de conocimiento.</span></h1><p>Estado de almacenamiento, procedencia y cobertura del contenido cargado.</p></section>
-    <section class="stats-grid">
-      <div class="stat-card"><small>PERFUMES</small><strong>${fragranceCount.toLocaleString("es-NI")}</strong><span>fichas locales</span></div>
-      <div class="stat-card"><small>TECNOLOGÍA</small><strong>${technologyCount.toLocaleString("es-NI")}</strong><span>productos guardados</span></div>
-      <div class="stat-card"><small>EVIDENCIAS</small><strong>${evidenceCount.toLocaleString("es-NI")}</strong><span>registros reportados</span></div>
-      <div class="stat-card"><small>PIRÁMIDES</small><strong>${coverage}%</strong><span>con salida, corazón y fondo</span></div>
+    <section class="library-intro-compact"><span class="kicker">BIBLIOTECA DE PERFUMERÍA</span><h1>Datos y cobertura</h1></section>
+    <section class="stats-grid library-stats-compact">
+      <div class="stat-card"><small>FRAGANCIAS</small><strong>${fragranceCount.toLocaleString("es-NI")}</strong><span>fichas locales</span></div>
+      <div class="stat-card"><small>PIRÁMIDES</small><strong>${coverage}%</strong><span>salida, corazón y fondo</span></div>
+      <div class="stat-card"><small>EVIDENCIAS</small><strong>${evidenceCount.toLocaleString("es-NI")}</strong><span>registros documentados</span></div>
     </section>
     <section class="detail-block"><span class="kicker">ALMACENAMIENTO</span><h2>${escapeHtml(storageLabel)}</h2>
-      <p>${state.runtime.native ? "La biblioteca se guarda en SQLite dentro de la aplicación Android." : "Esta vista previa utiliza memoria temporal. Cierra o recarga el navegador y los datos de esta sesión se perderán."}</p>
       <dl class="fact-list">
         <div><dt>Dataset</dt><dd>${escapeHtml(dataset.title)}</dd></div>
         <div><dt>Versión</dt><dd>${escapeHtml(dataset.version)}</dd></div>
@@ -824,7 +776,10 @@ function renderLibrary() {
         <div><dt>Licencia</dt><dd>CC BY 4.0</dd></div>
       </dl>
     </section>
-    <aside class="evidence-note"><strong>Transparencia</strong><p>${escapeHtml(dataset.title)} aporta datos reportados; la cobertura indica presencia de campos, no exactitud ni verificación externa. La aplicación no convierte esos registros en claims independientes.</p><a href="https://www.scento.com/perfume-database" target="_blank" rel="noopener noreferrer">Fuente del dataset ↗</a></aside>`;
+    <details class="result-detail-disclosure library-source-disclosure"><summary>Procedencia y límites de los datos</summary>
+      <p>${escapeHtml(dataset.title)} aporta datos reportados. La cobertura indica presencia de campos, no exactitud ni verificación externa.</p>
+      <a href="https://www.scento.com/perfume-database" target="_blank" rel="noopener noreferrer">Fuente del dataset ↗</a>
+    </details>`;
 }
 
 function renderError(error) {
@@ -832,6 +787,13 @@ function renderError(error) {
 }
 
 function updateNavigation() {
+  const techButton = nav.querySelector('[data-route="tech"]');
+  if (techButton) {
+    techButton.hidden = !PRODUCT_MODULES.tech;
+    techButton.setAttribute("aria-hidden", String(!PRODUCT_MODULES.tech));
+    techButton.tabIndex = PRODUCT_MODULES.tech ? 0 : -1;
+  }
+  nav.classList.toggle("has-tech", PRODUCT_MODULES.tech);
   nav.querySelectorAll("[data-route]").forEach(button => {
     button.classList.toggle("active", button.dataset.route === state.route);
   });
@@ -845,8 +807,9 @@ function render() {
     app.innerHTML = product ? renderFragranceDetail(product) : renderFragrance();
     return;
   }
-  const views = { home: renderHome, fragrance: renderFragrance, tech: renderTech, library: renderLibrary };
-  app.innerHTML = (views[state.route] ?? renderHome)();
+  const views = { home: renderHome, fragrance: renderFragrance, library: renderLibrary };
+  if (PRODUCT_MODULES.tech) views.tech = renderTech;
+  app.innerHTML = (views[state.route] ?? renderFragrance)();
   if (state.route === "fragrance") {
     if (state.fragranceMode === "search") renderFragranceSearchResults();
     else if (state.fragranceMode === "advisor") renderAdviceResults();
@@ -862,31 +825,35 @@ function renderFragranceSearchResults() {
   if (!target) return;
   const query = state.searchQuery.trim();
   if (!query) {
-    target.innerHTML = `<div class="empty-panel"><span class="empty-symbol">⌕</span><strong>Busca una fragancia</strong><p>Escribe un nombre, casa, familia olfativa o nota en el campo superior.</p></div>`;
+    target.innerHTML = `<div class="empty-panel compact"><strong>Busca una fragancia</strong><p>Nombre, marca, familia o nota olfativa.</p></div>`;
     return;
   }
   const matches = searchProducts(state.products, query, 30);
+  const visibleMatches = matches.slice(0, state.searchVisibleLimit);
   target.innerHTML = matches.length
-    ? `<div class="result-summary">${matches.length} resultados · biblioteca offline</div>${matches.map(product => {
+    ? `<div class="result-summary">${visibleMatches.length} de ${matches.length} resultados</div>${visibleMatches.map(product => {
       const family = product.attributes.primaryScentFamily ?? product.attributes.scentFamilies?.[0] ?? "Familia no indicada";
       const concentration = product.attributes.concentrationLabel ?? "Concentración no indicada";
-      return `<button class="result-card" type="button" data-action="open-fragrance" data-id="${encodeURIComponent(product.id)}">
-        <span class="result-monogram">F</span><span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))} · ${escapeHtml(concentration)}</small><em>Familia: ${escapeHtml(displayFragranceFamily(family))}</em></span><span class="result-arrow">↗</span>
+      return `<button class="result-card compact-result-card" type="button" data-action="open-fragrance" data-id="${encodeURIComponent(product.id)}">
+        <span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))} · ${escapeHtml(concentration)}</small><em>Familia: ${escapeHtml(displayFragranceFamily(family))}</em></span><span class="result-arrow">↗</span>
       </button>`;
-    }).join("")}`
-    : `<div class="empty-panel compact"><strong>No encontramos coincidencias</strong><p>Revisa la escritura o prueba con otra marca, familia o nota.</p></div>`;
+    }).join("")}${matches.length > visibleMatches.length ? `<button type="button" class="show-more-results" data-action="show-more-search">Mostrar más resultados</button>` : ""}`
+    : `<div class="empty-panel compact"><strong>No encontramos coincidencias</strong><p>Probá con otra marca, nombre o nota.</p></div>`;
 }
 
 function clearFragranceRequest() {
   state.fragrancePrompt = "";
   state.fragranceForm = { occasion: "", families: [], avoidFamilies: [], notes: "", avoidNotes: "", climate: "", intensity: "" };
   state.adviceResult = null;
+  state.adviceVisibleLimit = 5;
+  state.searchVisibleLimit = 8;
   state.profileMessage = "Solicitud y filtros temporales limpiados.";
 }
 
 function navigate(route) {
   techLookupGuard.invalidate();
   techComparisonGuard.invalidate();
+  if (route === "tech" && !PRODUCT_MODULES.tech) return;
   if (state.route === "fragrance" && route !== "fragrance") clearFragranceRequest();
   if (state.techLookupStatus === "loading") state.techLookupStatus = "idle";
   if (state.techComparisonStatus === "loading") state.techComparisonStatus = "idle";
@@ -987,6 +954,12 @@ app.addEventListener("click", async event => {
   } else if (actionButton.dataset.action === "clear-fragrance-request") {
     clearFragranceRequest();
     render();
+  } else if (actionButton.dataset.action === "show-more-advice") {
+    state.adviceVisibleLimit += 5;
+    renderAdviceResults();
+  } else if (actionButton.dataset.action === "show-more-search") {
+    state.searchVisibleLimit += 8;
+    renderFragranceSearchResults();
   } else if (actionButton.dataset.action === "toggle-favorite") {
     const productId = decodeURIComponent(actionButton.dataset.id ?? "");
     const favorite = actionButton.dataset.favorite === "true";
@@ -1104,6 +1077,7 @@ app.addEventListener("click", async event => {
       state.profileMessage = rating >= 4
         ? "Valoración guardada. El perfil buscará patrones con tus próximas valoraciones."
         : "Preferencia negativa guardada. Las tendencias se aplicarán cuando haya repetición suficiente.";
+      state.adviceVisibleLimit = 5;
       state.adviceResult = buildFragranceAdvice({
         products: state.products,
         message: state.fragrancePrompt,
@@ -1116,6 +1090,7 @@ app.addEventListener("click", async event => {
     render();
   } else if (actionButton.dataset.action === "clear-search") {
     state.searchQuery = "";
+    state.searchVisibleLimit = 8;
     render();
     document.querySelector("#fragrance-search")?.focus();
   }
@@ -1124,6 +1099,7 @@ app.addEventListener("click", async event => {
 app.addEventListener("input", event => {
   if (event.target.id === "fragrance-search") {
     state.searchQuery = event.target.value;
+    state.searchVisibleLimit = 8;
     renderFragranceSearchResults();
   } else if (event.target.id === "collection-search") {
     state.collectionSearch = event.target.value;
@@ -1279,6 +1255,7 @@ app.addEventListener("submit", async event => {
   }
 
   if (event.target.id === "fragrance-advisor-form") {
+    state.adviceVisibleLimit = 5;
     state.fragrancePrompt = document.querySelector("#fragrance-prompt")?.value ?? state.fragrancePrompt;
     state.fragranceForm.families = [...event.target.querySelectorAll('input[name="fragrance-family"]:checked')]
       .map(input => input.value);
@@ -1289,6 +1266,7 @@ app.addEventListener("submit", async event => {
     try {
       // Customer request filters are deliberately ephemeral: never save them to the local profile.
       state.profileMessage = "Solicitud analizada. Los filtros se usan solo para esta búsqueda.";
+      state.adviceVisibleLimit = 5;
       state.adviceResult = buildFragranceAdvice({
         products: state.products,
         message: state.fragrancePrompt,
