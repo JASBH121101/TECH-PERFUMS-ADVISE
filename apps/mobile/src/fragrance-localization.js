@@ -422,8 +422,12 @@ export function auditFragranceCatalogLanguage(products) {
   const summarize = (terms, type) => {
     const dictionary = TRANSLATIONS[type] ?? {};
     const translated = terms.filter(term => Object.hasOwn(dictionary, normalizeTerm(term)));
+    const translatedKeys = new Set(translated.map(term => normalizeTerm(term)));
     const preserved = type === "note"
-      ? terms.filter(term => PRESERVED_NOTE_TERMS.has(normalizeTerm(term)))
+      ? terms.filter(term =>
+          !translatedKeys.has(normalizeTerm(term)) &&
+          PRESERVED_NOTE_TERMS.has(normalizeTerm(term))
+        )
       : [];
     const review = terms.filter(term =>
       !Object.hasOwn(dictionary, normalizeTerm(term)) &&
