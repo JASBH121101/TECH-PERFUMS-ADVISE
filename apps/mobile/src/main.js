@@ -885,9 +885,9 @@ function clearFragranceRequest() {
 }
 
 function navigate(route) {
-  if (state.route === "fragrance" && route !== "fragrance") clearFragranceRequest();
   techLookupGuard.invalidate();
   techComparisonGuard.invalidate();
+  if (state.route === "fragrance" && route !== "fragrance") clearFragranceRequest();
   if (state.techLookupStatus === "loading") state.techLookupStatus = "idle";
   if (state.techComparisonStatus === "loading") state.techComparisonStatus = "idle";
   state.route = route;
