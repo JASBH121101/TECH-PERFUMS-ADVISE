@@ -231,3 +231,109 @@
   #jbae-update-notice .update-notice-primary,
   #jbae-update-notice .update-notice-close { font-size: 14px; }
 }
+
+
+/* JBAE readability contract v2: override legacy micro-type across every app view. */
+#app p {
+  font-size: 15px !important;
+  line-height: 1.65 !important;
+}
+#app small,
+#app label,
+#app legend,
+#app dt,
+#app dd {
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+#app li {
+  font-size: 14px !important;
+  line-height: 1.65 !important;
+}
+#app input,
+#app select,
+#app textarea {
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+}
+#app button,
+#app .family-choice,
+#app .mode-tab {
+  font-size: 15px !important;
+  line-height: 1.4 !important;
+}
+#app .field-group label,
+#app .family-fieldset legend,
+#app .collection-tools label,
+#app .collection-note label,
+#app .comparison-selector > label {
+  font-size: 13px !important;
+  letter-spacing: .06em;
+}
+#app .field-hint,
+#app .footnote,
+#app .result-summary,
+#app .loading-state,
+#app .loading-inline,
+#app .module-description,
+#app .module-link,
+#app .hero-version,
+#app .hero-status,
+#app .home-stat span,
+#app .data-strip small,
+#app .advice-reasons,
+#app .warning-panel,
+#app .result-disclaimer,
+#app .comparison-incomplete,
+#app .comparison-rank li,
+#app .comparison-source-card span,
+#app .comparison-source-card a,
+#app .technology-suggestion-status,
+#app .evidence-inline,
+#app .source-link,
+#app .comparison-coverage,
+#app .comparison-missing {
+  font-size: 14px !important;
+  line-height: 1.65 !important;
+}
+#app .eyebrow,
+#app .kicker,
+#app .module-code,
+#app .tag-row span,
+#app .note-grid small,
+#app .fact-list dt,
+#app .fact-list dd,
+#app .tech-fact dt,
+#app .tech-fact dd,
+#app .profile-dimensions span,
+#app .comparison-option small,
+#app .comparison-selected-list > small,
+#app .technology-suggestion-copy small {
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+#app .result-copy strong,
+#app .advice-card-copy strong,
+#app .tech-source-head strong,
+#app .collection-compare-tools strong,
+#app .data-strip strong,
+#app .home-note strong,
+#app .module-card strong,
+#app .technology-suggestion-copy strong {
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+}
+#app .tech-comparison-table th,
+#app .tech-comparison-table td,
+#app .fragrance-comparison-table th,
+#app .fragrance-comparison-table td {
+  font-size: 13px !important;
+  line-height: 1.65 !important;
+}
+.bottom-nav .nav-item small {
+  font-size: 12px !important;
+}
+.brand-copy small,
+.runtime-pill {
+  font-size: 11px !important;
+}
