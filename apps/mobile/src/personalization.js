@@ -95,8 +95,13 @@ export function buildFragranceAdvice({
       ...(Array.isArray(attributes.baseNotes) ? attributes.baseNotes : []),
     ];
   }));
+  const knownPerfumes = products.map(product => ({
+    id: product.id,
+    name: product.name,
+    brand: product.brand,
+  }));
   const parsed = typeof message === "string" && message.trim()
-    ? parseFragranceCustomerMessage(message.trim(), { knownNotes })
+    ? parseFragranceCustomerMessage(message.trim(), { knownNotes, knownPerfumes })
     : {
         preferences: Object.freeze({}),
         signals: Object.freeze([]),
@@ -107,7 +112,50 @@ export function buildFragranceAdvice({
       };
 
   const learnedPreferences = collectSignals(profile, products);
-  const preferences = { ...parsed.preferences };
+  const referenceProduct = parsed.referenceProduct
+    ? products.find(product => product.id === parsed.referenceProduct.id)
+    : null;
+  const referenceAttributes = referenceProduct?.attributes ?? {};
+  const referenceNotes = uniqueStrings([
+    ...(Array.isArray(referenceAttributes.allNotes) ? referenceAttributes.allNotes : []),
+    ...(Array.isArray(referenceAttributes.topNotes) ? referenceAttributes.topNotes : []),
+    ...(Array.isArray(referenceAttributes.middleNotes) ? referenceAttributes.middleNotes : []),
+    ...(Array.isArray(referenceAttributes.baseNotes) ? referenceAttributes.baseNotes : []),
+  ]);
+  const referencePreferences = referenceProduct ? {
+    preferredFamilies: uniqueStrings(referenceAttributes.scentFamilies ?? []),
+    preferredCharacters: uniqueStrings(referenceAttributes.characterTraits ?? []),
+    preferredNotes: referenceNotes,
+  } : {};
+  const preferences = { ...referencePreferences, ...parsed.preferences };
+  for (const field of ["preferredFamilies", "preferredCharacters", "preferredNotes"]) {
+    preferences[field] = uniqueStrings([
+      ...(referencePreferences[field] ?? []),
+      ...(parsed.preferences[field] ?? []),
+    ]);
+    if (!preferences[field].length) delete preferences[field];
+  }
+  const referenceAvoidFamilies = parsed.preferences.avoidFamilies ?? [];
+  const referenceAvoidCharacters = parsed.preferences.avoidCharacters ?? [];
+  const referenceAvoidNotes = parsed.preferences.avoidNotes ?? [];
+  if (preferences.preferredFamilies) preferences.preferredFamilies =
+    preferences.preferredFamilies.filter(value => !referenceAvoidFamilies.includes(value));
+  if (preferences.preferredCharacters) preferences.preferredCharacters =
+    preferences.preferredCharacters.filter(value => !referenceAvoidCharacters.includes(value));
+  if (preferences.preferredNotes) preferences.preferredNotes =
+    preferences.preferredNotes.filter(value => !referenceAvoidNotes.includes(value));
+  const referenceInfo = parsed.referenceQuery || parsed.referencePerfumes?.length ? Object.freeze({
+    query: parsed.referenceQuery ?? parsed.referencePerfumes[0],
+    name: parsed.referenceProduct?.name ?? parsed.referencePerfumes[0] ?? parsed.referenceQuery,
+    brand: parsed.referenceProduct?.brand ?? null,
+    resolution: parsed.referenceResolution ?? "recognized_alias",
+    matchedInCatalog: Boolean(referenceProduct),
+    usedFields: Object.freeze(referenceProduct ? [
+      ...(referencePreferences.preferredFamilies.length ? ["scentFamilies"] : []),
+      ...(referencePreferences.preferredCharacters.length ? ["characterTraits"] : []),
+      ...(referencePreferences.preferredNotes.length ? ["notes"] : []),
+    ] : []),
+  }) : null;
   for (const field of ["preferredFamilies", "avoidFamilies", "preferredNotes", "avoidNotes"]) {
     preferences[field] = uniqueStrings([
       ...(profile?.[field] ?? []),
@@ -150,6 +198,7 @@ export function buildFragranceAdvice({
       usageContextLabel: parsed.usageContextLabel ?? null,
       contextSummary: parsed.contextSummary ?? null,
       clarificationPrompt: parsed.clarificationPrompt ?? null,
+      reference: referenceInfo,
       match: null,
       preferences: Object.freeze({}),
       learnedPreferences,
@@ -172,6 +221,7 @@ export function buildFragranceAdvice({
     usageContextLabel: parsed.usageContextLabel ?? null,
     contextSummary: parsed.contextSummary ?? null,
     clarificationPrompt: parsed.clarificationPrompt ?? null,
+    reference: referenceInfo,
     preferences: match.requestedPreferences,
     learnedPreferences,
     match,
