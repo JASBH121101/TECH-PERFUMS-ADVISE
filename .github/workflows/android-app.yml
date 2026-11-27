@@ -217,7 +217,7 @@ jobs:
             gh release upload "$TAG" JBAE.apk --clobber
             gh release edit "$TAG" --title "JBAE v$APP_VERSION" --notes "$NOTES"
           else
-            gh release create "$TAG" JBAE.apk --title "JBAE v$APP_VERSION" --notes "$NOTES"
+            gh release create "$TAG" JBAE.apk --title "JBAE v$APP_VERSION" --notes "$NOTES" --target "$(git rev-parse HEAD)"
           fi
       - name: Verify published APK asset
         env:
