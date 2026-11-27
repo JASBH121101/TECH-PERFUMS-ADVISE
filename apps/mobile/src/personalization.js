@@ -1,6 +1,7 @@
 import {
   matchFragrances,
   parseFragranceCustomerMessage,
+  resolveFragranceReferenceModifiers,
 } from "../../../src/index.js";
 
 function uniqueStrings(values) {
@@ -122,15 +123,22 @@ export function buildFragranceAdvice({
     ...(Array.isArray(referenceAttributes.middleNotes) ? referenceAttributes.middleNotes : []),
     ...(Array.isArray(referenceAttributes.baseNotes) ? referenceAttributes.baseNotes : []),
   ]);
+  const referenceModifierResolution = resolveFragranceReferenceModifiers({
+    modifiers: parsed.referenceModifiers ?? [],
+    referenceAttributes,
+    message,
+  });
+  const modifierPreferences = referenceModifierResolution.preferences;
   const referencePreferences = referenceProduct ? {
     preferredFamilies: uniqueStrings(referenceAttributes.scentFamilies ?? []),
     preferredCharacters: uniqueStrings(referenceAttributes.characterTraits ?? []),
     preferredNotes: referenceNotes,
   } : {};
-  const preferences = { ...referencePreferences, ...parsed.preferences };
-  for (const field of ["preferredFamilies", "preferredCharacters", "preferredNotes"]) {
+  const preferences = { ...referencePreferences, ...modifierPreferences, ...parsed.preferences };
+  for (const field of ["preferredFamilies", "preferredCharacters", "preferredNotes", "avoidFamilies", "avoidCharacters", "avoidNotes"]) {
     preferences[field] = uniqueStrings([
       ...(referencePreferences[field] ?? []),
+      ...(modifierPreferences[field] ?? []),
       ...(parsed.preferences[field] ?? []),
     ]);
     if (!preferences[field].length) delete preferences[field];
@@ -190,6 +198,23 @@ export function buildFragranceAdvice({
     else if (!preferences[field] && profile?.[field]) preferences[field] = profile[field];
   }
 
+  if (parsed.conflicts?.length) {
+    return Object.freeze({
+      status: "needs_preferences",
+      parsedSignals: parsed.signals,
+      usageContext: parsed.usageContext ?? null,
+      usageContextLabel: parsed.usageContextLabel ?? null,
+      contextSummary: parsed.contextSummary ?? null,
+      clarificationPrompt: parsed.clarificationPrompt ?? parsed.conflicts[0]?.question ?? null,
+      conflicts: parsed.conflicts,
+      reference: referenceInfo,
+      referenceModifierResolution,
+      match: null,
+      preferences: Object.freeze(preferences),
+      learnedPreferences,
+    });
+  }
+
   if (Object.keys(preferences).length === 0) {
     return Object.freeze({
       status: "needs_preferences",
@@ -199,6 +224,8 @@ export function buildFragranceAdvice({
       contextSummary: parsed.contextSummary ?? null,
       clarificationPrompt: parsed.clarificationPrompt ?? null,
       reference: referenceInfo,
+      referenceModifierResolution,
+      conflicts: parsed.conflicts ?? Object.freeze([]),
       match: null,
       preferences: Object.freeze({}),
       learnedPreferences,
@@ -222,6 +249,8 @@ export function buildFragranceAdvice({
     contextSummary: parsed.contextSummary ?? null,
     clarificationPrompt: parsed.clarificationPrompt ?? null,
     reference: referenceInfo,
+    referenceModifierResolution,
+    conflicts: parsed.conflicts ?? Object.freeze([]),
     preferences: match.requestedPreferences,
     learnedPreferences,
     match,
