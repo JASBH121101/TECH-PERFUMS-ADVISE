@@ -40,6 +40,7 @@ const NOTE_ALIASES = Object.freeze({
 });
 const CHARACTER_ALIASES = Object.freeze({
   fresco: "fresh", fresca: "fresh", limpio: "clean", limpia: "clean",
+  citrico: "citrusy", citrica: "citrusy", citrus: "citrusy",
   dulce: "sweet", goloso: "gourmand", golosa: "gourmand",
 });
 const OCCASION_ALIASES = Object.freeze({
