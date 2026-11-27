@@ -142,21 +142,23 @@ test("Android readability stylesheet is bundled by Vite and raises app-wide mobi
 });
 
 
+
+
 test("editable text fields render blank and do not show example text inside controls", async () => {
   const source = await read("src/main.js");
-  assert.doesNotMatch(source, /\\bplaceholder\\s*=/u);
-  assert.match(source, /searchQuery:\\s*""/u);
-  assert.match(source, /fragrancePrompt:\\s*""/u);
-  assert.match(source, /collectionSearch:\\s*""/u);
-  assert.match(source, /comparisonSearch:\\s*""/u);
-  assert.match(source, /techModel:\\s*""/u);
-  assert.match(source, /techCompareModels:\\s*\\["",\\s*"",\\s*"",\\s*""\\]/u);
+  assert.equal(source.includes("placeholder="), false);
+  assert.ok(source.includes('searchQuery: ""'));
+  assert.ok(source.includes('fragrancePrompt: ""'));
+  assert.ok(source.includes('collectionSearch: ""'));
+  assert.ok(source.includes('comparisonSearch: ""'));
+  assert.ok(source.includes('techModel: ""'));
+  assert.ok(source.includes('techCompareModels: ["", "", "", ""]'));
 });
 
 test("readability contract overrides compact legacy typography in the shipped interface", async () => {
   const accessibility = await read("src/update-accessibility.css");
-  assert.match(accessibility, /#app p \\{\\s*font-size: 15px !important/su);
-  assert.match(accessibility, /#app small,\\s*#app label,\\s*#app legend,\\s*#app dt,\\s*#app dd \\{\\s*font-size: 13px !important/su);
-  assert.match(accessibility, /#app input,\\s*#app select,\\s*#app textarea \\{\\s*font-size: 16px !important/su);
-  assert.match(accessibility, /#app button,\\s*#app \\.family-choice,\\s*#app \\.mode-tab \\{\\s*font-size: 15px !important/su);
+  assert.ok(accessibility.includes("#app p {\\n  font-size: 15px !important;"));
+  assert.ok(accessibility.includes("#app small,\\n#app label,\\n#app legend,\\n#app dt,\\n#app dd {\\n  font-size: 13px !important;"));
+  assert.ok(accessibility.includes("#app input,\\n#app select,\\n#app textarea {\\n  font-size: 16px !important;"));
+  assert.ok(accessibility.includes("#app button,\\n#app .family-choice,\\n#app .mode-tab {\\n  font-size: 15px !important;"));
 });
