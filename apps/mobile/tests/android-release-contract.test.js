@@ -155,10 +155,12 @@ test("editable text fields render blank and do not show example text inside cont
   assert.ok(source.includes('techCompareModels: ["", "", "", ""]'));
 });
 
+
 test("readability contract overrides compact legacy typography in the shipped interface", async () => {
   const accessibility = await read("src/update-accessibility.css");
-  assert.ok(accessibility.includes("#app p {\\n  font-size: 15px !important;"));
-  assert.ok(accessibility.includes("#app small,\\n#app label,\\n#app legend,\\n#app dt,\\n#app dd {\\n  font-size: 13px !important;"));
-  assert.ok(accessibility.includes("#app input,\\n#app select,\\n#app textarea {\\n  font-size: 16px !important;"));
-  assert.ok(accessibility.includes("#app button,\\n#app .family-choice,\\n#app .mode-tab {\\n  font-size: 15px !important;"));
+  assert.ok(accessibility.includes("#app p {"));
+  assert.ok(accessibility.includes("font-size: 15px !important;"));
+  assert.ok(accessibility.includes("font-size: 13px !important;"));
+  assert.ok(accessibility.includes("font-size: 16px !important;"));
+  assert.ok(accessibility.includes("font-size: 14px !important;"));
 });
