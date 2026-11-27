@@ -70,6 +70,33 @@ function extractNotes(text, knownNotes = []) {
   return { preferredNotes: [...new Set(preferredNotes)], avoidNotes: [...new Set(avoidNotes)] };
 }
 
+const REFERENCE_PERFUMES = Object.freeze([
+  { aliases: ["dior sauvage", "sauvage de dior", "sauvage"], value: "Dior Sauvage" },
+  { aliases: ["bleu de chanel", "bleu chanel"], value: "Bleu de Chanel" },
+  { aliases: ["acqua di gio", "aqua di gio", " acqua di gio"], value: "Acqua di Giò" },
+  { aliases: ["creed aventus", "aventus"], value: "Creed Aventus" },
+  { aliases: ["la vie est belle"], value: "La Vie Est Belle" },
+  { aliases: ["good girl de carolina herrera", "carolina herrera good girl", "good girl"], value: "Good Girl" },
+  { aliases: ["ysl libre", "libre de ysl", "libre"], value: "YSL Libre" },
+  { aliases: ["ysl y", "y de ysl", "y eau de parfum"], value: "Y" },
+  { aliases: ["versace eros", "eros de versace", "eros"], value: "Versace Eros" },
+  { aliases: ["one million de paco rabanne", "paco rabanne one million", "1 million", "one million"], value: "Paco Rabanne 1 Million" },
+]);
+function extractReferencePerfumes(text) {
+  return [...new Set(REFERENCE_PERFUMES.filter(reference =>
+    reference.aliases.some(term => includesAny(text, [term]))
+  ).map(reference => reference.value))];
+}
+function extractReferenceModifiers(text) {
+  const modifiers = [];
+  if (includesAny(text, ["mas suave", "más suave", "menos intenso", "menos fuerte", "softer", "less intense", "less strong"])) modifiers.push("softer");
+  if (includesAny(text, ["mas fresco", "más fresco", "menos dulce", "more fresh", "fresher", "less sweet"])) modifiers.push("fresher_or_less_sweet");
+  if (includesAny(text, ["mas dulce", "más dulce", "more sweet", "sweeter"])) modifiers.push("sweeter");
+  if (includesAny(text, ["mas intenso", "más intenso", "mas fuerte", "más fuerte", "stronger"])) modifiers.push("stronger");
+  if (includesAny(text, ["menos amaderado", "menos madera", "less woody"])) modifiers.push("less_woody");
+  return [...new Set(modifiers)];
+}
+
 /**
  * Conservative phrase-based extraction for Spanish/English fragrance requests.
  * This is an intent helper, not a generative model: only explicit signals are emitted.
@@ -85,6 +112,10 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [] } = {})
   const text = normalizeText(message);
   const preferences = {};
   const signals = [];
+  const referencePerfumes = extractReferencePerfumes(text);
+  const referenceModifiers = extractReferenceModifiers(text);
+  if (referencePerfumes.length) signals.push("reference_perfumes:" + referencePerfumes.join(","));
+  if (referenceModifiers.length) signals.push("reference_modifiers:" + referenceModifiers.join(","));
 
   const evening = includesAny(text, ["noche", "nocturno", "nocturna", "cita nocturna", "evening", "night"]);
   const office = includesAny(text, ["oficina", "trabajo", "trabajar", "laboral", "work", "office"]);
@@ -177,6 +208,8 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [] } = {})
 
   return Object.freeze({
     preferences: Object.freeze(preferences),
+    referencePerfumes: Object.freeze(referencePerfumes),
+    referenceModifiers: Object.freeze(referenceModifiers),
     signals: Object.freeze(signals),
     needsClarification: Object.keys(preferences).length === 0,
     note: "Only explicit, recognized customer signals are extracted. Unrecognized or ambiguous wording must be clarified rather than guessed.",
