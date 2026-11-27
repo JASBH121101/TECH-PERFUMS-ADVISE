@@ -296,7 +296,7 @@ const TRANSLATIONS = Object.freeze({
     "fruity": "Frutal",
     "green": "Verde",
     "herbal": "Herbal",
-    "leathery": "A cuero",
+    "leathery": "Cuero",
     "musky": "Almizclado",
     "powdery": "Empolvado",
     "resinous": "Resinoso",
@@ -359,10 +359,11 @@ export function localizeFragranceList(values, type = "note") {
   const seen = new Set();
   const localized = [];
   for (const value of values) {
-    const key = normalizeTerm(value);
+    const label = localizeFragranceTerm(value, type);
+    const key = normalizeTerm(label);
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    localized.push(localizeFragranceTerm(value, type));
+    localized.push(label);
   }
   return localized.length ? localized.join(", ") : "Sin dato en la ficha";
 }

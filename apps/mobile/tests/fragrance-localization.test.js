@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { auditFragranceCatalogLanguage, displayFragranceBrand, displayFragranceCharacters, displayFragranceFamilies, displayFragranceFamily, formatFragranceConcentration, localizeFragranceList, localizeFragranceTerm } from "../src/fragrance-localization.js";
 
 test("traduce notas de salida, corazón y fondo conocidas al español", () => {
@@ -120,4 +123,73 @@ test("catalogue language audit flags missing commercial names and duplicate iden
   ]);
   assert.equal(report.integrity.recordsWithoutCommercialName, 1);
   assert.deepEqual(report.integrity.duplicateIds, ["same"]);
+});
+
+
+function parseCsv(source) {
+  const rows = [];
+  let row = [], value = "", quoted = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (quoted) {
+      if (character === '"' && source[index + 1] === '"') {
+        value += '"';
+        index += 1;
+      } else if (character === '"') quoted = false;
+      else value += character;
+    } else if (character === '"') quoted = true;
+    else if (character === ",") {
+      row.push(value);
+      value = "";
+    } else if (character === "\n") {
+      row.push(value.replace(/\r$/u, ""));
+      rows.push(row);
+      row = [];
+      value = "";
+    } else value += character;
+  }
+  if (value || row.length) {
+    row.push(value);
+    rows.push(row);
+  }
+  const headers = rows.shift() ?? [];
+  return rows.map(values => Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""])));
+}
+
+test("audits the complete bundled 1,479-perfume source vocabulary without rewriting commercial names", async () => {
+  const testDirectory = dirname(fileURLToPath(import.meta.url));
+  const sourcePath = join(testDirectory, "../../data/fragrance/sources/scento-2026-10-29/perfumes.csv");
+  const records = parseCsv(await readFile(sourcePath, "utf8"));
+  const products = records.map(record => ({
+    id: record.id,
+    name: record.name,
+    brand: record.house,
+    attributes: {
+      scentFamilies: [record.family, record.secondary_family].filter(Boolean),
+      characterTraits: record.character ? record.character.split(";") : [],
+      seasons: record.seasons ? record.seasons.split(";") : [],
+      timesOfDay: record.times_of_day ? record.times_of_day.split(";") : [],
+      concentrationLabel: record.concentration,
+      topNotes: record.top_notes ? record.top_notes.split(";") : [],
+      middleNotes: record.heart_notes ? record.heart_notes.split(";") : [],
+      baseNotes: record.base_notes ? record.base_notes.split(";") : [],
+      allNotes: record.notes ? record.notes.split(";") : [],
+    },
+  }));
+  const report = auditFragranceCatalogLanguage(products);
+  assert.equal(report.catalogSize, 1479);
+  assert.equal(report.commercialNamesPolicy, "preserve_source");
+  assert.equal(report.brandNamesPolicy, "preserve_source");
+  assert.equal(report.coverage.families.reviewRequired, 0);
+  assert.equal(report.coverage.characters.reviewRequired, 0);
+  assert.equal(report.coverage.concentrations.reviewRequired, 0);
+  assert.equal(report.coverage.seasons.reviewRequired, 0);
+  assert.equal(report.coverage.times.reviewRequired, 0);
+  assert.ok(report.coverage.notes.intentionallyPreserved > 0);
+  assert.ok(report.coverage.notes.reviewRequired > 0);
+  assert.equal(
+    report.coverage.notes.translated + report.coverage.notes.intentionallyPreserved + report.coverage.notes.reviewRequired,
+    report.coverage.notes.distinct,
+  );
+  assert.ok(report.coverage.notes.reviewTerms.every(term => typeof term === "string" && term.length > 0));
 });
