@@ -179,3 +179,19 @@ test("hard-excludes explicitly avoided olfactory families", () => {
   assert.ok(excluded.exclusions.includes("contains_avoided_families"));
   assert.equal(allowed.eligibility, "eligible");
 });
+
+test("classifies recommendation strength while retaining eligibility and score transparency", () => {
+  const result = matchFragrances({
+    products: [
+      { id: "strong", name: "Strong Match", domain: "fragrance", productType: "perfume",
+        attributes: { scentFamilies: ["citrica"], allNotes: ["bergamot"], characterTraits: ["fresh"] } },
+      { id: "partial", name: "Partial Match", domain: "fragrance", productType: "perfume",
+        attributes: { scentFamilies: ["floral"], allNotes: ["rose"] } },
+    ],
+    preferences: { preferredFamilies: ["citrica"], preferredNotes: ["bergamot"], preferredCharacters: ["fresh"] },
+  });
+  assert.equal(result.ranking[0].matchTier, "strong_match");
+  assert.equal(result.ranking[0].explanation.headline, "Coincidencia sólida con los criterios disponibles.");
+  assert.ok(["partial_match", "weak_match"].includes(result.ranking[1].matchTier));
+  assert.equal(result.ranking[0].eligibility, "eligible");
+});
