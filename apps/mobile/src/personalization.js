@@ -97,7 +97,14 @@ export function buildFragranceAdvice({
   }));
   const parsed = typeof message === "string" && message.trim()
     ? parseFragranceCustomerMessage(message.trim(), { knownNotes })
-    : { preferences: Object.freeze({}), signals: Object.freeze([]) };
+    : {
+        preferences: Object.freeze({}),
+        signals: Object.freeze([]),
+        usageContext: null,
+        usageContextLabel: null,
+        contextSummary: null,
+        clarificationPrompt: null,
+      };
 
   const learnedPreferences = collectSignals(profile, products);
   const preferences = { ...parsed.preferences };
@@ -139,6 +146,10 @@ export function buildFragranceAdvice({
     return Object.freeze({
       status: "needs_preferences",
       parsedSignals: parsed.signals,
+      usageContext: parsed.usageContext ?? null,
+      usageContextLabel: parsed.usageContextLabel ?? null,
+      contextSummary: parsed.contextSummary ?? null,
+      clarificationPrompt: parsed.clarificationPrompt ?? null,
       match: null,
       preferences: Object.freeze({}),
       learnedPreferences,
@@ -157,6 +168,10 @@ export function buildFragranceAdvice({
   return Object.freeze({
     status: eligible.length ? "matched" : alternatives.length ? "partial_matches" : "insufficient_coverage",
     parsedSignals: parsed.signals,
+    usageContext: parsed.usageContext ?? null,
+    usageContextLabel: parsed.usageContextLabel ?? null,
+    contextSummary: parsed.contextSummary ?? null,
+    clarificationPrompt: parsed.clarificationPrompt ?? null,
     preferences: match.requestedPreferences,
     learnedPreferences,
     match,
