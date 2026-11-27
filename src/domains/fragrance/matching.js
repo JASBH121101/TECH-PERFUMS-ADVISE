@@ -39,8 +39,10 @@ const NOTE_ALIASES = Object.freeze({
   lima: "lime", yuzu: "yuzu", manzana: "apple", pera: "pear",
 });
 const CHARACTER_ALIASES = Object.freeze({
-  fresco: "fresh", fresca: "fresh", limpio: "clean", limpia: "clean",
+  fresco: "fresh", fresca: "fresh", fresquito: "fresh", fresquita: "fresh",
+  limpio: "clean", limpia: "clean", jabonoso: "clean", jabonosa: "clean",
   citrico: "citrusy", citrica: "citrusy", citrus: "citrusy",
+  herbal: "herbal", herbaceo: "herbal", herbacea: "herbal",
   dulce: "sweet", goloso: "gourmand", golosa: "gourmand",
 });
 const OCCASION_ALIASES = Object.freeze({
@@ -70,12 +72,15 @@ function asList(value, field = "attribute", mapper = normalizeText) {
   }
   return items.map(mapper);
 }
-function overlapScore(preferred, actual, aliases = null) {
-  if (!preferred.length || !actual.length) return null;
+function matchedValues(preferred, actual, aliases = null) {
+  if (!preferred.length || !actual.length) return [];
   const expanded = actual.flatMap(item => aliases?.[item] ?? [item]);
   const available = new Set(expanded);
-  const matched = preferred.filter(item => (aliases?.[item] ?? [item]).some(value => available.has(value)));
-  return matched.length / preferred.length * 100;
+  return preferred.filter(item => (aliases?.[item] ?? [item]).some(value => available.has(value)));
+}
+function overlapScore(preferred, actual, aliases = null) {
+  if (!preferred.length || !actual.length) return null;
+  return matchedValues(preferred, actual, aliases).length / preferred.length * 100;
 }
 function levelScore(value, target, field, levels) {
   if (value === undefined || value === null || target === undefined || target === null) return null;
@@ -177,7 +182,7 @@ function applyCeiling({ product, key, field, target, levels, weight, evidenceSto
   values.push({ key, weight, score: satisfied ? 100 : 0, status: satisfied ? "scored" : "constraint_failed",
     evidenceStatus: evidence.status, evidenceIds: evidence.ids, matched: satisfied ? ["within_limit"] : [] });
 }
-function explain(values) {
+function explain(values, tierHeadline = "No hay suficientes coincidencias positivas para justificar esta opción.") {
   const reasons = [];
   for (const item of values) {
     if (item.score === null || item.score < 60) continue;
@@ -384,18 +389,62 @@ export function matchFragrances({
     if (!evidenceStore) caveats.push("Los atributos del catálogo se utilizaron sin verificación independiente.");
     if (values.some(item => item.score === null)) caveats.push("Una o más preferencias carecen de datos o evidencia elegible.");
     if (sourceNoteFields.length && !allNotesComplete) caveats.push("La pirámide de notas es parcial; no se afirma que las notas no registradas estén ausentes.");
-    const matchTier = score === null ? "unrated" : score >= 75 ? "strong_match" : score >= 55 ? "partial_match" : "weak_match";
-    const tierHeadline = matchTier === "strong_match" ? "Esta opción coincide de forma sólida con los criterios disponibles." : matchTier === "partial_match" ? "Esta opción coincide parcialmente: cumple parte de lo solicitado, con diferencias." : "Coincidencia limitada; no es una de las opciones principales.";
+    const eligibility = exclusions.length ? "excluded"
+      : eligible ? "eligible"
+        : score === null ? "insufficient_data" : "insufficient_coverage";
+    const matchTier = score === null ? "unrated"
+      : eligibility === "excluded" ? "excluded"
+        : eligibility === "insufficient_coverage" ? "partial_match"
+          : score >= 75 ? "strong_match" : score >= 55 ? "partial_match" : "weak_match";
+    const tierHeadline = matchTier === "strong_match"
+      ? "Coincidencia sólida con los criterios disponibles."
+      : matchTier === "partial_match"
+        ? "Coincidencia parcial: hay diferencias o faltan datos para validar todo el pedido."
+        : matchTier === "excluded"
+          ? "Esta opción incumple una restricción indicada."
+          : matchTier === "weak_match"
+            ? "Coincidencia limitada con las preferencias expresadas."
+            : "No hay datos suficientes para evaluar esta opción.";
+    const missingCriteria = values.filter(item => item.score === null).map(item => item.key);
+    const unmatchedCriteria = scored.filter(item => item.score < 60).map(item => item.key);
+    const matchedFamilies = matchedValues(preferredFamilies,
+      asList(attributes.scentFamilies, "scentFamilies", value => alias(value, FAMILY_ALIASES)));
+    const matchedNotes = matchedValues(preferredNotes, notes);
+    const matchedCharacters = matchedValues(preferredCharacters,
+      asList(attributes.characterTraits, "characterTraits", value => alias(value, CHARACTER_ALIASES)));
+    const matchedDetails = Object.freeze({
+      families: Object.freeze(matchedFamilies),
+      notes: Object.freeze(matchedNotes),
+      characters: Object.freeze(matchedCharacters),
+    });
+    const matchedDimensionCount = scored.filter(item => item.score >= 60).length;
+    const criteriaCount = values.length;
+    const summary = eligibility === "excluded"
+      ? "No se recomienda esta opción porque incumple una restricción solicitada."
+      : score === null
+        ? "La ficha no contiene datos suficientes para justificar esta opción."
+        : eligibility === "insufficient_coverage"
+          ? "Coincide en " + matchedDimensionCount + " de " + criteriaCount +
+            " criterios evaluables, pero la cobertura de datos es de " + coverage.toFixed(0) +
+            "%. Se mantiene como alternativa parcial."
+          : "Coincide en " + matchedDimensionCount + " de " + criteriaCount +
+            " criterios evaluables. Cobertura de datos: " + coverage.toFixed(0) + "%.";
+    const rankingScore = score === null ? null : Number((score * coverage / 100).toFixed(1));
     const explanation = Object.freeze({
       headline: reasons.length ? tierHeadline : "No hay suficientes coincidencias positivas para justificar esta opción.",
+      summary,
       reasons: Object.freeze(reasons),
+      matchedDetails,
+      missingCriteria: Object.freeze(missingCriteria),
+      unmatchedCriteria: Object.freeze(unmatchedCriteria),
       tradeoffs: Object.freeze(scored.filter(item => item.score < 40).map(item => ({ criterion: item.key, score: item.score }))),
       evidenceNote: evidenceStore ? "La evidencia enlazada se evaluó bajo la política configurada." : "Las coincidencias utilizan atributos del catálogo no verificados independientemente; esto no certifica la calidad ni el rendimiento.",
     });
     return Object.freeze({
       id: product.id, name: product.name, productType: product.productType, matchTier,
-      score: score === null ? null : Number(score.toFixed(1)), coverage: Number(coverage.toFixed(1)),
-      eligibility: exclusions.length ? "excluded" : eligible ? "eligible" : score === null ? "insufficient_data" : "insufficient_coverage",
+      score: score === null ? null : Number(score.toFixed(1)),
+      rankingScore, coverage: Number(coverage.toFixed(1)),
+      eligibility,
       exclusions: Object.freeze(exclusions), constraints: Object.freeze(constraints),
       matchedCriteria: Object.freeze(scored.filter(item => item.score >= 60).map(item => item.key)),
       reasons: Object.freeze(reasons), explanation, breakdown: Object.freeze(values.map(item => Object.freeze(item))),
@@ -403,17 +452,25 @@ export function matchFragrances({
     });
   });
 
+  const rankGroup = item => item.eligibility === "eligible" ? 0
+    : item.eligibility === "insufficient_coverage" ? 1
+      : item.eligibility === "insufficient_data" ? 2 : 3;
   const ranking = results.sort((a, b) => {
-    const aEligible = a.eligibility === "eligible", bEligible = b.eligibility === "eligible";
-    if (aEligible !== bEligible) return aEligible ? -1 : 1;
-    if (a.score === null && b.score === null) return a.name.localeCompare(b.name);
-    if (a.score === null) return 1;
-    if (b.score === null) return -1;
-    return b.score - a.score;
+    const groupDifference = rankGroup(a) - rankGroup(b);
+    if (groupDifference) return groupDifference;
+    if (a.rankingScore === null && b.rankingScore === null) return a.name.localeCompare(b.name, "es");
+    if (a.rankingScore === null) return 1;
+    if (b.rankingScore === null) return -1;
+    return b.rankingScore - a.rankingScore ||
+      (b.score ?? -1) - (a.score ?? -1) ||
+      b.coverage - a.coverage ||
+      a.name.localeCompare(b.name, "es");
   }).map((item, index) => Object.freeze({ ...item, position: index + 1 }));
   const eligible = ranking.filter(item => item.eligibility === "eligible");
   const first = eligible[0] ?? null;
-  const tied = first !== null && eligible.filter(item => Math.abs(item.score - first.score) < 0.05).length > 1;
+  const tied = first !== null && eligible.filter(item =>
+    Math.abs((item.rankingScore ?? 0) - (first.rankingScore ?? 0)) < 0.05
+  ).length > 1;
   const decision = !first ? "no_eligible_match" : tied ? "tie" : "matched";
   return Object.freeze({
     decision, winnerId: decision === "matched" ? first.id : null,
