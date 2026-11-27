@@ -37,12 +37,14 @@ test("searches fragrance notes, families and characters using established Spanis
       allNotes: ["Vanilla", "Bergamot"],
       scentFamilies: ["Sunlit Citrus"],
       characterTraits: ["fresh", "clean"],
+      concentrationLabel: "eau-de-parfum",
     },
   };
   assert.equal(searchProducts([perfume], "Vainilla")[0].id, "vanilla-fresh");
   assert.equal(searchProducts([perfume], "Bergamota")[0].id, "vanilla-fresh");
   assert.equal(searchProducts([perfume], "Cítrica")[0].id, "vanilla-fresh");
   assert.equal(searchProducts([perfume], "Limpio")[0].id, "vanilla-fresh");
+  assert.equal(searchProducts([perfume], "Agua de perfume")[0].id, "vanilla-fresh");
 });
 
 test("searches commercial brands with canonical aliases without translating product names", () => {
