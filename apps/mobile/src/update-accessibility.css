@@ -475,3 +475,240 @@
   color: var(--cyan);
   font-size: 11px !important;
 }
+
+
+/* Blocks 17–18 — fragrance language presentation and compact mobile UX. */
+#app .fragrance-mode-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin: 10px 0 11px;
+  padding: 4px;
+  border-radius: 12px;
+}
+#app .fragrance-mode-tabs .mode-tab {
+  min-width: 0;
+  min-height: 38px;
+  padding: 5px 2px;
+  border-radius: 8px;
+  font-size: 9px !important;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+#app .compact-advisor-form {
+  padding: 12px;
+  border-radius: 14px;
+}
+#app .compact-request-heading {
+  margin-bottom: 7px;
+}
+#app #fragrance-prompt {
+  height: 68px;
+  min-height: 68px;
+  font-size: 15px !important;
+  line-height: 1.4;
+}
+#app .advisor-memory-strip {
+  margin-bottom: 10px;
+  padding: 7px 9px;
+}
+#app .quick-examples-disclosure,
+#app .advisor-filter-disclosure {
+  margin-top: 7px;
+}
+#app .compact-advisor-actions {
+  margin-top: 9px;
+}
+#app .advice-results {
+  margin-top: 10px;
+}
+#app .advice-result-list {
+  gap: 6px;
+}
+#app .advice-result-item {
+  gap: 2px;
+}
+#app .advice-card.compact-advice-card {
+  min-height: 62px;
+  padding: 9px;
+  border-radius: 11px;
+}
+#app .compact-advice-card .advice-card-copy em {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+#app .compact-advice-card .match-score {
+  display: grid;
+  gap: 1px;
+  justify-items: end;
+  font-size: 12px;
+}
+#app .compact-advice-card .match-score small {
+  color: var(--dim);
+  font-size: 8px;
+  font-weight: 500;
+}
+#app .recommendation-detail {
+  margin: 0 3px 4px 39px;
+  border: 1px solid rgba(203,218,238,.08);
+  border-radius: 9px;
+  background: rgba(17,25,35,.48);
+}
+#app .recommendation-detail > summary {
+  min-height: 32px;
+  padding: 7px 9px;
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+#app .recommendation-detail > summary::-webkit-details-marker { display: none; }
+#app .recommendation-detail > summary::after {
+  content: "+";
+  float: right;
+  color: var(--cyan);
+  font-size: 14px;
+}
+#app .recommendation-detail[open] > summary::after { content: "−"; }
+#app .recommendation-detail-content {
+  display: grid;
+  gap: 7px;
+  padding: 0 9px 9px;
+}
+#app .recommendation-detail-content strong {
+  display: block;
+  color: var(--text);
+  font-size: 10px;
+}
+#app .recommendation-detail-content p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 10px !important;
+  line-height: 1.45;
+}
+#app .recommendation-detail-content small {
+  color: var(--dim);
+  font-size: 9px;
+}
+#app .compact-catalog-search {
+  padding: 11px;
+  border-radius: 13px;
+}
+#app .compact-catalog-search .search-field input {
+  min-height: 40px;
+  font-size: 15px !important;
+}
+#app .catalog-search-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+#app .catalog-search-examples button {
+  min-height: 31px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--muted);
+  background: rgba(179,162,255,.06);
+  font-size: 10px !important;
+}
+#app .compact-result-card {
+  min-height: 58px;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+#app .compact-result-card .result-copy em {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.35;
+}
+#app .detail-top {
+  padding-bottom: 12px;
+}
+#app .detail-top .back-link {
+  margin-bottom: 12px;
+}
+#app .detail-monogram {
+  width: 48px;
+  height: 48px;
+  margin: 12px auto 10px;
+  border-radius: 14px;
+  font-size: 21px;
+}
+#app .detail-top h1 {
+  font-size: clamp(22px, 6vw, 27px);
+}
+#app .detail-block {
+  margin-top: 9px;
+  padding: 13px 12px;
+  border-radius: 13px;
+}
+#app .detail-block h2 {
+  font-size: 15px;
+}
+#app .fragrance-character-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 9px;
+  padding: 8px 9px;
+  border-radius: 9px;
+  background: rgba(179,162,255,.055);
+}
+#app .fragrance-character-summary span {
+  color: var(--dim);
+  font-size: 10px;
+}
+#app .fragrance-character-summary strong {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+#app .note-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+#app .note-grid div {
+  min-width: 0;
+  padding: 9px;
+  border-radius: 9px;
+}
+#app .note-grid div:nth-child(3) {
+  grid-column: 1 / -1;
+}
+#app .note-grid small {
+  font-size: 9px;
+}
+#app .note-grid strong {
+  font-size: 12px !important;
+  line-height: 1.45;
+}
+#app .detail-facts-disclosure > summary {
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+  list-style: none;
+}
+#app .detail-facts-disclosure > summary::-webkit-details-marker { display: none; }
+#app .detail-facts-disclosure > summary::after {
+  content: "Mostrar detalles +";
+  color: var(--cyan);
+  font-size: 10px;
+}
+#app .detail-facts-disclosure[open] > summary::after { content: "Ocultar detalles −"; }
+#app .detail-facts-disclosure .fact-list {
+  margin-top: 8px;
+}
+#app .detail-facts-disclosure .fact-list > div {
+  padding: 7px 0;
+}
+@media (max-width: 370px) {
+  #app .fragrance-mode-tabs .mode-tab { font-size: 8px !important; }
+  #app .compact-advisor-form { padding: 10px; }
+  #app .recommendation-detail { margin-left: 34px; }
+}

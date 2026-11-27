@@ -26,3 +26,27 @@ test("no devuelve productos que no coinciden", () => {
 test("valida el límite de resultados", () => {
   assert.throws(() => searchProducts(products, "libre", 0), /between 1 and 50/);
 });
+
+
+test("searches fragrance notes, families and characters using established Spanish labels", () => {
+  const perfume = {
+    id: "vanilla-fresh",
+    name: "Vanilla Fresh",
+    brand: "Maison Exemple",
+    attributes: {
+      allNotes: ["Vanilla", "Bergamot"],
+      scentFamilies: ["Sunlit Citrus"],
+      characterTraits: ["fresh", "clean"],
+    },
+  };
+  assert.equal(searchProducts([perfume], "Vainilla")[0].id, "vanilla-fresh");
+  assert.equal(searchProducts([perfume], "Bergamota")[0].id, "vanilla-fresh");
+  assert.equal(searchProducts([perfume], "Cítrica")[0].id, "vanilla-fresh");
+  assert.equal(searchProducts([perfume], "Limpio")[0].id, "vanilla-fresh");
+});
+
+test("searches commercial brands with canonical aliases without translating product names", () => {
+  const perfume = { id: "ysl-libre", name: "Libre", brand: "Yves Saint Laurent", attributes: {} };
+  assert.equal(searchProducts([perfume], "YSL")[0].id, "ysl-libre");
+  assert.equal(searchProducts([perfume], "Libre")[0].name, "Libre");
+});

@@ -73,3 +73,22 @@ test("Fragrance Advisor surfaces local commercial references and coverage-based 
   assert.match(main, /No se encontró una ficha local/u);
   assert.match(main, /item\.explanation\?\.summary/u);
 });
+
+
+test("Fragrance mobile tabs and result cards use compact progressive disclosures", async () => {
+  const main = await readMain();
+  const css = await readFile(join(root, "src/update-accessibility.css"), "utf8");
+  assert.match(css, /\.fragrance-mode-tabs\s*\{[^}]*repeat\(4,\s*minmax\(0,\s*1fr\)\)/su);
+  assert.match(main, /function renderRecommendationDetails\(item\)/u);
+  assert.match(main, /Ver coincidencias y diferencias/u);
+  assert.match(main, /data-action="search-example"/u);
+  assert.match(main, /Información de la ficha/u);
+});
+
+test("catalog search examples use localized fragrance vocabulary", async () => {
+  const main = await readMain();
+  assert.match(main, /data-query="Vainilla"/u);
+  assert.match(main, /data-query="Bergamota"/u);
+  assert.match(main, /data-query="Fresco"/u);
+  assert.match(main, /displayFragranceCharacters\(product\.attributes\.characterTraits\)/u);
+});

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { displayFragranceBrand, displayFragranceFamilies, displayFragranceFamily, formatFragranceConcentration, localizeFragranceList, localizeFragranceTerm } from "../src/fragrance-localization.js";
+import { auditFragranceCatalogLanguage, displayFragranceBrand, displayFragranceCharacters, displayFragranceFamilies, displayFragranceFamily, formatFragranceConcentration, localizeFragranceList, localizeFragranceTerm } from "../src/fragrance-localization.js";
 
 test("traduce notas de salida, corazón y fondo conocidas al español", () => {
   assert.equal(
@@ -72,4 +72,52 @@ test("keeps commercial perfume names unchanged while known note vocabulary is lo
   assert.equal(localizeFragranceTerm("vanilla", "note"), "Vainilla");
   assert.equal(localizeFragranceTerm("oud", "note"), "Oud (madera de agar)");
   assert.equal(displayFragranceBrand("Dior"), "Dior");
+});
+
+
+test("localizes all catalogue character descriptors and the elixir concentration label", () => {
+  assert.equal(
+    displayFragranceCharacters(["fresh", "citrusy", "clean", "woody"]),
+    "Fresco, Cítrico, Limpio, Amaderado",
+  );
+  assert.equal(formatFragranceConcentration("elixir"), "Elixir");
+});
+
+test("deduplicates repeated olfactory notes without changing their source meaning", () => {
+  assert.equal(localizeFragranceList(["Vanilla", "vanilla", "Vainilla", "Bergamot"]), "Vainilla, Bergamota");
+});
+
+test("catalogue language audit covers mapped and intentionally preserved perfumery materials", () => {
+  const report = auditFragranceCatalogLanguage([
+    {
+      id: "a", name: "Dior Sauvage Elixir", brand: "Dior",
+      attributes: {
+        allNotes: ["Vanilla", "Ambroxan", "Unknown resin"],
+        scentFamilies: ["Sunlit Citrus", "Wood & Root"],
+        characterTraits: ["fresh", "citrusy", "woody"],
+        concentrationLabel: "elixir",
+        seasons: ["summer"],
+        timesOfDay: ["day"],
+      },
+    },
+  ]);
+  assert.equal(report.catalogSize, 1);
+  assert.equal(report.commercialNamesPolicy, "preserve_source");
+  assert.equal(report.brandNamesPolicy, "preserve_source");
+  assert.equal(report.coverage.notes.translated, 1);
+  assert.equal(report.coverage.notes.intentionallyPreserved, 1);
+  assert.deepEqual(report.coverage.notes.reviewTerms, ["Unknown resin"]);
+  assert.equal(report.coverage.families.reviewRequired, 0);
+  assert.equal(report.coverage.characters.reviewRequired, 0);
+  assert.equal(report.coverage.concentrations.reviewRequired, 0);
+  assert.equal(report.integrity.recordsWithoutCommercialName, 0);
+});
+
+test("catalogue language audit flags missing commercial names and duplicate identifiers without rewriting names", () => {
+  const report = auditFragranceCatalogLanguage([
+    { id: "same", name: "Dior Sauvage", attributes: {} },
+    { id: "same", name: "", attributes: {} },
+  ]);
+  assert.equal(report.integrity.recordsWithoutCommercialName, 1);
+  assert.deepEqual(report.integrity.duplicateIds, ["same"]);
 });

@@ -1,7 +1,7 @@
 import "./styles.css";
 import "./update-accessibility.css";
 import { PRODUCT_MODULES } from "./product-modules.js";
-import { displayFragranceBrand, displayFragranceFamilies, displayFragranceFamily, formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
+import { displayFragranceBrand, displayFragranceCharacters, displayFragranceFamilies, displayFragranceFamily, formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
 import { safeExternalUrl } from "./safe-external-url.js";
 import { DOMAINS, buildFragranceComparison } from "../../../src/index.js";
 import { closeStorage, initializeStorage } from "./storage.js";
@@ -220,6 +220,48 @@ function renderAdviceContextSummary(result) {
     : "";
 }
 
+const ADVICE_CRITERION_LABELS = Object.freeze({
+  scentFamilies: "Familias olfativas",
+  avoidFamilies: "Familias que se evitaron",
+  notes: "Notas solicitadas",
+  avoidNotes: "Notas que se evitaron",
+  characterTraits: "Carácter",
+  avoidCharacters: "Carácter excluido",
+  occasion: "Ocasión",
+  climate: "Clima",
+  intensity: "Intensidad",
+  projection: "Proyección",
+  maxIntensity: "Límite de intensidad",
+  maxProjection: "Límite de proyección",
+  maxSillage: "Límite de estela",
+});
+
+function renderRecommendationDetails(item) {
+  const explanation = item?.explanation ?? {};
+  const matched = explanation.matchedDetails ?? {};
+  const matchedGroups = [
+    ["Familias", displayFragranceFamilies(matched.families ?? [])],
+    ["Notas", localizeFragranceList(matched.notes ?? [], "note")],
+    ["Carácter", displayFragranceCharacters(matched.characters ?? [])],
+  ].filter(([, value]) => !value.endsWith("no indicada") && value !== "Sin dato en la ficha");
+  const missing = (explanation.missingCriteria ?? []).map(key => ADVICE_CRITERION_LABELS[key] ?? key);
+  const differences = (explanation.unmatchedCriteria ?? []).map(key => ADVICE_CRITERION_LABELS[key] ?? key);
+  const tradeoffs = explanation.tradeoffs ?? [];
+  const coverage = Number.isFinite(item?.coverage) ? item.coverage : null;
+  if (!matchedGroups.length && !missing.length && !differences.length && !tradeoffs.length && coverage === null) return "";
+  return `
+    <details class="recommendation-detail">
+      <summary>Ver coincidencias y diferencias</summary>
+      <div class="recommendation-detail-content">
+        ${matchedGroups.length ? `<div><strong>Coincide en</strong><p>${matchedGroups.map(([label, value]) => escapeHtml(label + ": " + value)).join(" · ")}</p></div>` : ""}
+        ${differences.length ? `<div><strong>No coincide plenamente en</strong><p>${escapeHtml(differences.join(", "))}</p></div>` : ""}
+        ${missing.length ? `<div><strong>Datos no disponibles</strong><p>${escapeHtml(missing.join(", "))}</p></div>` : ""}
+        ${tradeoffs.length ? `<div><strong>Diferencias detectadas</strong><p>${escapeHtml(tradeoffs.map(item => ADVICE_CRITERION_LABELS[item.criterion] ?? item.criterion).join(", "))}</p></div>` : ""}
+        ${coverage !== null ? `<small>Cobertura de datos de la ficha: ${coverage}%.</small>` : ""}
+      </div>
+    </details>`;
+}
+
 function renderAdviceResults() {
   const target = document.querySelector("#advice-results");
   if (!target || !state.adviceResult) return;
@@ -246,11 +288,14 @@ function renderAdviceResults() {
       const family = product?.attributes?.primaryScentFamily ?? product?.attributes?.scentFamilies?.[0] ?? "Familia no indicada";
       const reason = item.explanation?.summary ?? item.reasons?.[0] ?? "";
       return `
-        <button type="button" class="advice-card compact-advice-card partial-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
-          <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
-          <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · ${escapeHtml(displayFragranceFamily(family))}</small>${reason ? `<em>${escapeHtml(reason)}</em>` : ""}</span>
-          <span class="match-score">${item.score}%</span>
-        </button>`;
+        <article class="advice-result-item">
+          <button type="button" class="advice-card compact-advice-card partial-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
+            <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
+            <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · ${escapeHtml(displayFragranceFamily(family))}</small>${reason ? `<em>${escapeHtml(reason)}</em>` : ""}</span>
+            <span class="match-score">${item.score}%<small>ajuste</small></span>
+          </button>
+          ${renderRecommendationDetails(item)}
+        </article>`;
     }).join("");
     target.innerHTML = `
       ${renderAdviceContextSummary(result)}
@@ -273,8 +318,9 @@ function renderAdviceResults() {
         <button type="button" class="advice-card compact-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
           <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
           <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · ${escapeHtml(displayFragranceFamily(family))}</small>${reason ? `<em>${escapeHtml(reason)}</em>` : ""}</span>
-          <span class="match-score">${item.score}%</span>
+          <span class="match-score">${item.score}%<small>ajuste</small></span>
         </button>
+        ${renderRecommendationDetails(item)}
         <div class="advice-feedback compact-advice-feedback"><span>¿Encaja?</span>
           <button type="button" data-action="rate-fragrance" data-id="${encodeURIComponent(item.id)}" data-rating="5">Me gusta</button>
           <button type="button" data-action="rate-fragrance" data-id="${encodeURIComponent(item.id)}" data-rating="1">No es para mí</button>
@@ -298,8 +344,14 @@ function renderAdviceResults() {
 
 function renderFragranceSearch() {
   return `
-    <section class="search-panel"><label for="fragrance-search">BUSCAR EN LA BIBLIOTECA OFFLINE</label>
-      <div class="search-field"><span>⌕</span><input id="fragrance-search" type="search" autocomplete="off" value="${escapeHtml(state.searchQuery)}"><button type="button" id="clear-search" data-action="clear-search" aria-label="Limpiar búsqueda">×</button></div>
+    <section class="search-panel compact-catalog-search"><label for="fragrance-search">BUSCAR EN LA BIBLIOTECA OFFLINE</label>
+      <div class="search-field"><span aria-hidden="true">⌕</span><input id="fragrance-search" type="search" autocomplete="off" value="${escapeHtml(state.searchQuery)}" placeholder="Nombre, marca, nota o carácter"><button type="button" id="clear-search" data-action="clear-search" aria-label="Limpiar búsqueda">×</button></div>
+      <div class="catalog-search-examples" aria-label="Búsquedas rápidas">
+        <button type="button" data-action="search-example" data-query="Dior">Dior</button>
+        <button type="button" data-action="search-example" data-query="Vainilla">Vainilla</button>
+        <button type="button" data-action="search-example" data-query="Bergamota">Bergamota</button>
+        <button type="button" data-action="search-example" data-query="Fresco">Fresco</button>
+      </div>
     </section>
     <section id="fragrance-results" class="results-list"></section>
     <p class="footnote">Fuente: Scento Perfume Database, snapshot 29-10-2026, licencia CC BY 4.0. Sus afirmaciones permanecen como reportadas hasta una comprobación independiente.</p>`;
@@ -571,19 +623,23 @@ function renderFragranceDetail(product) {
     </section>
     <section class="detail-block"><span class="kicker">PERFIL OLFATIVO</span><h2>Familias y carácter</h2>
       <p>${escapeHtml(displayFragranceFamilies(attributes.scentFamilies))}</p>
+      ${attributes.characterTraits?.length ? `<div class="fragrance-character-summary"><span>Carácter</span><strong>${escapeHtml(displayFragranceCharacters(attributes.characterTraits))}</strong></div>` : ""}
       <div class="note-grid">
         <div><small>SALIDA</small><strong>${displayList(attributes.topNotes, "note")}</strong></div>
         <div><small>CORAZÓN</small><strong>${displayList(attributes.middleNotes, "note")}</strong></div>
         <div><small>FONDO</small><strong>${displayList(attributes.baseNotes, "note")}</strong></div>
       </div>
     </section>
-    <section class="detail-block"><span class="kicker">DETALLES DISPONIBLES</span><h2>Información de la ficha</h2>
+    <section class="detail-block detail-facts-block">
+      <details class="detail-facts-disclosure">
+        <summary><span class="kicker">DETALLES DISPONIBLES</span><strong>Información de la ficha</strong></summary>
       <dl class="fact-list">
         <div><dt>Perfumista</dt><dd>${displayList(attributes.perfumers)}</dd></div>
         <div><dt>Temporadas</dt><dd>${displayList(attributes.seasons, "season")}</dd></div>
         <div><dt>Momentos del día</dt><dd>${displayList(attributes.timesOfDay, "time")}</dd></div>
         <div><dt>Año de lanzamiento</dt><dd>${escapeHtml(attributes.releaseYear ?? "Sin dato")}</dd></div>
       </dl>
+      </details>
     </section>
     <aside class="evidence-note"><strong>Nota de evidencia</strong>
       <p>La información procede de la fuente identificada en el dataset. No demuestra por sí sola duración, proyección, rendimiento ni autenticidad. No mostramos horas de duración sin evidencia elegible.</p>
@@ -864,9 +920,12 @@ function renderFragranceSearchResults() {
   target.innerHTML = matches.length
     ? `<div class="result-summary">${visibleMatches.length} de ${matches.length} resultados</div>${visibleMatches.map(product => {
       const family = product.attributes.primaryScentFamily ?? product.attributes.scentFamilies?.[0] ?? "Familia no indicada";
-      const concentration = product.attributes.concentrationLabel ?? "Concentración no indicada";
+      const concentration = formatFragranceConcentration(product.attributes.concentrationLabel ?? "");
+      const characters = product.attributes.characterTraits?.length
+        ? displayFragranceCharacters(product.attributes.characterTraits)
+        : "";
       return `<button class="result-card compact-result-card" type="button" data-action="open-fragrance" data-id="${encodeURIComponent(product.id)}">
-        <span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))} · ${escapeHtml(concentration)}</small><em>Familia: ${escapeHtml(displayFragranceFamily(family))}</em></span><span class="result-arrow">↗</span>
+        <span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))} · ${escapeHtml(concentration)}</small><em>Familia: ${escapeHtml(displayFragranceFamily(family))}${characters ? " · " + escapeHtml(characters) : ""}</em></span><span class="result-arrow">↗</span>
       </button>`;
     }).join("")}${matches.length > visibleMatches.length ? `<button type="button" class="show-more-results" data-action="show-more-search">Mostrar más resultados</button>` : ""}`
     : `<div class="empty-panel compact"><strong>No encontramos coincidencias</strong><p>Probá con otra marca, nombre o nota.</p></div>`;
@@ -978,6 +1037,11 @@ app.addEventListener("click", async event => {
     state.fragranceMode = actionButton.dataset.mode;
     state.searchQuery = "";
     render();
+  } else if (actionButton.dataset.action === "search-example") {
+    state.searchQuery = actionButton.dataset.query ?? "";
+    const searchInput = document.querySelector("#fragrance-search");
+    if (searchInput) searchInput.value = state.searchQuery;
+    renderFragranceSearchResults();
   } else if (actionButton.dataset.action === "fragrance-example") {
     state.fragrancePrompt = actionButton.dataset.text ?? "";
     const prompt = document.querySelector("#fragrance-prompt");
