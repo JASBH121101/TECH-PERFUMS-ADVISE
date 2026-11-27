@@ -266,3 +266,71 @@ test("unknown reference names are disclosed and never converted into invented fr
   assert.equal(advice.status, "needs_preferences");
   assert.equal(advice.preferences.preferredFamilies, undefined);
 });
+
+
+test("blocks recommendations when the customer request contains contradictory intent", () => {
+  const advice = buildFragranceAdvice({
+    products: activityProducts,
+    message: "Busco algo fresco para diario, pero también de noche.",
+  });
+  assert.equal(advice.status, "needs_preferences");
+  assert.equal(advice.match, null);
+  assert.ok(advice.conflicts.some(item => item.field === "occasion"));
+  assert.match(advice.clarificationPrompt, /día, de noche/u);
+});
+
+test("applies a softer-than-reference ceiling only from documented ordinal attributes", () => {
+  const catalog = [
+    {
+      id: "reference", name: "Reference", brand: "Maison", domain: "fragrance", productType: "perfume",
+      attributes: {
+        scentFamilies: ["woody"], allNotes: ["Cedarwood"],
+        intensityLevel: "strong", projectionLevel: "strong", sillageLevel: "strong",
+      },
+    },
+    {
+      id: "soft-option", name: "Soft Option", domain: "fragrance", productType: "perfume",
+      attributes: {
+        scentFamilies: ["woody"], allNotes: ["Cedarwood"],
+        intensityLevel: "soft", projectionLevel: "close", sillageLevel: "low",
+      },
+    },
+    {
+      id: "strong-option", name: "Strong Option", domain: "fragrance", productType: "perfume",
+      attributes: {
+        scentFamilies: ["woody"], allNotes: ["Cedarwood"],
+        intensityLevel: "strong", projectionLevel: "strong", sillageLevel: "strong",
+      },
+    },
+  ];
+  const advice = buildFragranceAdvice({
+    products: catalog,
+    message: "Algo similar a Maison Reference, pero más suave",
+  });
+  assert.equal(advice.reference.matchedInCatalog, true);
+  assert.deepEqual(advice.referenceModifierResolution.applied, ["softer"]);
+  assert.equal(advice.preferences.maxIntensity, "moderate");
+  assert.equal(advice.preferences.maxProjection, "moderate");
+  assert.equal(advice.preferences.maxSillage, "moderate");
+  assert.equal(advice.recommendations[0].id, "soft-option");
+  assert.ok(advice.recommendations.every(item => item.id !== "strong-option"));
+});
+
+test("does not apply relative softness without comparable reference data", () => {
+  const catalog = [
+    {
+      id: "reference", name: "Reference", brand: "Maison", domain: "fragrance", productType: "perfume",
+      attributes: { scentFamilies: ["woody"], allNotes: ["Cedarwood"] },
+    },
+    {
+      id: "candidate", name: "Candidate", domain: "fragrance", productType: "perfume",
+      attributes: { scentFamilies: ["woody"], allNotes: ["Cedarwood"] },
+    },
+  ];
+  const advice = buildFragranceAdvice({
+    products: catalog,
+    message: "Algo similar a Maison Reference, pero más suave",
+  });
+  assert.deepEqual(advice.referenceModifierResolution.applied, []);
+  assert.ok(advice.referenceModifierResolution.unresolved.length > 0);
+});
