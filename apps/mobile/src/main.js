@@ -145,6 +145,11 @@ function renderFragranceAdvisorForm() {
       <details class="quick-examples-disclosure">
         <summary>Ideas rápidas <span>Opcional</span></summary>
         <div class="request-examples">
+          <button type="button" data-action="fragrance-example" data-text="Para gimnasio">Gimnasio</button>
+          <button type="button" data-action="fragrance-example" data-text="Para salir">Salir</button>
+          <button type="button" data-action="fragrance-example" data-text="Para uso diario">Diario</button>
+          <button type="button" data-action="fragrance-example" data-text="Para trabajo pesado">Trabajo físico</button>
+          <button type="button" data-action="fragrance-example" data-text="Para trabajo tranquilo">Trabajo tranquilo</button>
           <button type="button" data-action="fragrance-example" data-text="Busco algo fresco, limpio y cítrico para un cliente que trabaja en oficina y vive en clima caliente.">Fresco / oficina</button>
           <button type="button" data-action="fragrance-example" data-text="El cliente quiere un perfume dulce, cálido, con vainilla y ámbar para salir de noche, pero que no sea demasiado pesado.">Dulce / noche</button>
           <button type="button" data-action="fragrance-example" data-text="Busca una esencia elegante, amaderada y especiada, con buena presencia, pero sin notas demasiado dulces.">Elegante / amaderado</button>
@@ -195,12 +200,24 @@ function renderFragranceAdvisorForm() {
     <section id="advice-results" class="advice-results"></section>`;
 }
 
+function renderAdviceContextSummary(result) {
+  if (!result?.contextSummary) return "";
+  const label = result.usageContextLabel
+    ? '<strong>Contexto detectado: ' + escapeHtml(result.usageContextLabel) + '.</strong> '
+    : "";
+  return '<p class="intent-context-summary">' + label + escapeHtml(result.contextSummary) + '</p>';
+}
+
 function renderAdviceResults() {
   const target = document.querySelector("#advice-results");
   if (!target || !state.adviceResult) return;
   const result = state.adviceResult;
   if (result.status === "needs_preferences") {
-    target.innerHTML = `<div class="empty-panel compact"><strong>¿Qué aroma está buscando?</strong><p>Describí la ocasión, el estilo o alguna nota.</p></div>`;
+    const title = result.usageContext === "social_outing"
+      ? "Una precisión para tu salida"
+      : "¿Qué aroma está buscando?";
+    const prompt = result.clarificationPrompt || "Describí la ocasión, el estilo o alguna nota.";
+    target.innerHTML = `${renderAdviceContextSummary(result)}<div class="empty-panel compact"><strong>${title}</strong><p>${escapeHtml(prompt)}</p></div>`;
     return;
   }
   if (result.status === "error") {
@@ -224,6 +241,7 @@ function renderAdviceResults() {
         </button>`;
     }).join("");
     target.innerHTML = `
+      ${renderAdviceContextSummary(result)}
       <div class="warning-panel compact-warning"><strong>No hay coincidencias completas.</strong> Estas alternativas son parciales; revisá los datos faltantes.</div>
       ${missing.length ? `<details class="result-detail-disclosure"><summary>Datos que faltan en la mejor opción</summary><p>${escapeHtml(missing.join(", "))}</p></details>` : ""}
       <div class="result-section-title"><strong>Alternativas para revisar</strong><small>${visibleAlternatives.length} de ${allAlternatives.length}</small></div>
@@ -256,6 +274,7 @@ function renderAdviceResults() {
     return values.map(item => `${key}: ${item}`);
   });
   target.innerHTML = `
+    ${renderAdviceContextSummary(result)}
     <div class="result-section-title"><strong>Mejores coincidencias</strong><small>${visibleRecommendations.length} de ${allRecommendations.length}</small></div>
     <div class="advice-result-list">${items}</div>
     ${allRecommendations.length > visibleRecommendations.length ? `<button type="button" class="show-more-results" data-action="show-more-advice">Mostrar 5 más</button>` : ""}
