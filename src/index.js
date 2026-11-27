@@ -94,7 +94,7 @@ export {
 export { buildFragrancePerformanceProfile } from "./domains/fragrance/performance.js";
 export { buildFragranceComparison } from "./domains/fragrance/comparison.js";
 export { matchFragrances } from "./domains/fragrance/matching.js";
-export { parseFragranceCustomerMessage } from "./domains/fragrance/intent.js";
+export { parseFragranceCustomerMessage, resolveFragranceReferenceModifiers } from "./domains/fragrance/intent.js";
 export { buildFragranceCustomerExplanation } from "./domains/fragrance/customer-explanation.js";
 export {
   auditFragranceLibrary,
