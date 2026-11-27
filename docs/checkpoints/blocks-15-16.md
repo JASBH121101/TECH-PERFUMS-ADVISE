@@ -1,3 +1,5 @@
+> HISTORICAL CHECKPOINT: Blocks 15–16.1 were completed in JBAE v0.4.138. The next batch, Blocks 17–18, has since been implemented. Use [docs/checkpoints/blocks-17-18.md](./blocks-17-18.md) for the current implementation status and pending certification. This earlier checkpoint is retained as history.
+
 # JBAE Checkpoint — Blocks 15–16.1
 
 Project: JB Advisor Engine (JBAE)

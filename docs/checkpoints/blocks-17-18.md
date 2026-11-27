@@ -25,7 +25,7 @@ JBAE remains a perfume advisor and fragrance catalogue experience only.
 - Branch: feature/jbae-android-certification
 - PR #7: OPEN / DRAFT / NOT MERGED
 - main: untouched; last verified SHA b6b75050f63825c217e81a15957b9dd83a8745ca
-- Latest implementation commit before checkpoint update: 6ae2afff2006445a147c50d422227404501e9a8a
+- Latest implementation commit before checkpoint update: 1073652d143e27cf41fa55702b1a9c8c62f9a616
 - No merge or main-branch changes without explicit authorization.
 
 ## Block 17 — Fragrance catalogue language QA
