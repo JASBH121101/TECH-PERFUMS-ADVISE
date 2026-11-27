@@ -216,12 +216,26 @@ function renderAdviceContextSummary(result) {
     parts.push(escapeHtml(referenceText));
   }
   const modifierResolution = result?.referenceModifierResolution;
+  const modifierLabels = {
+    softer: "más suave",
+    fresher_or_less_sweet: "más fresco / menos dulce",
+    sweeter: "más dulce",
+    stronger: "más intenso",
+    less_woody: "menos amaderado",
+  };
+  const referenceFieldLabels = {
+    intensityLevel: "intensidad",
+    projectionLevel: "proyección",
+    sillageLevel: "estela",
+    wording: "descripción",
+  };
   if (modifierResolution?.applied?.length) {
-    parts.push(escapeHtml("Ajustes relativos aplicados: " + modifierResolution.applied.join(", ") + "."));
+    const labels = modifierResolution.applied.map(item => modifierLabels[item] ?? item);
+    parts.push(escapeHtml("Ajustes relativos aplicados: " + labels.join(", ") + "."));
   }
   if (modifierResolution?.unresolved?.length) {
-    const fields = modifierResolution.unresolved.map(item => item.field).filter(Boolean);
-    parts.push(escapeHtml("Ajustes relativos no verificables por datos faltantes o niveles no comparables: " + [...new Set(fields)].join(", ") + "."));
+    const fields = modifierResolution.unresolved.map(item => referenceFieldLabels[item.field] ?? item.field).filter(Boolean);
+    parts.push(escapeHtml("No se pudieron verificar estos ajustes en la referencia: " + [...new Set(fields)].join(", ") + "."));
   }
   return parts.length
     ? '<div class="intent-context-summary">' + parts.map(part => '<p>' + part + '</p>').join("") + '</div>'
