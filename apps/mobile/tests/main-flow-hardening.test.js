@@ -106,15 +106,15 @@ test("Fragrance comparison matrix localizes notes, character, concentration and 
 
 test("Fragrance Advisor blocks contradictory requests and shows the clarification required", async () => {
   const main = await readMain();
-  assert.match(main, /result\\.conflicts\\?\\.length/u);
+  assert.ok(main.includes("result.conflicts?.length"));
   assert.match(main, /No voy a ordenar fragancias hasta aclararlos/u);
   assert.match(main, /intent-conflict-list/u);
-  assert.match(main, /conflict\\.question/u);
+  assert.ok(main.includes("conflict.question"));
 });
 
 test("Fragrance Advisor discloses which comparative reference adjustments were applied or unresolved", async () => {
   const main = await readMain();
   assert.match(main, /referenceModifierResolution/u);
   assert.match(main, /Ajustes relativos aplicados/u);
-  assert.match(main, /Ajustes relativos no verificables/u);
+  assert.match(main, /No se pudieron verificar estos ajustes en la referencia/u);
 });
