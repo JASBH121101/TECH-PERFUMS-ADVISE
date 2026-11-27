@@ -435,10 +435,24 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
     physical_work: ["fresh", "clean", "citrusy", "herbal"],
     light_work: ["clean", "fresh"],
   }[usageContext] ?? [];
-  const resolvedAvoidedCharacters = [...new Set(avoidedCharacters)];
-  const compatibleFreshCharacters = preferredCharacters.includes("fresh") ? ["clean"] : [];
-  const resolvedPreferredCharacters = [...new Set([...preferredCharacters, ...compatibleFreshCharacters, ...contextCharacters])]
-    .filter(value => !resolvedAvoidedCharacters.includes(value));
+  const explicitCharacterOverlaps = [...new Set(preferredCharacters.filter(value => avoidedCharacters.includes(value)))];
+  if (explicitCharacterOverlaps.length) {
+    conflicts.push(Object.freeze({
+      field: "preferredCharacters",
+      label: "Carácter",
+      values: Object.freeze(explicitCharacterOverlaps),
+      question: "El carácter " + explicitCharacterOverlaps.join(", ") + " aparece como algo que buscás y también querés evitar. ¿Cuál preferís?",
+    }));
+    signals.push("conflict:preferredCharacters");
+  }
+  const resolvedAvoidedCharacters = [...new Set(avoidedCharacters.filter(value => !explicitCharacterOverlaps.includes(value)))];
+  const compatibleFreshCharacters = preferredCharacters.includes("fresh") && !explicitCharacterOverlaps.includes("fresh")
+    ? ["clean"] : [];
+  const resolvedPreferredCharacters = [...new Set([
+    ...preferredCharacters.filter(value => !explicitCharacterOverlaps.includes(value)),
+    ...compatibleFreshCharacters,
+    ...contextCharacters,
+  ])].filter(value => !resolvedAvoidedCharacters.includes(value));
   if (resolvedPreferredCharacters.length) {
     preferences.preferredCharacters = resolvedPreferredCharacters;
     signals.push("character:" + resolvedPreferredCharacters.join(","));
