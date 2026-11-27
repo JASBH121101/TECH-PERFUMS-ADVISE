@@ -339,11 +339,12 @@ function renderManagedFragranceCard(product, {
           ${noteEditorOpen ? `
             <form id="collection-note-form" data-product-id="${productId}">
               <label for="collection-note-editor">TU NOTA (MÁXIMO 240 CARACTERES)</label>
-              <textarea id="collection-note-editor" name="note" maxlength="240" rows="3">${escapeHtml(note)}</textarea>
-              <small><span id="collection-note-count">${note.length}</span>/240 caracteres · Solo se guarda en este perfil local</small>
+              <textarea id="collection-note-editor" name="note" maxlength="240" rows="3"></textarea>
+              <small><span id="collection-note-count">0</span>/240 caracteres · Solo se guarda en este perfil local</small>
               <div class="collection-note-actions">
                 <button type="submit">Guardar nota</button>
                 <button type="button" data-action="cancel-collection-note" data-id="${productId}">Cancelar</button>
+                ${note ? `<button type="button" data-action="delete-collection-note" data-id="${productId}">Eliminar nota</button>` : ""}
               </div>
             </form>` : `<button type="button" data-action="edit-collection-note" data-id="${productId}">${note ? "Editar nota" : "Añadir nota"}</button>`}
         </div>` : ""}
@@ -986,6 +987,25 @@ app.addEventListener("click", async event => {
   } else if (actionButton.dataset.action === "edit-collection-note") {
     state.editingCollectionNoteId = decodeURIComponent(actionButton.dataset.id ?? "");
     render();
+  } else if (actionButton.dataset.action === "delete-collection-note") {
+    const productId = decodeURIComponent(actionButton.dataset.id ?? "");
+    const profile = state.runtime.knowledgeStore.getFragranceProfile();
+    const existing = profile?.collection.find(item => item.productId === productId);
+    if (existing) {
+      try {
+        await state.runtime.knowledgeStore.saveFragranceCollectionItem({
+          productId,
+          status: existing.status,
+          note: null,
+        });
+        state.profile = state.runtime.knowledgeStore.getFragranceProfile();
+        state.profileMessage = "Nota privada eliminada.";
+      } catch (error) {
+        state.profileMessage = error instanceof Error ? error.message : "No se pudo eliminar la nota.";
+      }
+    }
+    state.editingCollectionNoteId = null;
+    render();
   } else if (actionButton.dataset.action === "cancel-collection-note") {
     state.editingCollectionNoteId = null;
     render();
@@ -1209,14 +1229,22 @@ app.addEventListener("submit", async event => {
       render();
       return;
     }
+    if (!note.trim()) {
+      state.profileMessage = existing.note
+        ? "La nota guardada se conserva. Escribe una nueva nota o usa Eliminar nota."
+        : "Escribe una nota antes de guardar.";
+      state.editingCollectionNoteId = null;
+      render();
+      return;
+    }
     try {
       await state.runtime.knowledgeStore.saveFragranceCollectionItem({
         productId,
         status: existing.status,
-        note: note.trim() ? note : null,
+        note,
       });
       state.profile = state.runtime.knowledgeStore.getFragranceProfile();
-      state.profileMessage = note.trim() ? "Nota privada guardada en tu perfil local." : "Nota privada eliminada.";
+      state.profileMessage = "Nota privada guardada en tu perfil local.";
       state.editingCollectionNoteId = null;
     } catch (error) {
       state.profileMessage = error instanceof Error ? error.message : "No se pudo guardar la nota.";
