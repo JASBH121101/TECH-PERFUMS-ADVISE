@@ -1,6 +1,6 @@
 import "./styles.css";
 import "./update-accessibility.css";
-import { formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
+import { displayFragranceBrand, formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
 import { safeExternalUrl } from "./safe-external-url.js";
 import { DOMAINS, buildFragranceComparison } from "../../../src/index.js";
 import { closeStorage, initializeStorage } from "./storage.js";
@@ -256,7 +256,7 @@ function renderAdviceResults() {
         <button type="button" class="advice-card partial-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
           <div class="advice-card-head">
             <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
-            <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(product?.brand ?? "Casa no indicada")} · ${escapeHtml(family)} · Alternativa parcial</small></span>
+            <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · ${escapeHtml(family)} · Alternativa parcial</small></span>
             <span class="match-score">${item.score}%</span>
           </div>
           ${reasons}
@@ -287,7 +287,7 @@ function renderAdviceResults() {
       <button type="button" class="advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
         <div class="advice-card-head">
           <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
-          <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(product?.brand ?? "Casa no indicada")} · ${escapeHtml(family)}</small></span>
+          <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · ${escapeHtml(family)}</small></span>
           <span class="match-score">${item.score}%</span>
         </div>
         ${reasons}
@@ -339,7 +339,7 @@ function renderManagedFragranceCard(product, {
     <article class="collection-card">
       <button type="button" class="collection-open" data-action="open-fragrance" data-id="${productId}">
         <span class="result-monogram">F</span>
-        <span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.brand ?? "Casa no indicada")}</small><em>${escapeHtml(family)}</em></span>
+        <span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))}</small><em>${escapeHtml(family)}</em></span>
         <span class="result-arrow">↗</span>
       </button>
       ${collectionItem ? `<div class="collection-status"><span>Estado</span><strong>${escapeHtml(status)}</strong></div>` : ""}
@@ -470,7 +470,7 @@ function renderComparisonValue(value) {
 function renderFragranceComparisonMatrix(result) {
   if (!result) return "";
   const header = result.columns.map(product => `
-    <th><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.brand ?? "Casa no indicada")}</small></th>`).join("");
+    <th><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))}</small></th>`).join("");
   const rows = result.fields.map(field => `
     <tr><th scope="row">${escapeHtml(field.label)}<small>${field.available}/${field.total} con dato</small></th>
       ${field.values.map(item => `<td>${renderComparisonValue(item.available ? item.value : null)}</td>`).join("")}
@@ -524,7 +524,7 @@ function renderComparisonSearchResults() {
       <label class="comparison-option ${selected ? "selected" : ""}">
         <input type="checkbox" name="fragrance-compare-product" value="${escapeHtml(product.id)}"
           ${selected ? "checked" : ""} ${disabled ? "disabled" : ""}>
-        <span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.brand ?? "Casa no indicada")}</small></span>
+        <span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))}</small></span>
         <em>${selected ? "Seleccionado" : "Añadir"}</em>
       </label>`;
   }).join("") : `<div class="empty-panel compact"><strong>No encontramos coincidencias</strong><p>Prueba con el nombre del perfume o su casa.</p></div>`;
@@ -570,7 +570,7 @@ function renderFragranceDetail(product) {
   return `
     <section class="detail-top"><button type="button" class="back-link" data-action="back-to-fragrance">← Volver a fragancias</button>
       <span class="kicker">FICHA DE FRAGANCIA</span><div class="detail-monogram">F</div>
-      <h1>${escapeHtml(product.name)}</h1><p class="detail-brand">${escapeHtml(product.brand)}</p>
+      <h1>${escapeHtml(product.name)}</h1><p class="detail-brand">${escapeHtml(displayFragranceBrand(product.brand))}</p>
       <div class="tag-row"><span>${escapeHtml(formatFragranceConcentration(attributes.concentrationLabel))}</span><span>${escapeHtml(attributes.releaseYear ?? "Año no indicado")}</span></div>
       <div class="detail-actions">
         <div><span>Tu estado</span><strong>${escapeHtml(collectionStatus)}</strong></div>
@@ -871,7 +871,7 @@ function renderFragranceSearchResults() {
       const family = product.attributes.primaryScentFamily ?? product.attributes.scentFamilies?.[0] ?? "Familia no indicada";
       const concentration = product.attributes.concentrationLabel ?? "Concentración no indicada";
       return `<button class="result-card" type="button" data-action="open-fragrance" data-id="${encodeURIComponent(product.id)}">
-        <span class="result-monogram">F</span><span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.brand)} · ${escapeHtml(concentration)}</small><em>${escapeHtml(family)}</em></span><span class="result-arrow">↗</span>
+        <span class="result-monogram">F</span><span class="result-copy"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(displayFragranceBrand(product.brand))} · ${escapeHtml(concentration)}</small><em>${escapeHtml(family)}</em></span><span class="result-arrow">↗</span>
       </button>`;
     }).join("")}`
     : `<div class="empty-panel compact"><strong>No encontramos coincidencias</strong><p>Revisa la escritura o prueba con otra marca, familia o nota.</p></div>`;
