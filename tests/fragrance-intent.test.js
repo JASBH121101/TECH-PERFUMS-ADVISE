@@ -100,3 +100,43 @@ test("reference-only requests are not silently converted into unsupported scent 
   assert.equal(result.preferences.preferredFamilies, undefined);
   assert.equal(result.needsClarification, true);
 });
+
+
+test("understands a short gym request using the catalog's real fragrance character labels", () => {
+  const result = parseFragranceCustomerMessage("Para gimnasio");
+  assert.equal(result.usageContext, "gym");
+  assert.equal(result.usageContextLabel, "Gimnasio");
+  assert.equal(result.preferences.occasion, "day");
+  assert.deepEqual(result.preferences.preferredCharacters, ["fresh", "clean", "citrusy"]);
+  assert.equal(result.needsClarification, false);
+});
+
+test("distinguishes physically demanding work from light or office work", () => {
+  const heavy = parseFragranceCustomerMessage("Para trabajo pesado");
+  assert.equal(heavy.usageContext, "physical_work");
+  assert.equal(heavy.preferences.occasion, "day");
+  assert.deepEqual(heavy.preferences.preferredCharacters, ["fresh", "clean", "citrusy", "herbal"]);
+
+  const light = parseFragranceCustomerMessage("Para trabajo leve");
+  assert.equal(light.usageContext, "light_work");
+  assert.equal(light.preferences.occasion, "office");
+  assert.deepEqual(light.preferences.preferredCharacters, ["clean", "fresh"]);
+});
+
+test("keeps a generic outing ambiguous and asks whether it is daytime or nighttime", () => {
+  const result = parseFragranceCustomerMessage("Para salir");
+  assert.equal(result.usageContext, "social_outing");
+  assert.equal(result.needsClarification, true);
+  assert.equal(result.clarificationPrompt, "¿La salida será de día o de noche?");
+});
+
+test("recognizes short daily and explicitly timed outing requests", () => {
+  const daily = parseFragranceCustomerMessage("Para diario");
+  assert.equal(daily.usageContext, "daily");
+  assert.equal(daily.preferences.occasion, "day");
+
+  const night = parseFragranceCustomerMessage("Para salir de noche");
+  assert.equal(night.usageContext, "social_outing");
+  assert.equal(night.preferences.occasion, "evening");
+  assert.equal(night.needsClarification, false);
+});
