@@ -1,6 +1,6 @@
 import "./styles.css";
 import "./update-accessibility.css";
-import { displayFragranceBrand, formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
+import { displayFragranceBrand, displayFragranceFamilies, displayFragranceFamily, formatFragranceConcentration, localizeFragranceList } from "./fragrance-localization.js";
 import { safeExternalUrl } from "./safe-external-url.js";
 import { DOMAINS, buildFragranceComparison } from "../../../src/index.js";
 import { closeStorage, initializeStorage } from "./storage.js";
@@ -256,7 +256,7 @@ function renderAdviceResults() {
         <button type="button" class="advice-card partial-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
           <div class="advice-card-head">
             <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
-            <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · ${escapeHtml(family)} · Alternativa parcial</small></span>
+            <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · Familia: ${escapeHtml(displayFragranceFamily(family))} · Alternativa parcial</small></span>
             <span class="match-score">${item.score}%</span>
           </div>
           ${reasons}
@@ -287,7 +287,7 @@ function renderAdviceResults() {
       <button type="button" class="advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
         <div class="advice-card-head">
           <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
-          <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · ${escapeHtml(family)}</small></span>
+          <span class="advice-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(displayFragranceBrand(product?.brand))} · Familia: ${escapeHtml(displayFragranceFamily(family))}</small></span>
           <span class="match-score">${item.score}%</span>
         </div>
         ${reasons}
@@ -585,7 +585,7 @@ function renderFragranceDetail(product) {
       </div>
     </section>
     <section class="detail-block"><span class="kicker">PERFIL OLFATIVO</span><h2>Familias y carácter</h2>
-      <p>${displayList(attributes.scentFamilies, "family")}</p>
+      <p>${escapeHtml(displayFragranceFamilies(attributes.scentFamilies))}</p>
       <div class="note-grid">
         <div><small>SALIDA</small><strong>${displayList(attributes.topNotes, "note")}</strong></div>
         <div><small>CORAZÓN</small><strong>${displayList(attributes.middleNotes, "note")}</strong></div>
