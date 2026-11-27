@@ -102,3 +102,19 @@ test("Fragrance comparison matrix localizes notes, character, concentration and 
   assert.match(main, /formatFragranceConcentration\(item\)/u);
   assert.match(main, /renderComparisonValue\(item\.available \? item\.value : null, field\.key\)/u);
 });
+
+
+test("Fragrance Advisor blocks contradictory requests and shows the clarification required", async () => {
+  const main = await readMain();
+  assert.match(main, /result\\.conflicts\\?\\.length/u);
+  assert.match(main, /No voy a ordenar fragancias hasta aclararlos/u);
+  assert.match(main, /intent-conflict-list/u);
+  assert.match(main, /conflict\\.question/u);
+});
+
+test("Fragrance Advisor discloses which comparative reference adjustments were applied or unresolved", async () => {
+  const main = await readMain();
+  assert.match(main, /referenceModifierResolution/u);
+  assert.match(main, /Ajustes relativos aplicados/u);
+  assert.match(main, /Ajustes relativos no verificables/u);
+});
