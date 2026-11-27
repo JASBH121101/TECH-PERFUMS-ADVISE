@@ -1,0 +1,69 @@
+name: JB Advisor Engine CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/jb-advisor-engine
+      - feature/jbae-standalone-android-app
+      - feature/jbae-olfactory-profile
+      - feature/jbae-fragrance-collection
+      - feature/jbae-collection-management
+      - feature/jbae-integrated-flow-hardening
+      - feature/jbae-integration-audit
+      - feature/jbae-android-certification
+  pull_request:
+    branches:
+      - main
+      - feature/jbae-standalone-android-app
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Node.js 22 validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check JavaScript syntax
+        run: |
+          set -euo pipefail
+          find src tests scripts apps/mobile/src apps/mobile/scripts -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -r -n1 node --check
+
+      - name: Run engine tests
+        run: npm test
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm install --no-audit --no-fund
+
+      - name: Run mobile app tests
+        run: npm --prefix apps/mobile test
+
+      - name: Build mobile web bundle
+        working-directory: apps/mobile
+        run: npm run build
+
+      - name: Build complete fragrance knowledge seed
+        run: npm run build:fragrance-library
+
+      - name: Publish fragrance library coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: fragrance-library-coverage
+          path: |
+            dist/fragrance-library/scento-library-coverage.json
+            dist/fragrance-library/scento-library-coverage.md
+            dist/fragrance-library/fragrance-quality-audit.json
+            dist/fragrance-library/fragrance-quality-audit.md
+          if-no-files-found: error
+          retention-days: 30

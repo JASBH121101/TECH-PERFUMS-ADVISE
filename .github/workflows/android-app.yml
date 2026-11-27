@@ -1,0 +1,241 @@
+name: JBAE Android Release
+
+on:
+  push:
+    branches:
+      - main
+      - feature/jbae-standalone-android-app
+      - feature/jbae-android-certification
+    paths:
+      - "apps/mobile/**"
+      - "!apps/mobile/README.md"
+      - "src/**"
+      - "data/fragrance/**"
+      - ".github/workflows/android-app.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jbae-android-release
+  cancel-in-progress: true
+
+jobs:
+  build-release:
+    name: Test, sign and publish JBAE APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Resolve release version
+        id: release-version
+        working-directory: apps/mobile
+        run: node scripts/resolve-release-version.mjs
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm install --no-audit --no-fund
+      - name: Test mobile application
+        working-directory: apps/mobile
+        run: npm test
+      - name: Test advisor engine
+        run: npm test
+      - name: Build searchable CoreInfo technology catalogue
+        working-directory: apps/mobile
+        run: node scripts/build-technology-catalog.mjs
+      - name: Build web bundle and offline seed
+        working-directory: apps/mobile
+        env:
+          VITE_APP_VERSION: ${{ steps.release-version.outputs.app_version }}
+        run: npm run build
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install Android SDK platform
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Generate Android project
+        working-directory: apps/mobile
+        run: npx cap add android
+      - name: Sync Capacitor plugins and assets
+        working-directory: apps/mobile
+        run: npx cap sync android
+      - name: Install native updater plugin
+        working-directory: apps/mobile
+        run: node scripts/install-android-updater.mjs
+      - name: Verify native Android system-bar insets
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN_ACTIVITY="$(find apps/mobile/android/app/src/main/java -name MainActivity.java -print -quit)"
+          test -n "$MAIN_ACTIVITY"
+          grep -Fq "WindowCompat.setDecorFitsSystemWindows(window, false)" "$MAIN_ACTIVITY"
+          grep -Fq "ViewCompat.setOnApplyWindowInsetsListener(content" "$MAIN_ACTIVITY"
+          grep -Fq "ViewCompat.requestApplyInsets(content)" "$MAIN_ACTIVITY"
+          grep -Fq "WindowInsetsCompat.Type.systemBars()" "$MAIN_ACTIVITY"
+          echo "Verified native system-bar insets handler in $MAIN_ACTIVITY"
+      - name: Restore JBAE signing identity from protected repository secrets
+        env:
+          JBAE_ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.JBAE_ANDROID_SIGNING_KEYSTORE_BASE64 }}
+          JBAE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.JBAE_ANDROID_KEYSTORE_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYSTORE="$HOME/.android/jbae-release.p12"
+          KEY_ALIAS="jbae-release-2026"
+          if [ -z "${JBAE_ANDROID_SIGNING_KEYSTORE_BASE64:-}" ]; then
+            echo "::error::Missing repository secret JBAE_ANDROID_SIGNING_KEYSTORE_BASE64."
+            exit 1
+          fi
+          if [ -z "${JBAE_ANDROID_KEYSTORE_PASSWORD:-}" ]; then
+            echo "::error::Missing repository secret JBAE_ANDROID_KEYSTORE_PASSWORD."
+            exit 1
+          fi
+          mkdir -p "$HOME/.android"
+          printf '%s' "$JBAE_ANDROID_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          if ! keytool -list -storetype PKCS12 -keystore "$KEYSTORE" -storepass "$JBAE_ANDROID_KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
+            rm -f "$KEYSTORE"
+            echo "::error::The supplied JBAE PKCS12 keystore/password/alias could not be validated."
+            exit 1
+          fi
+          CERT_SHA256="$(keytool -list -v -storetype PKCS12 -keystore "$KEYSTORE" -storepass "$JBAE_ANDROID_KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | awk -F': ' '/SHA256:/{gsub(/:/, "", $2); print toupper($2); exit}')"
+          if [ -z "$CERT_SHA256" ]; then
+            rm -f "$KEYSTORE"
+            echo "::error::Could not read the JBAE signing certificate fingerprint."
+            exit 1
+          fi
+          echo "JBAE_SIGNING_CERT_SHA256=$CERT_SHA256" >> "$GITHUB_ENV"
+          echo "Loaded the JBAE signing identity from protected repository secrets."
+      - name: Set Android version and protected signing configuration
+        env:
+          APP_VERSION: ${{ steps.release-version.outputs.app_version }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+          JBAE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.JBAE_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          path = Path("apps/mobile/android/app/build.gradle")
+          source = path.read_text(encoding="utf-8")
+          source, count_code = re.subn(r'versionCode\s+1\b', "versionCode " + os.environ["VERSION_CODE"], source, count=1)
+          source, count_name = re.subn(r'versionName\s+"[^"]+"', 'versionName "' + os.environ["APP_VERSION"] + '"', source, count=1)
+          if count_code != 1 or count_name != 1:
+              raise SystemExit("Could not set Android versionCode/versionName exactly once.")
+          if "signingConfigs {" not in source:
+              block = '''
+              signingConfigs {
+                  release {
+                      storeFile file(System.getProperty("user.home") + "/.android/jbae-release.p12")
+                      storeType "PKCS12"
+                      storePassword System.getenv("JBAE_ANDROID_KEYSTORE_PASSWORD")
+                      keyAlias "jbae-release-2026"
+                      keyPassword System.getenv("JBAE_ANDROID_KEYSTORE_PASSWORD")
+                  }
+              }
+              '''
+              source = source.replace("android {", "android {\n" + block, 1)
+          build_types = re.search(r'buildTypes\s*\{', source)
+          if not build_types:
+              raise SystemExit("Gradle buildTypes block was not found.")
+          release = re.search(r'release\s*\{', source[build_types.end():])
+          if not release:
+              raise SystemExit("Gradle release build type was not found.")
+          release_start = build_types.end() + release.start()
+          start = release_start + release.end()
+          depth, end = 1, start
+          while end < len(source) and depth:
+              if source[end] == "{": depth += 1
+              elif source[end] == "}": depth -= 1
+              end += 1
+          block = source[release_start:end]
+          if "signingConfig" not in block:
+              block = block[:-1] + "\n            signingConfig signingConfigs.release\n        }"
+              source = source[:release_start] + block + source[end:]
+          path.write_text(source, encoding="utf-8")
+          PY
+      - name: Assemble signed release APK
+        working-directory: apps/mobile/android
+        env:
+          JBAE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.JBAE_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+      - name: Verify APK signature, certificate fingerprint and package
+        env:
+          APP_VERSION: ${{ steps.release-version.outputs.app_version }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          SIGNATURE_INFO="$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK")"
+          printf '%s\n' "$SIGNATURE_INFO"
+          ACTUAL_CERT_SHA256="$(printf '%s\n' "$SIGNATURE_INFO" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{gsub(/:/, "", $2); print toupper($2); exit}')"
+          if [ -z "$ACTUAL_CERT_SHA256" ] || [ "$ACTUAL_CERT_SHA256" != "$JBAE_SIGNING_CERT_SHA256" ]; then
+            echo "::error::The APK certificate fingerprint does not match the protected JBAE keystore."
+            exit 1
+          fi
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.jb.advisor.mobile' versionCode='$VERSION_CODE' versionName='$APP_VERSION'"
+          sha256sum "$APK"
+          echo "Verified JBAE signing certificate SHA-256: $ACTUAL_CERT_SHA256"
+      - name: Prepare signed APK artifact for certification
+        run: cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk JBAE.apk
+      - name: Publish installable APK release
+        if: github.ref_name != 'feature/jbae-android-certification'
+        env:
+          APP_VERSION: ${{ steps.release-version.outputs.app_version }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="jbae-v$APP_VERSION"
+          NOTES="$(cat <<EOF
+          JBAE Android release
+          App version: $APP_VERSION
+          versionCode: $VERSION_CODE
+          Source commit: $(git rev-parse HEAD)
+          Package: com.jb.advisor.mobile
+          Contents: FRAGRANCE advisor, local SQLite profile/collection, and the JBAE Android updater. TECH remains in source but is disabled by the product feature flag.
+          Build checks: engine/mobile tests, signed APK package/version verification, and published-asset byte comparison.
+          Distribution: direct APK download. Android requires user confirmation before installation. This is not a Google Play release.
+          EOF
+          )"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" JBAE.apk --clobber
+            gh release edit "$TAG" --title "JBAE v$APP_VERSION" --notes "$NOTES"
+          else
+            gh release create "$TAG" JBAE.apk --title "JBAE v$APP_VERSION" --notes "$NOTES" --target "$(git rev-parse HEAD)"
+          fi
+      - name: Verify published APK asset
+        if: github.ref_name != 'feature/jbae-android-certification'
+        env:
+          APP_VERSION: ${{ steps.release-version.outputs.app_version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          URL="https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/releases/download/jbae-v$APP_VERSION/JBAE.apk"
+          curl --fail --silent --show-error --location --retry 4 --retry-all-errors "$URL" -o "$RUNNER_TEMP/JBAE-published.apk"
+          cmp JBAE.apk "$RUNNER_TEMP/JBAE-published.apk"
+          echo "Published APK matches the signed release artifact byte-for-byte."
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JBAE-Android-v${{ steps.release-version.outputs.app_version }}
+          path: JBAE.apk
+          retention-days: 14

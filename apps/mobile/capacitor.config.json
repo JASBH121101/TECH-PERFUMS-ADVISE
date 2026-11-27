@@ -1,0 +1,14 @@
+{
+  "appId": "com.jb.advisor.mobile",
+  "appName": "JBAE",
+  "webDir": "dist",
+  "backgroundColor": "#090d13",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorSQLite": {
+      "androidIsEncryption": false
+    }
+  }
+}

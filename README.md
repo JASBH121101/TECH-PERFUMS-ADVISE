@@ -2,27 +2,52 @@
 
 **Independent product-advisory intelligence for fragrance and technology.**
 
-JB Advisor Engine is the intelligence layer behind the TECH-PERFUMS-ADVISE Android application. It combines deterministic domain rules, evidence-backed research, product comparison, and preference-aware recommendations.
+JB Advisor Engine (JBAE) is the deterministic intelligence core used by the standalone TECH-PERFUMS-ADVISE Android application. It combines domain-specific normalization, provenance-aware evidence, explainable product comparison, preference-based recommendations, and controlled research intake.
 
 ## Product identity
 
 - **Engine:** JB Advisor Engine (JBAE)
 - **Tagline:** Understand. Compare. Recommend.
 - **Domains:** Fragrance and personal technology
-- **Application modules:** Fragrance Advisor and Tech Advisor
+- **App modules:** FRAGRANCE Advisor and TECH Advisor, delivered in the independent Capacitor Android application under `apps/mobile/`
 
 ## Architecture principles
 
-1. Evidence before assertion: every sourced fact keeps provenance and retrieval date.
-2. Deterministic decisions: scoring and validation rules are explicit, testable, and explainable.
-3. Hybrid autonomy: routine unverified knowledge can be refreshed automatically; verified facts, policy changes, destructive actions, and cost-bearing integrations require approval.
-4. Offline-first: local knowledge and core rules remain usable without a network connection.
-5. Domain separation: fragrance and technology use separate domain models and scoring criteria.
-6. Privacy and cost control: no secrets in source code; external paid services are opt-in.
+1. Evidence before assertion: sourced facts retain provenance, status, confidence and observation time.
+2. Deterministic decisions: validation, comparison and scoring are explicit, testable and explainable.
+3. Human approval: research candidates remain unconfirmed; adding them to local knowledge requires explicit approval.
+4. Offline-first: deterministic rules and local knowledge do not require a network connection.
+5. Domain separation: fragrance and technology use separate product models, units and comparison criteria.
+6. Privacy and cost control: no credentials in source code; fragrance research uses no-cost sources only. Paid APIs, paid trials and subscription fallbacks are excluded unless the owner explicitly changes this policy.
 
-## Repository layout
+## Implemented engine layers
 
-The `main` branch contains the public application foundation. Active engine development takes place in `feature/jb-advisor-engine`.
+- **Domain adapters:** normalized fragrance types (perfume, body mist, body spray, attar/oil and body lotion) and technology types spanning mobile, computing, gaming, displays, wearables, audio, imaging, networking and peripherals.
+- **Evidence Engine:** append-only claims, provenance, evidence statuses, deep immutable values and conflict detection.
+- **Comparison Engine:** domain- and category-safe comparison for 2–4 candidates, with missing-data and evidence coverage accounting.
+- **Recommendation Engine:** configurable priorities, domain profiles, minimum coverage gates, tie handling and explainable strengths/compromises.
+- **Knowledge Engine:** schema v2 snapshot, persisted domain-separated product catalog, evidence-linked products, version migrations, validated JSON backup and non-destructive merge restore.
+- **Fragrance Library:** attributed 1,479-perfume Scento seed, 160 houses, 420 materials and 20,280 field-scoped reported evidence records; searchable offline by perfume, house, family, concentration and note. The build generates field-coverage metrics, note-pyramid completeness and family/house/note distributions.
+- **Offline fragrance similarity:** deterministic weighted Jaccard discovery using shared notes (65%), families (20%), character traits (10%) and seasons (5%); results explain shared attributes and explicitly do not claim clone/equivalence.
+- **Fragrance preference matching:** explainable, weighted fit against preferred families, notes, character, occasion, climate, intensity and projection; hard exclusions for avoided notes and disallowed product types; missing or incomplete data cannot be treated as a match. See [Fragrance preference matching](docs/fragrance-matching.md).
+- **Product Identity Matcher:** deterministic cross-source identity matching using GTIN/EAN/UPC, manufacturer identifiers, brand, model, category and variant attributes. Distinguishes exact variants from same-family candidates; never auto-merges.
+- **Local Catalog Index:** offline search by exact ID/model/name, aliases, brand and selected attributes; case/diacritic insensitive, bounded, deterministic and domain-filtered. Supports identity-aware match lookup; potential duplicates are flagged for review, never auto-merged.
+- **SQLite adapter:** transactional persistence adapter for an already opened Capacitor SQLite connection, with schema version checks and SQLite quick integrity check.
+- **Advisor Core:** deterministic orchestration of normalization, evidence integration and recommendation.
+- **Customer intent and explanation:** conservative Spanish/English phrase extraction, structured-preference precedence, hard non-intrusive ceilings and customer-facing explanations that do not invent performance ranges.
+- **Public ESM API:** stable root package entry point with consumer contract tests for the advisor, local knowledge, Capacitor adapter and fragrance matching APIs.
+- **Research Engine:** provider-agnostic research intake; Scento and 10ML Fragrance Index (fragrance), Open Beauty Facts exact-barcode cosmetics lookup, Wikidata, TechAPI (opt-in), CoreInfo (technology), SICSA Nicaragua and five additional Nicaragua retailer page adapters return unconfirmed candidates that require explicit approval before staging. The 10ML provider is free/no-key, uses bounded cached GET queries, and carries the mandatory visible attribution metadata. Open Beauty Facts lookup is GTIN-only and beauty-database-scoped, preserves ODbL/database-content attribution, excludes CC BY-SA product images and never assigns product type automatically. The fragrance workflow does not use paid catalog APIs, paid trials or subscription fallbacks. Retailer adapters use allowlisted exact product URLs, not claimed official APIs.
+- **Nicaragua Retailer Comparison:** compares exact product URLs across RadioShack, La Curacao and SIMAN. The comparison uses the product identity matcher, requires exact-variant evidence before price ranking, blocks currency/tax mismatches and supports partial results without naming a global winner.
+
+## Nicaragua retailer coverage
+
+Read-only exact-product adapters are implemented for RadioShack, La Curacao, El Gallo Más Gallo and Almacenes SIMAN. SIMAN uses the documented public VTEX Legacy Search endpoint; the other three read the retailer's exact product page. They preserve original source URLs, market, currency, tax signal and observation time. The El Verdugo catalog adapter is limited to product identity, SKU and explicitly published warranty; price and stock remain disabled pending current local evidence. CONICO remains a manual quotation/proforma source because no stable public current catalogue or API has been verified.
+
+No official API is assumed for these retailers. Category crawling, login, checkout, order placement, inferred stock, currency conversion and landed-price calculation are out of scope. The live Galaxy A17 comparison confirms the same GTIN/MPN and 4 GB + 128 GB configuration at RadioShack and La Curacao. SIMAN returns a product-level SKU, price and stock, but its selected SKU does not expose a GTIN/MPN, so it remains outside the exact-identity price subset. See [Nicaragua retailer expansion](docs/nicaragua-retailer-expansion.md) and [Nicaragua retailer comparison](docs/nicaragua-retailer-comparison.md) for contracts and limitations.
+
+## Repository workflow
+
+Engine development continues in `feature/jb-advisor-engine`; the standalone Android application is maintained in `feature/jbae-standalone-android-app`. The application consumes the existing engine from `src/` and adds its own UI, native SQLite lifecycle, Android updater and GitHub Pages preview in `apps/mobile/`. The app branch is currently 312 commits ahead of `main`; `main` remains unchanged pending explicit integration approval. JBAE is independent of JB Manager. See [mobile app documentation](apps/mobile/README.md) and [JB Manager integration contract](docs/jb-manager-integration.md).
 
 ## Development
 
@@ -37,10 +62,32 @@ npm run check
 npm test
 ```
 
+The GitHub Actions validation workflow checks JavaScript syntax and runs the full test suite. A separate private JB Expert QA workflow audits the public project without copying private QA source into this repository.
+
+## Current validation
+
+On 2026-11-08, the latest successful JBAE CI run passed **308/308 engine tests** and **37/37 mobile tests**, plus JavaScript syntax validation and the fragrance-library build. The mobile release workflow also completed the Android Release build, package/version check, APK signature verification and release-asset byte-for-byte verification. The published initial Android release is `jbae-v0.4.0` (`versionCode=21`; 12,834,636 bytes). The [successful Android Release run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337409) and [successful CI run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337414) are available in GitHub Actions.
+
+The Pages preview deployed successfully at [JBAE GitHub Pages](https://jasbh121101.github.io/TECH-PERFUMS-ADVISE/) (see [deployment run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524466802)). JB Expert QA passed with **97/100**, 27 rules executed and 0 rule-execution errors. It reported five findings: two medium-severity findings (`code-quality.file-size` and `security.dynamic-code`, the latter requiring manual review of an HTML sink) and three informational findings. The dynamic source-link destinations are being restricted to absolute HTTPS URLs and covered by dedicated tests; the large UI module remains a maintainability task. See the [latest QA run](https://github.com/JASBH121101/TECH-PERFUMS-ADVISE/actions/runs/42524337656).
+
+The workflow verifies compilation, signing metadata and publication integrity. It does **not** prove installation, SQLite persistence after process termination, updater behavior or responsive behavior on a physical Android device. Fragrance source records remain reported rather than independently verified; local retailer prices and availability also require fresh source checks.
+
+## Fragrance library seed
+
+A dated Scento dataset snapshot is included under `data/fragrance/sources/scento-2026-10-29/`: 1,479 perfumes, 160 houses and 420 materials under CC BY 4.0 with attribution. It includes 331 records from 11 selected Middle Eastern / Arabic-fragrance houses. JBAE normalizes the records and imports field-level provenance as `reported`; it does not silently mark the claims verified. The seed currently covers perfumes, not a verified bulk catalog of body mists, body sprays, oils or lotions. See [Fragrance Library](docs/fragrance-library.md). Run `npm run build:fragrance-library` to build the Knowledge Store seed, supporting reference file and coverage report.
+
+## Remaining implementation and device-validation work
+
+- Mobile TECH now exposes a 2–4 device comparison table, unit-normalized variant matching, source-conflict visibility and an optional relative score for a selected metric when all devices have comparable values. Results remain unverified candidates. The mobile app now offers an explicit save action that imports each eligible field with `reported` evidence in one knowledge snapshot; promotion to `verified` or `cross_checked` remains a separate human-review step.
+- Validate native SQLite seed import, reopen, process-kill/restart recovery and backup/restore on an Android emulator and physical device. SQLCipher encryption is not enabled in this phase.
+- Pages PWA shell implemented with app icons, manifest and same-origin service-worker caching. Browser preview data still uses session memory and does not persist across reloads; durable browser storage remains pending.
+- Expand the fragrance seed beyond its current perfume-only snapshot before claiming broad body-mist, body-spray, oil or lotion coverage.
+- Resolve SIMAN's selected-variant GTIN/MPN for the Galaxy A17 page before including it in the exact-identity price subset.
+- El Gallo Más Gallo remains deferred pending diagnosis of runner transport behavior; wider Nicaragua retailer coverage and exact-SKU matching across additional stores remain pending.
+- OCR intake and a representative, independently reviewed benchmark dataset with certification thresholds for recommendation quality remain pending.
+
+The mobile TECH flow now supports 2–4 device comparisons, source-conflict handling, variant-aware IDs and explicit approval to save eligible fields as `reported` evidence in a single KnowledgeStore snapshot. The Pages PWA shell precaches its built JS/CSS, manifest and icons. The mobile application supplies the native SQLite connection lifecycle and consumes the engine's `CapacitorSQLiteKnowledgeAdapter`. Passing CI and APK-signature checks does not substitute for emulator or physical-device certification.
+
 ## Security
 
-Never commit API keys, access tokens, private customer data, or local environment files. Use GitHub Actions secrets for CI credentials.
-
-## Status
-
-Foundation initialized. Engine implementation and domain modules are developed incrementally and validated before integration into the Android application.
+Never commit API keys, access tokens, private customer data or local environment files. Keep API secrets out of the APK and use platform secure storage or a server-side integration where required.
