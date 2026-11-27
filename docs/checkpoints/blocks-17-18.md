@@ -1,3 +1,5 @@
+> **CHECKPOINT HISTÓRICO.** Los bloques 17–18 fueron ampliados por los bloques 19–20. Para el estado completo, protección de ramas, nuevas implementaciones y siguiente etapa, continuar desde [docs/checkpoints/blocks-19-20.md](./blocks-19-20.md).
+
 # JBAE Checkpoint — Blocks 17–18
 
 Project: JB Advisor Engine (JBAE)
