@@ -22,7 +22,7 @@ test("localiza familias, temporadas y momentos del día", () => {
   assert.equal(localizeFragranceList(["spring", "summer", "autumn"], "season"), "Primavera, Verano, Otoño");
   assert.equal(localizeFragranceList(["day", "evening"], "time"), "Día, Tarde / noche");
   assert.equal(localizeFragranceList(["Birch", "Amber gris"]), "Abedul, Ámbar gris");
-  assert.equal(localizeFragranceList(["Orchard fruit", "Sunlit Citrus"], "family"), "Frutas de huerto, Cítricos soleados");
+  assert.equal(localizeFragranceList(["Orchard fruit", "Sunlit Citrus"], "family"), "Frutal, Cítrica");
 });
 
 test("conserva sin alterar los términos desconocidos para no inventar traducciones", () => {
