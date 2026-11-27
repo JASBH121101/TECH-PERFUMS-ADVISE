@@ -58,7 +58,7 @@ function classifyTermMentions(text, term) {
   while ((match = pattern.exec(text))) {
     const before = text.slice(Math.max(0, match.index - 90), match.index);
     const tail = before.split(/\s+/u).slice(-8).join(" ");
-    const isNegative = /(?:\bno\b(?:\s+\w+){0,6}|\bmenos\b(?:\s+\w+){0,4}|\bsin\b(?:\s+\w+){0,4}|\bnada\s+de(?:\s+\w+){0,3}|\bevitar?\b(?:\s+\w+){0,4}|\bnot\b(?:\s+\w+){0,4})\s*$/u.test(tail);
+    const isNegative = /(?:\bno\b(?:\s+\w+){0,3}|\bmenos\b(?:\s+\w+){0,2}|\bsin\b(?:\s+\w+){0,3}|\bnada\s+de(?:\s+\w+){0,3}|\bevitar?\b(?:\s+\w+){0,3}|\bnot\b(?:\s+\w+){0,2})\s*$/u.test(tail);
     if (isNegative) negative = true;
     else positive = true;
   }
