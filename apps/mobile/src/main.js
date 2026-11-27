@@ -201,11 +201,23 @@ function renderFragranceAdvisorForm() {
 }
 
 function renderAdviceContextSummary(result) {
-  if (!result?.contextSummary) return "";
-  const label = result.usageContextLabel
-    ? '<strong>Contexto detectado: ' + escapeHtml(result.usageContextLabel) + '.</strong> '
+  const parts = [];
+  if (result?.contextSummary) {
+    const label = result.usageContextLabel
+      ? '<strong>Contexto detectado: ' + escapeHtml(result.usageContextLabel) + '.</strong> '
+      : "";
+    parts.push(label + escapeHtml(result.contextSummary));
+  }
+  if (result?.reference) {
+    const referenceName = result.reference.name || result.reference.query;
+    const referenceText = result.reference.matchedInCatalog
+      ? "Referencia del catálogo: " + referenceName + ". Se comparan únicamente sus atributos disponibles."
+      : "Referencia mencionada: " + referenceName + ". No se encontró una ficha local; no se inventaron sus características.";
+    parts.push(escapeHtml(referenceText));
+  }
+  return parts.length
+    ? '<div class="intent-context-summary">' + parts.map(part => '<p>' + part + '</p>').join("") + '</div>'
     : "";
-  return '<p class="intent-context-summary">' + label + escapeHtml(result.contextSummary) + '</p>';
 }
 
 function renderAdviceResults() {
@@ -232,7 +244,7 @@ function renderAdviceResults() {
     const alternatives = visibleAlternatives.map((item, index) => {
       const product = state.products.find(candidate => candidate.id === item.id);
       const family = product?.attributes?.primaryScentFamily ?? product?.attributes?.scentFamilies?.[0] ?? "Familia no indicada";
-      const reason = item.reasons?.[0] ?? "";
+      const reason = item.explanation?.summary ?? item.reasons?.[0] ?? "";
       return `
         <button type="button" class="advice-card compact-advice-card partial-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
           <span class="advice-rank">${String(index + 1).padStart(2, "0")}</span>
@@ -255,7 +267,7 @@ function renderAdviceResults() {
   const items = visibleRecommendations.map((item, index) => {
     const product = state.products.find(candidate => candidate.id === item.id);
     const family = product?.attributes?.primaryScentFamily ?? product?.attributes?.scentFamilies?.[0] ?? "Familia no indicada";
-    const reason = item.reasons?.[0] ?? "";
+    const reason = item.explanation?.summary ?? item.reasons?.[0] ?? "";
     return `
       <article class="advice-result-item">
         <button type="button" class="advice-card compact-advice-card" data-action="open-fragrance" data-id="${encodeURIComponent(item.id)}">
