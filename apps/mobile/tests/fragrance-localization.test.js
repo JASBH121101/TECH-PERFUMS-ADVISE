@@ -18,7 +18,7 @@ test("traduce notas de salida, corazón y fondo conocidas al español", () => {
 });
 
 test("localiza familias, temporadas y momentos del día", () => {
-  assert.equal(localizeFragranceList(["Velvet Sweet", "Petal Garden"], "family"), "Dulzor aterciopelado, Jardín de pétalos");
+  assert.equal(localizeFragranceList(["Velvet Sweet", "Petal Garden"], "family"), "Dulce / gourmand, Floral");
   assert.equal(localizeFragranceList(["spring", "summer", "autumn"], "season"), "Primavera, Verano, Otoño");
   assert.equal(localizeFragranceList(["day", "evening"], "time"), "Día, Tarde / noche");
   assert.equal(localizeFragranceList(["Birch", "Amber gris"]), "Abedul, Ámbar gris");
