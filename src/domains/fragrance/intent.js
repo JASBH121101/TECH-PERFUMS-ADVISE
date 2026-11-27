@@ -46,7 +46,7 @@ function includesAny(text, terms) {
   return terms.some(term => new RegExp("\\b" + escapeRegExp(normalizeText(term)) + "\\b", "u").test(text));
 }
 function hasNegatedTerm(text, term) {
-  const prefix = "(?:no\\s+(?:quiero|me\\s+gusta(?:n)?|soporto|busco)(?:\\s+(?:algo|un|una|el|la|los|las|nada|muy|tan|demasiado|tanto|tanta))*|no\\s+tan|no|que\\s+no\\s+sea(?:\\s+(?:muy|tan|demasiado))?|que\\s+no\\s+tenga|nada\\s+de|sin|evita|evitar)";
+  const prefix = "(?:no\\s+(?:quiero|me\\s+gusta(?:n)?|soporto|busco)(?:\\s+(?:algo|un|una|el|la|los|las|nada|muy|tan|demasiado|tanto|tanta))*|no\\s+tan|menos|no|que\\s+no\\s+sea(?:\\s+(?:muy|tan|demasiado))?|que\\s+no\\s+tenga|nada\\s+de|sin|evita|evitar)";
   const optionalWords = "(?:(?:ningun|ninguna|ninguno|el|la|los|las|un|una|algo|aroma|aromas|nota|notas|fragancia|fragancias|perfume|perfumes|familia|familias|muy|tan|demasiado|tanto|tanta)\\s+){0,4}";
   return new RegExp("\\b" + prefix + "\\s+" + optionalWords + escapeRegExp(term) + "\\b", "u").test(text);
 }
@@ -126,6 +126,110 @@ function extractReferenceModifiers(text) {
   if (includesAny(text, ["mas intenso", "más intenso", "mas fuerte", "más fuerte", "stronger"])) modifiers.push("stronger");
   if (includesAny(text, ["menos amaderado", "menos madera", "less woody"])) modifiers.push("less_woody");
   return [...new Set(modifiers)];
+}
+
+const ORDINAL_MODIFIER_LEVELS = Object.freeze({
+  intensityLevel: Object.freeze({
+    soft: 1, suave: 1, moderate: 2, moderada: 2, strong: 3, intensa: 3, intenso: 3, very_strong: 4,
+  }),
+  projectionLevel: Object.freeze({
+    close: 1, cercana: 1, moderate: 2, moderada: 2, strong: 3, alta: 3, very_strong: 4,
+  }),
+  sillageLevel: Object.freeze({
+    low: 1, baja: 1, moderate: 2, moderada: 2, strong: 3, alta: 3, very_strong: 4,
+  }),
+});
+const ORDINAL_MODIFIER_TARGETS = Object.freeze({
+  intensityLevel: Object.freeze({ field: "maxIntensity", values: Object.freeze({ 1: null, 2: "soft", 3: "moderate", 4: "strong" }) }),
+  projectionLevel: Object.freeze({ field: "maxProjection", values: Object.freeze({ 1: null, 2: "close", 3: "moderate", 4: "strong" }) }),
+  sillageLevel: Object.freeze({ field: "maxSillage", values: Object.freeze({ 1: null, 2: "low", 3: "moderate", 4: "strong" }) }),
+});
+
+/**
+ * Converts comparative language into preferences only when its meaning is explicit.
+ * "Softer than X" needs a known ordinal value on the reference product; no numeric
+ * longevity or performance claim is inferred from missing catalogue attributes.
+ */
+export function resolveFragranceReferenceModifiers({
+  modifiers = [],
+  referenceAttributes = {},
+  message = "",
+} = {}) {
+  if (!Array.isArray(modifiers) || modifiers.some(item => typeof item !== "string" || !item.trim())) {
+    throw new TypeError("modifiers must be an array of non-empty strings");
+  }
+  if (!referenceAttributes || typeof referenceAttributes !== "object" || Array.isArray(referenceAttributes)) {
+    throw new TypeError("referenceAttributes must be an object");
+  }
+  if (typeof message !== "string") throw new TypeError("message must be a string");
+
+  const preferences = {};
+  const applied = [];
+  const unresolved = [];
+  const add = (field, values) => {
+    preferences[field] = [...new Set([...(preferences[field] ?? []), ...values])];
+  };
+
+  if (modifiers.includes("softer")) {
+    let appliedAny = false;
+    for (const sourceField of ["intensityLevel", "projectionLevel", "sillageLevel"]) {
+      const config = ORDINAL_MODIFIER_TARGETS[sourceField];
+      const rawValue = referenceAttributes[sourceField];
+      const normalized = rawValue == null ? "" : normalizeText(String(rawValue)).replace(/\\s+/gu, "_");
+      const level = ORDINAL_MODIFIER_LEVELS[sourceField][normalized];
+      const target = level ? config.values[level] : null;
+      if (target) {
+        const current = preferences[config.field];
+        preferences[config.field] = current
+          ? (ORDINAL_MODIFIER_LEVELS[sourceField][String(current).replace(/\\s+/gu, "_")] <= level ? current : target)
+          : target;
+        appliedAny = true;
+      } else {
+        unresolved.push(Object.freeze({
+          modifier: "softer",
+          field: sourceField,
+          reason: rawValue == null ? "reference_attribute_missing" : "reference_attribute_at_minimum_or_unrecognized",
+        }));
+      }
+    }
+    if (appliedAny) applied.push("softer");
+  }
+
+  const normalizedMessage = normalizeText(message);
+  if (modifiers.includes("fresher_or_less_sweet")) {
+    let appliedAny = false;
+    if (includesAny(normalizedMessage, ["mas fresco", "más fresco", "mas fresca", "más fresca", "fresher", "more fresh"])) {
+      add("preferredCharacters", ["fresh", "clean"]);
+      appliedAny = true;
+    }
+    if (includesAny(normalizedMessage, ["menos dulce", "less sweet", "no tan dulce", "not too sweet"])) {
+      add("avoidCharacters", ["sweet", "gourmand"]);
+      appliedAny = true;
+    }
+    if (appliedAny) applied.push("fresher_or_less_sweet");
+    else unresolved.push(Object.freeze({ modifier: "fresher_or_less_sweet", field: "wording", reason: "direction_not_explicit" }));
+  }
+  if (modifiers.includes("sweeter")) {
+    preferences.preferredFamilies = [...new Set([...(preferences.preferredFamilies ?? []), "gourmand"])];
+    add("preferredCharacters", ["sweet", "gourmand"]);
+    applied.push("sweeter");
+  }
+  if (modifiers.includes("stronger")) {
+    preferences.intensity = "strong";
+    preferences.projection = "strong";
+    applied.push("stronger");
+  }
+  if (modifiers.includes("less_woody")) {
+    add("avoidFamilies", ["woody"]);
+    applied.push("less_woody");
+  }
+
+  return Object.freeze({
+    preferences: Object.freeze(Object.fromEntries(Object.entries(preferences).map(([key, value]) =>
+      [key, Array.isArray(value) ? Object.freeze(value) : value]))),
+    applied: Object.freeze([...new Set(applied)]),
+    unresolved: Object.freeze(unresolved),
+  });
 }
 
 
@@ -217,6 +321,7 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
   const text = normalizeText(message);
   const preferences = {};
   const signals = [];
+  const conflicts = [];
   const referencePerfumes = extractReferencePerfumes(text);
   const referenceModifiers = extractReferenceModifiers(text);
   const reference = resolveKnownReference(text, knownPerfumes);
@@ -231,7 +336,11 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
   const daily = includesAny(text, ["diario", "de diario", "pa diario", "pal diario", "dia a dia", "todos los dias", "uso diario", "everyday", "daily"]);
   const explicitDay = includesAny(text, ["de dia", "durante el dia", "salida diurna", "en el dia", "daytime"]);
   const explicitOffice = includesAny(text, ["oficina", "office", "escritorio", "trabajo sentado", "trabajo administrativo"]);
-  if (evening) {
+  const daytimeIntent = daily || explicitDay || usageContext === "campus" || usageContext === "gym" || usageContext === "physical_work" || usageContext === "light_work" || explicitOffice;
+  if (evening && daytimeIntent) {
+    conflicts.push(Object.freeze({ field: "occasion", label: "Momento de uso", question: "¿La fragancia se usará de día, de noche o buscás una opción versátil para ambos momentos?" }));
+    signals.push("conflict:occasion");
+  } else if (evening) {
     preferences.occasion = "evening";
     signals.push("occasion:evening");
   } else if (daily || explicitDay || usageContext === "campus" || usageContext === "gym" || usageContext === "physical_work") {
@@ -243,10 +352,15 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
     signals.push("occasion:office");
   }
 
-  if (includesAny(text, ["calor", "caluroso", "calurosa", "humedo", "humeda", "tropical", "clima caliente", "para el calor", "clima calido", "hot weather"])) {
+  const warmClimate = includesAny(text, ["calor", "caluroso", "calurosa", "humedo", "humeda", "tropical", "clima caliente", "para el calor", "clima calido", "hot weather"]);
+  const coldClimate = includesAny(text, ["frio", "fria", "invierno", "cold weather"]);
+  if (warmClimate && coldClimate) {
+    conflicts.push(Object.freeze({ field: "climate", label: "Clima", question: "¿Debo priorizar clima caluroso y húmedo o clima frío?" }));
+    signals.push("conflict:climate");
+  } else if (warmClimate) {
     preferences.climate = "hot_humid";
     signals.push("climate:hot_humid");
-  } else if (includesAny(text, ["frio", "fria", "invierno", "cold weather"])) {
+  } else if (coldClimate) {
     preferences.climate = "cold";
     signals.push("climate:cold");
   }
@@ -266,7 +380,10 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
   const asksStrong = !negatedStrong && includesAny(text, [
     "intenso", "intensa", "fuerte", "potente", "marcado", "strong", "powerful",
   ]);
-  if (asksSoft && !asksStrong) {
+  if (asksSoft && asksStrong) {
+    conflicts.push(Object.freeze({ field: "intensity", label: "Intensidad", question: "¿Preferís una intensidad suave y discreta o una fragancia intensa y potente?" }));
+    signals.push("conflict:intensity");
+  } else if (asksSoft && !asksStrong) {
     if (includesAny(text, softWords)) {
       preferences.intensity = "soft";
       preferences.projection = "close";
@@ -349,9 +466,43 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
     signals.push("performance:long_lasting");
   }
 
+  const overlapConflicts = [
+    ["preferredFamilies", "avoidFamilies", "Familias olfativas"],
+    ["preferredNotes", "avoidNotes", "Notas"],
+    ["preferredCharacters", "avoidCharacters", "Carácter"],
+  ];
+  for (const [positiveField, negativeField, label] of overlapConflicts) {
+    const positive = preferences[positiveField] ?? [];
+    const negative = preferences[negativeField] ?? [];
+    const overlap = positive.filter(value => negative.includes(value));
+    if (overlap.length) {
+      conflicts.push(Object.freeze({
+        field: positiveField,
+        label,
+        values: Object.freeze(overlap),
+        question: "Hay una preferencia y un rechazo para " + overlap.join(", ") + ". ¿Querés incluirlo o evitarlo?",
+      }));
+      preferences[positiveField] = positive.filter(value => !overlap.includes(value));
+      preferences[negativeField] = negative.filter(value => !overlap.includes(value));
+      if (!preferences[positiveField].length) delete preferences[positiveField];
+      if (!preferences[negativeField].length) delete preferences[negativeField];
+      signals.push("conflict:" + positiveField);
+    }
+  }
+  const conflictingModifiers =
+    (referenceModifiers.includes("softer") && referenceModifiers.includes("stronger")) ||
+    (referenceModifiers.includes("sweeter") && referenceModifiers.includes("fresher_or_less_sweet")) ||
+    (referenceModifiers.includes("less_woody") && (preferences.preferredFamilies ?? []).includes("woody"));
+  if (conflictingModifiers) {
+    conflicts.push(Object.freeze({ field: "referenceModifiers", label: "Comparación", question: "Los cambios solicitados para la referencia se contradicen. ¿Qué diferencia querés priorizar?" }));
+    signals.push("conflict:reference_modifiers");
+  }
+
   const contextDetails = usageContext ? USAGE_CONTEXTS[usageContext] : null;
-  const needsClarification = Object.keys(preferences).length === 0;
-  const clarificationPrompt = reference.query && reference.resolution === "not_found" && needsClarification
+  const needsClarification = Object.keys(preferences).length === 0 || conflicts.length > 0;
+  const clarificationPrompt = conflicts.length
+    ? conflicts[0].question
+    : reference.query && reference.resolution === "not_found" && needsClarification
     ? "No encontré esa referencia en el catálogo local. ¿Qué rasgos te gustan de ese perfume?"
     : usageContext === "social_outing" && !preferences.occasion
     ? "¿La salida será de día o de noche?"
@@ -373,6 +524,7 @@ export function parseFragranceCustomerMessage(message, { knownNotes = [], knownP
     usageContextLabel: contextDetails?.label ?? null,
     contextSummary: contextDetails?.summary ?? null,
     clarificationPrompt,
+    conflicts: Object.freeze(conflicts),
     signals: Object.freeze(signals),
     needsClarification,
     note: "Only explicit, recognized customer signals are extracted. Unrecognized or ambiguous wording must be clarified rather than guessed.",
