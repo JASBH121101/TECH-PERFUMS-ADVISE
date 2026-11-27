@@ -215,6 +215,14 @@ function renderAdviceContextSummary(result) {
       : "Referencia mencionada: " + referenceName + ". No se encontró una ficha local; no se inventaron sus características.";
     parts.push(escapeHtml(referenceText));
   }
+  const modifierResolution = result?.referenceModifierResolution;
+  if (modifierResolution?.applied?.length) {
+    parts.push(escapeHtml("Ajustes relativos aplicados: " + modifierResolution.applied.join(", ") + "."));
+  }
+  if (modifierResolution?.unresolved?.length) {
+    const fields = modifierResolution.unresolved.map(item => item.field).filter(Boolean);
+    parts.push(escapeHtml("Ajustes relativos no verificables por datos faltantes o niveles no comparables: " + [...new Set(fields)].join(", ") + "."));
+  }
   return parts.length
     ? '<div class="intent-context-summary">' + parts.map(part => '<p>' + part + '</p>').join("") + '</div>'
     : "";
@@ -267,11 +275,19 @@ function renderAdviceResults() {
   if (!target || !state.adviceResult) return;
   const result = state.adviceResult;
   if (result.status === "needs_preferences") {
-    const title = result.usageContext === "social_outing"
-      ? "Una precisión para tu salida"
-      : "¿Qué aroma está buscando?";
-    const prompt = result.clarificationPrompt || "Describí la ocasión, el estilo o alguna nota.";
-    target.innerHTML = `${renderAdviceContextSummary(result)}<div class="empty-panel compact"><strong>${title}</strong><p>${escapeHtml(prompt)}</p></div>`;
+    const title = result.conflicts?.length
+      ? "Necesito aclarar algunas condiciones"
+      : result.usageContext === "social_outing"
+        ? "Una precisión para tu salida"
+        : "¿Qué aroma está buscando?";
+    const prompt = result.conflicts?.length
+      ? "Hay criterios que se contradicen. No voy a ordenar fragancias hasta aclararlos."
+      : result.clarificationPrompt || "Describí la ocasión, el estilo o alguna nota.";
+    const conflictList = (result.conflicts ?? []).map(conflict =>
+      '<li><strong>' + escapeHtml(conflict.label || "Criterio") + ':</strong> ' +
+      escapeHtml(conflict.question || "Aclarar preferencia") + '</li>'
+    ).join("");
+    target.innerHTML = `${renderAdviceContextSummary(result)}<div class="empty-panel compact"><strong>${title}</strong><p>${escapeHtml(prompt)}</p>${conflictList ? '<ul class="intent-conflict-list">' + conflictList + '</ul>' : ""}</div>`;
     return;
   }
   if (result.status === "error") {
