@@ -166,3 +166,15 @@ test("readability contract overrides compact legacy typography in the shipped in
   assert.ok(accessibility.includes("font-size: 16px !important;"));
   assert.ok(accessibility.includes("font-size: 14px !important;"));
 });
+
+test("fragrance customer requests are ephemeral and old preference filters are cleared on boot", async () => {
+  const source = await read("src/main.js");
+  assert.match(source, /function clearFragranceRequest\(\)/u);
+  assert.match(source, /preferredFamilies: \[\]/u);
+  assert.match(source, /avoidFamilies: \[\]/u);
+  assert.match(source, /Los filtros se usan solo para esta búsqueda/u);
+  assert.doesNotMatch(source, /state\.fragranceForm = \{\s*occasion: state\.profile\.occasion/u);
+  assert.match(source, /data-action="clear-fragrance-request"/u);
+  assert.match(source, /data-action="fragrance-example"/u);
+  assert.match(source, /Buscar esencias para el cliente/u);
+});
