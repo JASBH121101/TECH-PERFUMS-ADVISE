@@ -383,7 +383,7 @@ export function matchFragrances({
     if (values.some(item => item.score === null)) caveats.push("Una o más preferencias carecen de datos o evidencia elegible.");
     if (sourceNoteFields.length && !allNotesComplete) caveats.push("La pirámide de notas es parcial; no se afirma que las notas no registradas estén ausentes.");
     const matchTier = score === null ? "unrated" : score >= 75 ? "strong_match" : score >= 55 ? "partial_match" : "weak_match";
-    const tierHeadline = matchTier === "strong_match" ? "Coincidencia sólida con los criterios disponibles." : matchTier === "partial_match" ? "Alternativa parcial: cumple parte de lo solicitado, con diferencias." : "Coincidencia limitada; no es una de las opciones principales.";
+    const tierHeadline = matchTier === "strong_match" ? "Coincide de forma sólida con los criterios disponibles." : matchTier === "partial_match" ? "Coincide parcialmente: cumple parte de lo solicitado, con diferencias." : "Coincidencia limitada; no es una de las opciones principales.";
     const explanation = Object.freeze({
       headline: reasons.length ? tierHeadline : "No hay suficientes coincidencias positivas para justificar esta opción.",
       reasons: Object.freeze(reasons),
