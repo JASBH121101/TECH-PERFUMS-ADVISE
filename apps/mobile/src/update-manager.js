@@ -1,5 +1,6 @@
 import { apkUpdater } from "./apk-updater.js";
 import { compareVersions, fetchLatestJbaeRelease } from "./update-utils.js";
+import { resolveUpdateState, hasRecoverableInstaller } from "./update-state.js";
 
 const CURRENT_VERSION = import.meta.env.VITE_APP_VERSION || "0.4.0";
 let latestRelease = null;
@@ -8,13 +9,38 @@ let monitorTimer = null;
 let monitorBusy = false;
 let installPermissionPending = false;
 let lastInstallAttempt = "";
+let dismissedUpdateVersion = "";
+let dismissedInstallerVersion = "";
 
 function closeNotice() {
   noticeElement?.remove();
   noticeElement = null;
 }
 
-function showNotice({ title, message, actionLabel = "", onAction = null, dismissible = true } = {}) {
+function syncUpdateButton() {
+  const button = document.getElementById("update-button");
+  if (!button) return;
+  const state = resolveUpdateState(latestRelease, CURRENT_VERSION, apkUpdater.isNative);
+  const available = state.status === "available" || state.status === "web";
+  button.classList.toggle("has-update", available);
+  button.dataset.updateVersion = available ? state.version : "";
+  const label = available
+    ? "Actualización JBAE v" + state.version + " disponible. Buscar o instalar actualización"
+    : apkUpdater.isNative ? "Buscar actualizaciones de JBAE" : "Descargar APK de JBAE";
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.setAttribute("aria-pressed", available ? "true" : "false");
+}
+
+function showNotice({
+  title,
+  message,
+  actionLabel = "",
+  onAction = null,
+  dismissible = true,
+  updateVersion = "",
+  onDismiss = null,
+} = {}) {
   closeNotice();
   const notice = document.createElement("aside");
   notice.className = "update-notice";
@@ -55,7 +81,11 @@ function showNotice({ title, message, actionLabel = "", onAction = null, dismiss
     close.type = "button";
     close.className = "update-notice-close";
     close.textContent = "Cerrar";
-    close.addEventListener("click", closeNotice);
+    close.addEventListener("click", () => {
+      if (updateVersion) dismissedUpdateVersion = updateVersion;
+      if (typeof onDismiss === "function") onDismiss();
+      closeNotice();
+    });
     actions.append(close);
   }
   notice.append(actions);
@@ -97,6 +127,18 @@ async function openInstaller(release) {
   });
 }
 
+function showInstallerRecovery(release) {
+  const version = String(release.version || "");
+  if (!version || dismissedInstallerVersion === version) return;
+  showNotice({
+    title: "APK lista para instalar · v" + version,
+    message: "Android ya recibió y validó la actualización. Si cerraste o cancelaste el instalador, podés abrirlo otra vez sin descargar el APK de nuevo.",
+    actionLabel: "Abrir instalador",
+    onAction: () => openInstaller(release),
+    onDismiss: () => { dismissedInstallerVersion = version; },
+  });
+}
+
 async function beginDownload(release) {
   if (!apkUpdater.isNative) {
     window.open(release.downloadUrl, "_blank", "noopener,noreferrer");
@@ -104,6 +146,7 @@ async function beginDownload(release) {
   }
   installPermissionPending = false;
   lastInstallAttempt = "";
+  dismissedInstallerVersion = "";
   const result = await apkUpdater.downloadAndInstall({
     url: release.downloadUrl,
     version: release.version,
@@ -147,7 +190,11 @@ async function pollDownload(release) {
     }
     if (status.status === "successful") {
       stopMonitor();
-      if (status.installPrompted || installPermissionPending) return;
+      if (installPermissionPending) return;
+      if (hasRecoverableInstaller(status)) {
+        showInstallerRecovery({ ...release, version: status.version || release.version });
+        return;
+      }
       const attemptKey = String(status.downloadId || "") + ":" + String(status.version || "");
       if (lastInstallAttempt === attemptKey) return;
       lastInstallAttempt = attemptKey;
@@ -197,14 +244,16 @@ async function checkForUpdates(interactive = false) {
   }
   try {
     latestRelease = await fetchLatestJbaeRelease();
-    if (!latestRelease) {
+    syncUpdateButton();
+    const state = resolveUpdateState(latestRelease, CURRENT_VERSION, apkUpdater.isNative);
+    if (state.status === "none") {
       if (interactive) showNotice({
         title: "No hay una versión publicada",
         message: "Todavía no se encontró un APK oficial de JBAE en GitHub Releases.",
       });
       return;
     }
-    if (!apkUpdater.isNative) {
+    if (state.status === "web") {
       if (interactive) showNotice({
         title: "JBAE v" + latestRelease.version + " está publicada",
         message: "Esta es la vista web de Pages. Para instalar o actualizar Android, descargá el APK oficial.",
@@ -213,13 +262,16 @@ async function checkForUpdates(interactive = false) {
       });
       return;
     }
-    if (compareVersions(latestRelease.version, CURRENT_VERSION) > 0) {
-      showNotice({
-        title: "Actualización disponible · v" + latestRelease.version,
-        message: "Hay una nueva versión firmada de JBAE. Android descargará el APK en segundo plano y abrirá su instalador cuando termine.",
-        actionLabel: "Descargar e instalar",
-        onAction: () => beginDownload(latestRelease),
-      });
+    if (state.status === "available") {
+      if (interactive || dismissedUpdateVersion !== latestRelease.version) {
+        showNotice({
+          title: "Actualización disponible · v" + latestRelease.version,
+          message: "Hay una nueva versión firmada de JBAE. Android descargará el APK en segundo plano y abrirá su instalador cuando termine.",
+          actionLabel: "Descargar e instalar",
+          onAction: () => beginDownload(latestRelease),
+          updateVersion: latestRelease.version,
+        });
+      }
     } else if (interactive) {
       showNotice({
         title: "JBAE está actualizada",
@@ -244,12 +296,16 @@ async function restorePendingDownload() {
   try {
     const status = await apkUpdater.getDownloadStatus();
     if (!status) return;
+    const recoveredRelease = status.version
+      ? { ...latestRelease, version: status.version }
+      : latestRelease;
+    if (hasRecoverableInstaller(status)) {
+      stopMonitor();
+      showInstallerRecovery(recoveredRelease);
+      return;
+    }
     if (["pending", "running", "paused", "successful"].includes(status.status)) {
-      const release = status.version === latestRelease.version
-        ? latestRelease
-        : { ...latestRelease, version: status.version };
-      if (status.status === "successful" && status.installPrompted) return;
-      startMonitor(release);
+      startMonitor(recoveredRelease);
     } else if (status.status === "failed") {
       showNotice({
         title: "La descarga anterior falló",
@@ -267,8 +323,7 @@ export function initializeUpdateManager() {
   const button = document.getElementById("update-button");
   if (!button) return;
   button.addEventListener("click", () => void checkForUpdates(true));
-  button.title = apkUpdater.isNative ? "Buscar actualizaciones de JBAE" : "Descargar APK de JBAE";
-  button.setAttribute("aria-label", button.title);
+  syncUpdateButton();
   void checkForUpdates(false).then(() => restorePendingDownload());
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {

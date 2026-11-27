@@ -1,0 +1,73 @@
+/* JBAE Android updater: persistent update cue and readable mobile controls. */
+#update-button.update-button {
+  position: relative;
+  flex-basis: 44px;
+  width: 44px;
+  height: 44px;
+  font-size: 22px;
+  touch-action: manipulation;
+}
+#update-button.update-button.has-update {
+  border-color: rgba(117,225,209,.78);
+  color: #eafffb;
+  background: rgba(54,133,124,.22);
+  box-shadow: 0 0 0 3px rgba(117,225,209,.11), 0 0 18px rgba(117,225,209,.2);
+}
+#update-button.update-button.has-update::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #090d13;
+  border-radius: 50%;
+  background: #ffbd70;
+}
+#update-button.update-button:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+#jbae-update-notice.update-notice {
+  z-index: 80;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  padding: 18px;
+}
+#jbae-update-notice .update-notice-copy strong {
+  font-size: 16px;
+  line-height: 1.4;
+}
+#jbae-update-notice .update-notice-copy p {
+  margin-top: 9px;
+  font-size: 14px;
+  line-height: 1.65;
+}
+#jbae-update-notice .update-notice-actions {
+  flex-wrap: wrap;
+  gap: 9px;
+}
+#jbae-update-notice .update-notice-primary,
+#jbae-update-notice .update-notice-close {
+  min-height: 44px;
+  padding: 9px 14px;
+  font-size: 13px;
+  line-height: 1.35;
+  touch-action: manipulation;
+}
+#jbae-update-notice .update-notice-primary {
+  flex: 1 1 190px;
+}
+#jbae-update-notice .update-notice-close {
+  flex: 0 0 auto;
+}
+@media (max-width: 370px) {
+  #jbae-update-notice.update-notice {
+    left: 10px;
+    right: 10px;
+    padding: 15px;
+  }
+  #jbae-update-notice .update-notice-copy strong { font-size: 15px; }
+  #jbae-update-notice .update-notice-copy p { font-size: 13px; }
+  #jbae-update-notice .update-notice-primary,
+  #jbae-update-notice .update-notice-close { font-size: 12px; }
+}
